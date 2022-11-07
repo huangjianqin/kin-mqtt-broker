@@ -1,19 +1,18 @@
 package org.kin.mqtt.broker;
 
 import io.netty.bootstrap.ServerBootstrap;
-import io.netty.channel.ChannelHandler;
+import io.netty.buffer.PooledByteBufAllocator;
 import io.netty.channel.ChannelInitializer;
+import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.handler.codec.mqtt.MqttDecoder;
 import io.netty.handler.codec.mqtt.MqttEncoder;
-import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.DisposableBean;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
-import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -40,9 +39,13 @@ public class MqttBrokerAutoConfiguration {
         ServerBootstrap serverBootstrap = new ServerBootstrap();
         serverBootstrap.group(boss, worker)
                 .channel(NioServerSocketChannel.class)
+                .childOption(ChannelOption.TCP_NODELAY, true)
+                .childOption(ChannelOption.SO_REUSEADDR, true)
+                .childOption(ChannelOption.SO_KEEPALIVE, true)
+                .childOption(ChannelOption.ALLOCATOR, PooledByteBufAllocator.DEFAULT)
                 .childHandler(new ChannelInitializer<SocketChannel>() {
                     @Override
-                    protected void initChannel(SocketChannel socketChannel){
+                    protected void initChannel(SocketChannel socketChannel) {
                         socketChannel.pipeline().addLast(new MqttDecoder());
                         socketChannel.pipeline().addLast(MqttEncoder.INSTANCE);
                         socketChannel.pipeline().addLast("MqttServerHandler", new MqttServerHandler());

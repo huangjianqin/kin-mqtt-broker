@@ -6,10 +6,8 @@ import io.netty.handler.codec.mqtt.*;
 import io.netty.handler.timeout.IdleStateHandler;
 import io.netty.util.Attribute;
 import io.netty.util.AttributeKey;
-import org.reactivestreams.Subscription;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import reactor.core.publisher.Flux;
 
 import java.util.LinkedList;
 import java.util.List;
@@ -132,8 +130,7 @@ final class MqttServerHandler extends ChannelInboundHandlerAdapter {
         MqttSessionManager.INSTANCE.register(session);
 
         //ack消息
-        // TODO: 2022/11/7 retain length
-        MqttFixedHeader fixedHeader = new MqttFixedHeader(MqttMessageType.CONNACK, false, MqttQoS.FAILURE, false, 0x02);
+        MqttFixedHeader fixedHeader = new MqttFixedHeader(MqttMessageType.CONNACK, false, MqttQoS.FAILURE, false, 0);
         MqttConnAckVariableHeader connAckVariableHeader = new MqttConnAckVariableHeader(MqttConnectReturnCode.CONNECTION_ACCEPTED, false);
         return new MqttConnAckMessage(fixedHeader, connAckVariableHeader);
     }
@@ -154,8 +151,7 @@ final class MqttServerHandler extends ChannelInboundHandlerAdapter {
         //publish
         PublishService.INSTANCE.publish(topicName, message.payload());
         //publish ack
-        // TODO: 2022/11/7 retain length
-        MqttFixedHeader ackFixedHeader = new MqttFixedHeader(MqttMessageType.PUBACK, false, MqttQoS.AT_LEAST_ONCE, false, 2);
+        MqttFixedHeader ackFixedHeader = new MqttFixedHeader(MqttMessageType.PUBACK, false, MqttQoS.AT_LEAST_ONCE, false, 0);
         MqttMessageIdVariableHeader messageIdVariableHeader = MqttMessageIdVariableHeader.from(Math.abs(message.variableHeader().packetId()));
         return new MqttPubAckMessage(ackFixedHeader, messageIdVariableHeader);
     }
@@ -167,8 +163,7 @@ final class MqttServerHandler extends ChannelInboundHandlerAdapter {
      * @param ctx     netty context
      */
     private void onPubAck(MqttPubAckMessage message, ChannelHandlerContext ctx) {
-        // TODO: server publish消息收到ack处理
-        System.out.println("pub ack");
+        log.debug("message publish ack, {}", message);
     }
 
     /**
@@ -196,10 +191,9 @@ final class MqttServerHandler extends ChannelInboundHandlerAdapter {
         }
 
         //subscribe ack
-        // TODO: 2022/11/7 qosList
-        // TODO: 2022/11/7 retain length
+        //Granted Qos 被取代为 Reason Code, Reason Code 中有状态码表示了具体的Granted Qos
         MqttSubAckPayload mqttSubAckPayload = new MqttSubAckPayload(qosList);
-        MqttFixedHeader mqttFixedHeader = new MqttFixedHeader(MqttMessageType.SUBACK, false, MqttQoS.AT_MOST_ONCE, false, subMsgVariableHeader.messageId());
+        MqttFixedHeader mqttFixedHeader = new MqttFixedHeader(MqttMessageType.SUBACK, false, MqttQoS.AT_MOST_ONCE, false, 0);
         return new MqttSubAckMessage(mqttFixedHeader, subMsgVariableHeader, mqttSubAckPayload);
     }
 
@@ -219,14 +213,14 @@ final class MqttServerHandler extends ChannelInboundHandlerAdapter {
         }
 
         //unsubscribe ack
-        // TODO: 2022/11/7 retain length
-        MqttFixedHeader fixedHeader = new MqttFixedHeader(MqttMessageType.UNSUBACK, false, MqttQoS.AT_MOST_ONCE, false, 2);
+        MqttFixedHeader fixedHeader = new MqttFixedHeader(MqttMessageType.UNSUBACK, false, MqttQoS.AT_MOST_ONCE, false, 0);
         MqttMessageIdVariableHeader variableHeader = MqttMessageIdVariableHeader.from(message.variableHeader().messageId());
         return new MqttUnsubAckMessage(fixedHeader, variableHeader);
     }
 
     /**
      * 处理{@link MqttMessageType#PINGREQ}心跳消息入口
+     *
      * @return {@link MqttMessageType#PINGRESP}消息
      */
     private MqttMessage onPing() {
@@ -245,7 +239,7 @@ final class MqttServerHandler extends ChannelInboundHandlerAdapter {
     }
 
     @Override
-    public void channelInactive(ChannelHandlerContext ctx){
+    public void channelInactive(ChannelHandlerContext ctx) {
         onDisconnect(ctx);
     }
 
