@@ -9,6 +9,7 @@ import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * mqtt publish消息存储
+ *
  * @author huangjianqin
  * @date 2022/11/6
  */
@@ -16,7 +17,10 @@ final class TopicMessageStore {
     /** 单例 */
     static final TopicMessageStore INSTANCE = new TopicMessageStore();
 
-    /** key -> topic name , value -> publish消息Sink */
+    /**
+     * key -> topic name , value -> publish消息store
+     * TODO: 2022/11/8  没有订阅时, 该什么时候clean store?
+     */
     final Map<String, Sinks.Many<ByteBuf>> topics = new ConcurrentHashMap<>();
 
     private TopicMessageStore() {
@@ -48,7 +52,7 @@ final class TopicMessageStore {
      */
     private void tryInitTopicMessageSink(String topicName) {
         if (!topics.containsKey(topicName)) {
-            topics.computeIfAbsent(topicName, k -> Sinks.many().replay().all());
+            topics.computeIfAbsent(topicName, k -> Sinks.many().replay().limit(32));
         }
     }
 }
