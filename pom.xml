@@ -9,6 +9,7 @@
     <version>${revision}</version>
     <modules>
         <module>kin-mqtt-broker-starter</module>
+        <module>kin-mqtt-broker-core</module>
     </modules>
     <packaging>pom</packaging>
 
@@ -20,6 +21,8 @@
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
 
         <revision>0.1.0.0</revision>
+
+        <kin-mqtt-broker-dependencies.version>0.1.0.0</kin-mqtt-broker-dependencies.version>
     </properties>
 
     <dependencyManagement>
@@ -27,7 +30,7 @@
             <dependency>
                 <groupId>org.kin</groupId>
                 <artifactId>kin-mqtt-broker-dependencies</artifactId>
-                <version>${project.version}</version>
+                <version>${kin-mqtt-broker-dependencies.version}</version>
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>
