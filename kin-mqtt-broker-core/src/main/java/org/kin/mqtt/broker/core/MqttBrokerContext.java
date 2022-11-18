@@ -1,6 +1,7 @@
 package org.kin.mqtt.broker.core;
 
 import org.kin.framework.Closeable;
+import org.kin.framework.utils.SysUtils;
 import org.kin.mqtt.broker.core.auth.AuthService;
 import org.kin.mqtt.broker.core.cluster.BrokerManager;
 import org.kin.mqtt.broker.core.store.MqttMessageStore;
@@ -16,7 +17,7 @@ import reactor.core.scheduler.Schedulers;
  */
 public final class MqttBrokerContext implements Closeable {
     /** mqtt消息处理的{@link Scheduler} */
-    public static final Scheduler MQTT_MESSAGE_HANDLE_SCHEDULER = Schedulers.boundedElastic();
+    public final Scheduler mqttMessageHandleScheduler;
     /** retry task管理 */
     private final RetryService retryService = new DefaultRetryService();
     /** topic管理 */
@@ -31,6 +32,10 @@ public final class MqttBrokerContext implements Closeable {
     private AuthService authService;
     /** mqtt broker集群管理 */
     private BrokerManager brokerManager;
+
+    public MqttBrokerContext(int port) {
+        mqttMessageHandleScheduler = Schedulers.newBoundedElastic(SysUtils.CPU_NUM * 10, Integer.MAX_VALUE, "kin-mqtt-broker-bs-" + port, 60);
+    }
 
     void setDispatcher(MqttMessageDispatcher dispatcher) {
         this.dispatcher = dispatcher;
@@ -51,9 +56,15 @@ public final class MqttBrokerContext implements Closeable {
     @Override
     public void close() {
         retryService.close();
+        brokerManager.shutdown().subscribe();
+        mqttMessageHandleScheduler.dispose();
     }
 
     //getter
+    public Scheduler getMqttMessageHandleScheduler() {
+        return mqttMessageHandleScheduler;
+    }
+
     public RetryService getRetryService() {
         return retryService;
     }

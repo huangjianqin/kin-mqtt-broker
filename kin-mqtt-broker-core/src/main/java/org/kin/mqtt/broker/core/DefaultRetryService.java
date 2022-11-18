@@ -53,5 +53,9 @@ final class DefaultRetryService extends HashedWheelTimer implements RetryService
         }
 
         log.warn("send publish message retry task still have {}, {}", retries.size(), retries);
+        //取消所有没执行完的retry task, 再一次stop timer
+        for (PublishRetry retry : retries) {
+            retry.cancel();
+        }
     }
 }

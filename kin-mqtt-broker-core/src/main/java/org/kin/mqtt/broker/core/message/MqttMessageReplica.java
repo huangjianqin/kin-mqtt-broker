@@ -34,10 +34,6 @@ public final class MqttMessageReplica implements Serializable {
     /** mqtt消息可变头属性 */
     private Map<String, String> properties;
 
-    public static MqttMessageReplica fromPublishMessage(String clientId, MqttPublishMessage message) {
-        return fromPublishMessage(clientId, message, 0);
-    }
-
     public static MqttMessageReplica fromPublishMessage(String clientId, MqttPublishMessage message, long timestamp) {
         MqttPublishVariableHeader variableHeader = message.variableHeader();
         MqttFixedHeader fixedHeader = message.fixedHeader();

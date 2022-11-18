@@ -68,6 +68,10 @@ public final class PublishRetry implements Retry {
     public void cancel() {
         cancelled = true;
         retryService.removeRetry(getId());
+        if (curTimes == 0) {
+            //没重试过, 必须释放bytebuf
+            cleaner.run();
+        }
         log.debug("id={} retry cancelled", getId());
     }
 

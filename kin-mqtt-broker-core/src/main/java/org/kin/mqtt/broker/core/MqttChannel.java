@@ -75,7 +75,7 @@ public class MqttChannel {
      * @return complete signal
      */
     public Mono<Void> sendMessage(MqttMessage mqttMessage, boolean retry) {
-        log.debug("channel {} send message {}", getConnection(), mqttMessage);
+        log.debug("channel {} send {} message", getConnection(), mqttMessage.fixedHeader().messageType());
         if (retry) {
             //Increase the reference count of bytebuf, and the reference count of retrybytebuf is 2
             //mqttChannel.write() method releases a reference count.
@@ -281,7 +281,7 @@ public class MqttChannel {
      * connection close主要逻辑
      */
     private void close0() {
-        log.info("{}: mqtt channel closed, {}", Thread.currentThread().getName(), this);
+        log.info("mqtt channel closed, {}", this);
 
         offline();
         if (!persistent) {
@@ -373,5 +373,16 @@ public class MqttChannel {
 
     public String getUserName() {
         return userName;
+    }
+
+    @Override
+    public String toString() {
+        return "MqttChannel{" +
+                "clientId='" + clientId + '\'' +
+                ", connectTime=" + connectTime +
+                ", persistent=" + persistent +
+                ", userName='" + userName + '\'' +
+                ", status=" + status +
+                '}';
     }
 }

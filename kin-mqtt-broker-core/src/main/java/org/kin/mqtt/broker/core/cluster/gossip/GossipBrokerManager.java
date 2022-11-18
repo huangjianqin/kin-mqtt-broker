@@ -68,7 +68,7 @@ public final class GossipBrokerManager implements BrokerManager {
      */
     private List<Address> seedMembers(String seeds) {
         //解析seeds
-        return Stream.of(seeds)
+        return Stream.of(seeds.split(";"))
                 .map(hostPort -> {
                     String[] splits = hostPort.split(":");
                     return Address.create(splits[0], Integer.parseInt(splits[1]));
@@ -104,8 +104,11 @@ public final class GossipBrokerManager implements BrokerManager {
 
     @Override
     public Mono<Void> broadcastMqttMessage(MqttMessageReplica message) {
-        log.info("cluster broadcast message {} ", message);
-        return clusterMono.flatMap(c -> c.spreadGossip(Message.withData(message).build())).then();
+        return clusterMono.flatMap(c -> {
+                    log.debug("cluster broadcast message {} ", message);
+                    return c.spreadGossip(Message.withData(message).build());
+                })
+                .then();
     }
 
     @Override
@@ -131,7 +134,7 @@ public final class GossipBrokerManager implements BrokerManager {
 
         @Override
         public void onGossip(Message message) {
-            log.info("cluster accept message {} ", message);
+            log.debug("cluster accept message {} ", message);
             clusterMqttMessageSink.emitNext(message.data(), new RetryNonSerializedEmitFailureHandler());
         }
 

@@ -1,7 +1,10 @@
 package org.kin.mqtt.broker.core;
 
 import org.kin.framework.Closeable;
+import reactor.core.publisher.Mono;
 import reactor.netty.DisposableServer;
+
+import java.util.Objects;
 
 /**
  * @author huangjianqin
@@ -9,14 +12,16 @@ import reactor.netty.DisposableServer;
  */
 public final class MqttBroker implements Closeable {
     /** mqtt server disposable */
-    private final DisposableServer mqttServerDisposable;
+    private volatile DisposableServer mqttServerDisposable;
 
-    public MqttBroker(DisposableServer mqttServerDisposable) {
-        this.mqttServerDisposable = mqttServerDisposable;
+    public MqttBroker(Mono<DisposableServer> disposableServerMono) {
+        disposableServerMono.doOnNext(d -> mqttServerDisposable = d).subscribe();
     }
 
     @Override
     public void close() {
-        mqttServerDisposable.dispose();
+        if (Objects.nonNull(mqttServerDisposable)) {
+            mqttServerDisposable.dispose();
+        }
     }
 }

@@ -54,10 +54,14 @@ public final class PublishHandler extends AbstractMqttMessageHandler<MqttPublish
 
             //已注册的订阅
             Set<TopicSubscription> subscriptions = topicManager.getSubscriptions(variableHeader.topicName(), qos);
+            // http mock
+            if (mqttChannel.isBrokerChannel()) {
+                return broadcastPublish(brokerContext, subscriptions, message, clientId, timestamp);
+            }
+
             switch (qos) {
                 case AT_MOST_ONCE:
-                    return broadcastPublish(brokerContext, subscriptions, message, timestamp)
-                            .then(trySaveRetainMessage(messageStore, clientId, message, timestamp));
+                    return broadcastPublish(brokerContext, subscriptions, message, clientId, timestamp);
                 case AT_LEAST_ONCE:
                     return broadcastPublish(brokerContext, subscriptions, message, timestamp)
                             .then(mqttChannel.sendMessage(MqttMessageUtils.createPubAck(packetId), false))
@@ -81,6 +85,22 @@ public final class PublishHandler extends AbstractMqttMessageHandler<MqttPublish
             log.error("", e);
         }
         return Mono.empty();
+    }
+
+    /**
+     * 广播publish消息
+     *
+     * @param brokerContext broker context
+     * @param subscriptions 已注册的订阅
+     * @param message       接收到的publish消息
+     * @param clientId      mqtt sender id
+     * @param timestamp     mqtt消息接收时间戳
+     * @return complete signal
+     */
+    private Mono<Void> broadcastPublish(MqttBrokerContext brokerContext, Set<TopicSubscription> subscriptions,
+                                        MqttPublishMessage message, String clientId, long timestamp) {
+        return broadcastPublish(brokerContext, subscriptions, message, timestamp)
+                .then(trySaveRetainMessage(brokerContext.getMessageStore(), clientId, message, timestamp));
     }
 
     /**

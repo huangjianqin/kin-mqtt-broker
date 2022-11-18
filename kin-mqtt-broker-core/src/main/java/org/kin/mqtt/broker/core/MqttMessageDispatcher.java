@@ -12,6 +12,7 @@ import org.kin.mqtt.broker.core.message.MqttMessageWrapper;
 import org.kin.mqtt.broker.core.message.handler.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import reactor.netty.ReactorNetty;
 
 import java.util.*;
 
@@ -82,32 +83,34 @@ public final class MqttMessageDispatcher {
         MqttFixedHeader fixedHeader = mqttMessage.fixedHeader();
         //todo 思考一下没有办法减少字节复制
         MqttMessageReplica messageReplica = null;
-        if (mqttMessage instanceof MqttPublishMessage) {
+        if (!wrapper.isFromCluster() && mqttMessage instanceof MqttPublishMessage) {
             //先转换成可持久化的消息
-            messageReplica = MqttMessageReplica.fromPublishMessage(mqttChannel.getClientId(), (MqttPublishMessage) mqttMessage, wrapper.getTimestamp());
+            MqttPublishMessage publishMessage = (MqttPublishMessage) mqttMessage;
+            messageReplica = MqttMessageReplica.fromPublishMessage(mqttChannel.getClientId(), publishMessage, wrapper.getTimestamp());
         }
 
         MqttMessageType mqttMessageType = fixedHeader.messageType();
-        String threadName = Thread.currentThread().getName();
-        log.debug("{}: prepare to handle {} message from channel {}", threadName, mqttMessageType, mqttChannel);
+        log.info("prepare to handle {} message from channel {}", mqttMessageType, mqttChannel);
         MqttMessageHandler<MqttMessage> messageHandler = type2handler.get(mqttMessageType);
         if (Objects.nonNull(messageHandler)) {
             messageHandler.handle((MqttMessageWrapper<MqttMessage>) wrapper, mqttChannel, brokerContext)
                     .contextWrite(context -> context.putNonNull(MqttBrokerContext.class, brokerContext))
-                    .subscribeOn(MqttBrokerContext.MQTT_MESSAGE_HANDLE_SCHEDULER)
                     .subscribe(v -> {
-                    }, error -> log.error("{}: handle {} message from channel {} error, {}", threadName, mqttMessageType, mqttChannel, error));
+                            },
+                            error -> log.error("handle {} message from channel {} error, {}", mqttMessageType, mqttChannel, error),
+                            //释放onMqttClientConnected里面的retain(), 还有initBrokerManager的MqttMessageReplica.fromCluster(....)
+                            () -> ReactorNetty.safeRelease(mqttMessage.payload()));
         } else {
             throw new IllegalArgumentException(String.format("does not find handler to handle %s message", mqttMessageType));
         }
 
         //仅仅处理publish消息
-        if ((!wrapper.isFromCluster()) && Objects.nonNull(messageReplica)) {
+        if (Objects.nonNull(messageReplica)) {
             //集群广播mqtt消息
             BrokerManager brokerManager = brokerContext.getBrokerManager();
-            brokerManager.broadcastMqttMessage(messageReplica).subscribeOn(MqttBrokerContext.MQTT_MESSAGE_HANDLE_SCHEDULER).subscribe();
+            brokerManager.broadcastMqttMessage(messageReplica).subscribe();
 
-            // TODO: 2022/11/14 dsl规则匹配, 支持定义广播mqtt到指定datasource
+            // TODO: 2022/11/14 dsl规则匹配, 支持定义广播mqtt到指定datasource, 全异步
         }
     }
 }

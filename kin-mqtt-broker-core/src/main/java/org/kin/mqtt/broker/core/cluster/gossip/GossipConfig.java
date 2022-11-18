@@ -13,8 +13,11 @@ public final class GossipConfig extends ClusterConfig {
     private int port;
     /** gossip集群命名空间 需要一致才能通信 */
     private String namespace;
-    /** gossip集群seed节点配置, ':'分割 */
+    /** gossip集群seed节点配置, ';'分割 */
     private String seeds;
+
+    private GossipConfig() {
+    }
 
     public static Builder builder() {
         return new Builder();

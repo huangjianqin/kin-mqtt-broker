@@ -6,11 +6,14 @@ import io.netty.channel.ChannelOption;
 import io.netty.handler.codec.mqtt.MqttDecoder;
 import io.netty.handler.codec.mqtt.MqttEncoder;
 import io.netty.handler.codec.mqtt.MqttMessage;
+import io.netty.handler.codec.mqtt.MqttPublishMessage;
 import org.kin.framework.utils.LazyInstantiation;
 import org.kin.framework.utils.SysUtils;
 import org.kin.mqtt.broker.core.auth.NoneAuthService;
 import org.kin.mqtt.broker.core.cluster.BrokerManager;
 import org.kin.mqtt.broker.core.cluster.ClusterConfig;
+import org.kin.mqtt.broker.core.cluster.gossip.GossipBrokerManager;
+import org.kin.mqtt.broker.core.cluster.gossip.GossipConfig;
 import org.kin.mqtt.broker.core.cluster.standalone.StandaloneBrokerManager;
 import org.kin.mqtt.broker.core.message.MqttMessageWrapper;
 import org.kin.mqtt.broker.core.store.MemoryMessageStore;
@@ -103,6 +106,13 @@ public final class MqttBrokerBootstrap extends ServerTransport {
     }
 
     /**
+     * gossip集群配置
+     */
+    public MqttBrokerBootstrap gossipCluster(GossipConfig gossipConfig) {
+        return cluster(GossipBrokerManager.class, gossipConfig);
+    }
+
+    /**
      * start mqtt server及其admin server
      */
     public MqttBroker start() {
@@ -111,16 +121,20 @@ public final class MqttBrokerBootstrap extends ServerTransport {
             tcpServer = tcpServer.secure(this::secure);
         }
 
-        MqttBrokerContext brokerContext = new MqttBrokerContext();
-        // TODO: 2022/11/16 临时
+        MqttBrokerContext brokerContext = new MqttBrokerContext(port);
         brokerContext.setDispatcher(new MqttMessageDispatcher(interceptors));
         brokerContext.setAuthService(NoneAuthService.INSTANCE);
         brokerContext.setMessageStore(new MemoryMessageStore());
-        BrokerManager brokerManager = StandaloneBrokerManager.INSTANCE;
+        BrokerManager brokerManager;
+        if (Objects.isNull(brokerManagerInstantiation)) {
+            brokerManager = StandaloneBrokerManager.INSTANCE;
+        } else {
+            brokerManager = brokerManagerInstantiation.instance();
+        }
         brokerContext.setBrokerManager(brokerManager);
 
         //启动mqtt broker
-        LoopResources loopResources = LoopResources.create("kin-mqtt-server", 2, SysUtils.DOUBLE_CPU, false);
+        LoopResources loopResources = LoopResources.create("kin-mqtt-server-" + port, 2, SysUtils.DOUBLE_CPU, false);
         tcpServer = tcpServer.port(port)
                 .childOption(ChannelOption.ALLOCATOR, PooledByteBufAllocator.DEFAULT)
                 .childOption(ChannelOption.TCP_NODELAY, true)
@@ -137,21 +151,21 @@ public final class MqttBrokerBootstrap extends ServerTransport {
 
         //自定义mqtt server配置
         tcpServer = customServerTransport(tcpServer);
-        DisposableServer mqttServerDisposable = tcpServer.bind()
+        Mono<DisposableServer> disposableServerMono = tcpServer.bind()
                 .doOnNext(d -> {
                     //定义mqtt broker close逻辑
                     d.onDispose(loopResources);
                     d.onDispose(brokerContext::close);
-                    log.info("mqtt broker closed");
+                    d.onDispose(() -> log.info("mqtt broker(port:{}) closed", port));
                 })
                 .doOnSuccess(d -> log.info("mqtt server started on port({})", port))
-                .block();
+                .cast(DisposableServer.class);
 
         //集群初始化
         initBrokerManager(brokerContext);
 
         // TODO: 2022/11/12 admin http server
-        return new MqttBroker(mqttServerDisposable);
+        return new MqttBroker(disposableServerMono);
     }
 
     /**
@@ -169,6 +183,14 @@ public final class MqttBrokerBootstrap extends ServerTransport {
                 })
                 //过滤解包失败的
                 .filter(mqttMessage -> mqttMessage.decoderResult().isSuccess())
+                .doOnNext(mqttMessage -> {
+                    //此publish complete会释放reference count, 所以先retain. 就像是SimpleChannelInboundHandler
+                    if (mqttMessage instanceof MqttPublishMessage) {
+                        MqttPublishMessage publishMessage = (MqttPublishMessage) mqttMessage;
+                        publishMessage.retain();
+                    }
+                })
+                .publishOn(brokerContext.getMqttMessageHandleScheduler())
                 //mqtt消息处理
                 .subscribe(mqttMessage -> brokerContext.getDispatcher().dispatch(MqttMessageWrapper.common(mqttMessage), mqttChannel, brokerContext));
     }
@@ -184,15 +206,14 @@ public final class MqttBrokerBootstrap extends ServerTransport {
             brokerManager = brokerManagerInstantiation.instance();
         }
         brokerManager.init(this)
-                .then(Mono.fromRunnable(() -> {
-                    brokerManager.clusterMqttMessages()
-                            .onErrorResume(e -> Mono.empty())
-                            .subscribe(clusterMessage -> brokerContext.getDispatcher().dispatch(
-                                            MqttMessageWrapper.fromCluster(clusterMessage),
-                                            new MqttBrokerChannel(brokerContext, clusterMessage.getClientId()),
-                                            brokerContext),
-                                    t -> log.error("broker manager handle cluster message error", t));
-                }))
+                .then(Mono.fromRunnable(() -> brokerManager.clusterMqttMessages()
+                        .onErrorResume(e -> Mono.empty())
+                        .publishOn(brokerContext.getMqttMessageHandleScheduler())
+                        .subscribe(clusterMessage -> brokerContext.getDispatcher().dispatch(
+                                        MqttMessageWrapper.fromCluster(clusterMessage),
+                                        new MqttBrokerChannel(brokerContext, clusterMessage.getClientId()),
+                                        brokerContext),
+                                t -> log.error("broker manager handle cluster message error", t))))
                 .subscribe();
     }
 
