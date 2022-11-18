@@ -16,7 +16,7 @@ import reactor.core.scheduler.Schedulers;
  * @date 2022/11/14
  */
 public final class MqttBrokerContext implements Closeable {
-    /** mqtt消息处理的{@link Scheduler} */
+    /** mqtt消息处理的{@link Scheduler} todo 如果datastore datasource auth能支持全异步的形式, 则不需要额外的scheduler也ok */
     public final Scheduler mqttMessageHandleScheduler;
     /** retry task管理 */
     private final RetryService retryService = new DefaultRetryService();
