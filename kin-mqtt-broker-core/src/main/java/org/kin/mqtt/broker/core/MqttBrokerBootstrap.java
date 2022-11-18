@@ -140,7 +140,8 @@ public final class MqttBrokerBootstrap extends ServerTransport {
                 .childOption(ChannelOption.TCP_NODELAY, true)
                 .childOption(ChannelOption.SO_KEEPALIVE, true)
                 .childOption(ChannelOption.SO_REUSEADDR, true)
-                .wiretap(true)
+                //打印底层event和二进制内容
+//                .wiretap(false)
                 .metrics(true)
                 .runOn(loopResources)
                 .doOnConnection(connection -> {
