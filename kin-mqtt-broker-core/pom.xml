@@ -36,27 +36,21 @@
             <artifactId>kin-framework-java</artifactId>
         </dependency>
 
+        <!-- jackson-->
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-core</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-databind</artifactId>
+        </dependency>
+
         <!-- mqtt broker组件依赖 -->
         <dependency>
             <groupId>org.kin</groupId>
             <artifactId>kin-mqtt-broker-auth-api</artifactId>
             <version>${project.version}</version>
-        </dependency>
-
-        <!-- gossip -->
-        <dependency>
-            <groupId>io.scalecube</groupId>
-            <artifactId>scalecube-cluster</artifactId>
-        </dependency>
-
-        <dependency>
-            <groupId>io.scalecube</groupId>
-            <artifactId>scalecube-codec-jackson</artifactId>
-        </dependency>
-
-        <dependency>
-            <groupId>io.scalecube</groupId>
-            <artifactId>scalecube-transport-netty</artifactId>
         </dependency>
 
         <!-- 高效性能及内存优化的集合类工具 -->

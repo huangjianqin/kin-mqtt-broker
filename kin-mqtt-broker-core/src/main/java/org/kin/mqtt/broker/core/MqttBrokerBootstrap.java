@@ -7,15 +7,11 @@ import io.netty.handler.codec.mqtt.MqttDecoder;
 import io.netty.handler.codec.mqtt.MqttEncoder;
 import io.netty.handler.codec.mqtt.MqttMessage;
 import io.netty.handler.codec.mqtt.MqttPublishMessage;
-import org.kin.framework.utils.LazyInstantiation;
 import org.kin.framework.utils.SysUtils;
 import org.kin.mqtt.broker.auth.AuthService;
 import org.kin.mqtt.broker.auth.NoneAuthService;
-import org.kin.mqtt.broker.core.cluster.BrokerManager;
-import org.kin.mqtt.broker.core.cluster.ClusterConfig;
-import org.kin.mqtt.broker.core.cluster.gossip.GossipBrokerManager;
-import org.kin.mqtt.broker.core.cluster.gossip.GossipConfig;
-import org.kin.mqtt.broker.core.cluster.standalone.StandaloneBrokerManager;
+import org.kin.mqtt.broker.cluster.BrokerManager;
+import org.kin.mqtt.broker.cluster.StandaloneBrokerManager;
 import org.kin.mqtt.broker.core.message.MqttMessageWrapper;
 import org.kin.mqtt.broker.core.store.MemoryMessageStore;
 import org.kin.mqtt.broker.core.store.MqttMessageStore;
@@ -29,7 +25,6 @@ import reactor.netty.tcp.TcpServer;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Objects;
 
 /**
  * mqtt broker启动类
@@ -42,22 +37,16 @@ public final class MqttBrokerBootstrap extends ServerTransport {
 
     /** mqtt broker port, default 1883 */
     private int port = 1883;
-    /** admin manager port, default 9000 */
-    private int adminPort = 9000;
     /** 最大消息大小, 默认4MB */
     private int messageMaxSize = 4194304;
     /** 注册的interceptor */
     private final List<Interceptor> interceptors = new ArrayList<>();
-    /** broker manager实例化逻辑 */
-    private LazyInstantiation<BrokerManager> brokerManagerInstantiation;
-    /** mqtt broker集群配置 */
-    private ClusterConfig clusterConfig;
+    /** mqtt broker集群管理. 默认单节点模式 */
+    private BrokerManager brokerManager = StandaloneBrokerManager.INSTANCE;
     /** mqtt消息外部存储, 默认存储在jvm内存 */
     private MqttMessageStore messageStore = new MemoryMessageStore();
     /** auth service, 默认不进行校验 */
     private AuthService authService = NoneAuthService.INSTANCE;
-    /** mqtt broker集群管理. 默认单节点模式 */
-    private BrokerManager brokerManager = StandaloneBrokerManager.INSTANCE;
 
     public static MqttBrokerBootstrap create() {
         return new MqttBrokerBootstrap();
@@ -72,15 +61,6 @@ public final class MqttBrokerBootstrap extends ServerTransport {
     public MqttBrokerBootstrap port(int port) {
         Preconditions.checkArgument(port > 0, "port must be greater than 0");
         this.port = port;
-        return this;
-    }
-
-    /**
-     * 定义mqtt server admin port
-     */
-    public MqttBrokerBootstrap adminPort(int adminPort) {
-        Preconditions.checkArgument(port > 0, "adminPort must be greater than 0");
-        this.adminPort = adminPort;
         return this;
     }
 
@@ -102,22 +82,19 @@ public final class MqttBrokerBootstrap extends ServerTransport {
     }
 
     /**
-     * 集群配置
+     * 注册{@link Interceptor}
      */
-    public MqttBrokerBootstrap cluster(Class<? extends BrokerManager> brokerManagerClass, ClusterConfig clusterConfig) {
-        Preconditions.checkNotNull(brokerManagerClass);
-        Preconditions.checkNotNull(clusterConfig);
-        this.brokerManagerInstantiation = new LazyInstantiation<BrokerManager>(brokerManagerClass) {
-        };
-        this.clusterConfig = clusterConfig;
+    public MqttBrokerBootstrap interceptors(List<Interceptor> interceptors) {
+        interceptors.addAll(interceptors);
         return this;
     }
 
     /**
-     * gossip集群配置
+     * mqtt broker集群管理
      */
-    public MqttBrokerBootstrap gossipCluster(GossipConfig gossipConfig) {
-        return cluster(GossipBrokerManager.class, gossipConfig);
+    public MqttBrokerBootstrap brokerManager(BrokerManager brokerManager) {
+        this.brokerManager = brokerManager;
+        return this;
     }
 
     /**
@@ -137,14 +114,6 @@ public final class MqttBrokerBootstrap extends ServerTransport {
     }
 
     /**
-     * mqtt broker集群管理
-     */
-    public MqttBrokerBootstrap brokerManager(BrokerManager brokerManager) {
-        this.brokerManager = brokerManager;
-        return this;
-    }
-
-    /**
      * start mqtt server及其admin server
      */
     public MqttBroker start() {
@@ -154,7 +123,7 @@ public final class MqttBrokerBootstrap extends ServerTransport {
         }
 
         MqttBrokerContext brokerContext = new MqttBrokerContext(port, new MqttMessageDispatcher(interceptors),
-                authService, messageStore, brokerManager);
+                authService, brokerManager, messageStore);
         BrokerManager brokerManager;
 
         //启动mqtt broker
@@ -223,13 +192,7 @@ public final class MqttBrokerBootstrap extends ServerTransport {
      * {@link BrokerManager}初始化完成之后的操作
      */
     private void initBrokerManager(MqttBrokerContext brokerContext) {
-        BrokerManager brokerManager;
-        if (Objects.isNull(brokerManagerInstantiation)) {
-            brokerManager = StandaloneBrokerManager.INSTANCE;
-        } else {
-            brokerManager = brokerManagerInstantiation.instance();
-        }
-        brokerManager.init(this)
+        brokerContext.getBrokerManager().start()
                 .then(Mono.fromRunnable(() -> brokerManager.clusterMqttMessages()
                         .onErrorResume(e -> Mono.empty())
                         .publishOn(brokerContext.getMqttMessageHandleScheduler())
@@ -246,24 +209,12 @@ public final class MqttBrokerBootstrap extends ServerTransport {
         return port;
     }
 
-    public int getAdminPort() {
-        return adminPort;
-    }
-
     public int getMessageMaxSize() {
         return messageMaxSize;
     }
 
     public List<Interceptor> getInterceptors() {
         return interceptors;
-    }
-
-    public ClusterConfig getClusterConfig() {
-        return clusterConfig;
-    }
-
-    public LazyInstantiation<BrokerManager> getBrokerManagerInstantiation() {
-        return brokerManagerInstantiation;
     }
 
     public MqttMessageStore getMessageStore() {

@@ -1,14 +1,8 @@
-package org.kin.mqtt.broker.core.cluster.standalone;
+package org.kin.mqtt.broker.cluster;
 
-import com.google.common.base.Preconditions;
-import org.kin.mqtt.broker.core.MqttBrokerBootstrap;
-import org.kin.mqtt.broker.core.cluster.BrokerManager;
-import org.kin.mqtt.broker.core.cluster.MqttBrokerNode;
 import org.kin.mqtt.broker.core.message.MqttMessageReplica;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
-
-import java.util.Objects;
 
 /**
  * 单节点启动
@@ -24,8 +18,7 @@ public final class StandaloneBrokerManager implements BrokerManager {
     }
 
     @Override
-    public Mono<Void> init(MqttBrokerBootstrap bootstrap) {
-        Preconditions.checkArgument(Objects.isNull(bootstrap.getClusterConfig()));
+    public Mono<Void> start() {
         return Mono.empty();
     }
 

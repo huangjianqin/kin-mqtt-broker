@@ -11,6 +11,9 @@
         <module>kin-mqtt-broker-starter</module>
         <module>kin-mqtt-broker-core</module>
         <module>kin-mqtt-broker-auth</module>
+        <module>kin-mqtt-broker-standalone-starter</module>
+        <module>kin-mqtt-broker-gossip-starter</module>
+        <module>kin-mqtt-broker-example</module>
     </modules>
     <packaging>pom</packaging>
 

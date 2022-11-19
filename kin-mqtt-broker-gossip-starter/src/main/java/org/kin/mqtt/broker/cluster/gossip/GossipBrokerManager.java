@@ -1,6 +1,5 @@
-package org.kin.mqtt.broker.core.cluster.gossip;
+package org.kin.mqtt.broker.cluster.gossip;
 
-import com.google.common.base.Preconditions;
 import io.scalecube.cluster.Cluster;
 import io.scalecube.cluster.ClusterImpl;
 import io.scalecube.cluster.ClusterMessageHandler;
@@ -12,10 +11,8 @@ import io.scalecube.net.Address;
 import io.scalecube.reactor.RetryNonSerializedEmitFailureHandler;
 import io.scalecube.transport.netty.tcp.TcpTransportFactory;
 import org.kin.framework.utils.NetUtils;
-import org.kin.mqtt.broker.core.MqttBrokerBootstrap;
-import org.kin.mqtt.broker.core.cluster.BrokerManager;
-import org.kin.mqtt.broker.core.cluster.ClusterConfig;
-import org.kin.mqtt.broker.core.cluster.MqttBrokerNode;
+import org.kin.mqtt.broker.cluster.BrokerManager;
+import org.kin.mqtt.broker.cluster.MqttBrokerNode;
 import org.kin.mqtt.broker.core.message.MqttMessageReplica;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -37,23 +34,23 @@ import java.util.stream.Stream;
 public final class GossipBrokerManager implements BrokerManager {
     private static final Logger log = LoggerFactory.getLogger(GossipBrokerManager.class);
 
+    /** config */
+    private final GossipProperties gossipProperties;
     /** 来自集群广播的mqtt消息流 */
     private final Sinks.Many<MqttMessageReplica> clusterMqttMessageSink = Sinks.many().multicast().onBackpressureBuffer();
     /** gossip cluster */
     private volatile Mono<Cluster> clusterMono;
 
+    public GossipBrokerManager(GossipProperties gossipProperties) {
+        this.gossipProperties = gossipProperties;
+    }
+
     @Override
-    public Mono<Void> init(MqttBrokerBootstrap bootstrap) {
-        ClusterConfig config = bootstrap.getClusterConfig();
-        Preconditions.checkNotNull(config);
-        Preconditions.checkArgument(config instanceof GossipConfig, "cluster config must be GossipConfig");
-
-        GossipConfig gossipConfig = (GossipConfig) config;
-
-        int port = gossipConfig.getPort();
+    public Mono<Void> start() {
+        int port = gossipProperties.getPort();
         clusterMono = new ClusterImpl().config(clusterConfig -> clusterConfig.externalHost(NetUtils.getIp()).externalPort(port))
-                .membership(membershipConfig -> membershipConfig.seedMembers(seedMembers(gossipConfig.getSeeds()))
-                        .namespace(gossipConfig.getNamespace())
+                .membership(membershipConfig -> membershipConfig.seedMembers(seedMembers(gossipProperties.getSeeds()))
+                        .namespace(gossipProperties.getNamespace())
                         .syncInterval(5_000))
                 .transport(transportConfig -> transportConfig.transportFactory(new TcpTransportFactory())
                         .messageCodec(JacksonMessageCodec.INSTANCE)

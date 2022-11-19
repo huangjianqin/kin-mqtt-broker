@@ -5,7 +5,7 @@ import io.netty.handler.codec.mqtt.MqttMessage;
 import io.netty.handler.codec.mqtt.MqttMessageType;
 import io.netty.handler.codec.mqtt.MqttPublishMessage;
 import org.eclipse.collections.impl.map.mutable.UnifiedMap;
-import org.kin.mqtt.broker.core.cluster.BrokerManager;
+import org.kin.mqtt.broker.cluster.BrokerManager;
 import org.kin.mqtt.broker.core.message.MqttMessageHandler;
 import org.kin.mqtt.broker.core.message.MqttMessageReplica;
 import org.kin.mqtt.broker.core.message.MqttMessageWrapper;

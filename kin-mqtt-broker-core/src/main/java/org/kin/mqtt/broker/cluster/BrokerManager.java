@@ -1,6 +1,5 @@
-package org.kin.mqtt.broker.core.cluster;
+package org.kin.mqtt.broker.cluster;
 
-import org.kin.mqtt.broker.core.MqttBrokerBootstrap;
 import org.kin.mqtt.broker.core.message.MqttMessageReplica;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -17,12 +16,11 @@ import reactor.core.publisher.Mono;
  */
 public interface BrokerManager {
     /**
-     * 初始化
+     * start
      *
-     * @param bootstrap mqtt broker启动配置
      * @return init complete signal
      */
-    Mono<Void> init(MqttBrokerBootstrap bootstrap);
+    Mono<Void> start();
 
     /**
      * 返回来自集群其他broker的mqtt消息流

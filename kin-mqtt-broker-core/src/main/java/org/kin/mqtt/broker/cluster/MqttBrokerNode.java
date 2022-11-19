@@ -1,4 +1,4 @@
-package org.kin.mqtt.broker.core.cluster;
+package org.kin.mqtt.broker.cluster;
 
 /**
  * mqtt broker集群节点

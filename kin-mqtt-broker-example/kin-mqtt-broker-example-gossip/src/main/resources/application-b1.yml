@@ -1,0 +1,8 @@
+org:
+  kin:
+    mqtt:
+      broker:
+        gossip:
+          port: 5001
+          seeds: 'localhost:5001;localhost:5002'
+          namespace: mqtt-broker
