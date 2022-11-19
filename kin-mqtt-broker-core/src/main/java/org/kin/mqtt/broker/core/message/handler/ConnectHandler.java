@@ -2,10 +2,10 @@ package org.kin.mqtt.broker.core.message.handler;
 
 import io.netty.handler.codec.mqtt.*;
 import org.kin.framework.utils.Extension;
+import org.kin.mqtt.broker.auth.AuthService;
 import org.kin.mqtt.broker.core.MqttBrokerContext;
 import org.kin.mqtt.broker.core.MqttChannel;
 import org.kin.mqtt.broker.core.MqttChannelManager;
-import org.kin.mqtt.broker.core.auth.AuthService;
 import org.kin.mqtt.broker.core.message.MqttMessageReplica;
 import org.kin.mqtt.broker.core.message.MqttMessageUtils;
 import org.kin.mqtt.broker.core.message.MqttMessageWrapper;

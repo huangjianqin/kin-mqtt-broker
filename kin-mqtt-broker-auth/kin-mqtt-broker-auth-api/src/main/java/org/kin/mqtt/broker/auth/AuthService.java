@@ -1,4 +1,4 @@
-package org.kin.mqtt.broker.core.auth;
+package org.kin.mqtt.broker.auth;
 
 import reactor.core.publisher.Mono;
 

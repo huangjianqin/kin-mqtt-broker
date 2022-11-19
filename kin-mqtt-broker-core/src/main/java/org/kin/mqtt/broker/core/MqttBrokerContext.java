@@ -2,7 +2,7 @@ package org.kin.mqtt.broker.core;
 
 import org.kin.framework.Closeable;
 import org.kin.framework.utils.SysUtils;
-import org.kin.mqtt.broker.core.auth.AuthService;
+import org.kin.mqtt.broker.auth.AuthService;
 import org.kin.mqtt.broker.core.cluster.BrokerManager;
 import org.kin.mqtt.broker.core.store.MqttMessageStore;
 import org.kin.mqtt.broker.core.topic.TopicManager;
@@ -25,31 +25,19 @@ public final class MqttBrokerContext implements Closeable {
     /** channel管理 */
     private final MqttChannelManager channelManager = new DefaultMqttChannelManager();
     /** mqtt消息处理实现 */
-    private MqttMessageDispatcher dispatcher;
+    private final MqttMessageDispatcher dispatcher;
     /** mqtt消息外部存储 */
-    private MqttMessageStore messageStore;
+    private final MqttMessageStore messageStore;
     /** auth service */
-    private AuthService authService;
+    private final AuthService authService;
     /** mqtt broker集群管理 */
-    private BrokerManager brokerManager;
+    private final BrokerManager brokerManager;
 
-    public MqttBrokerContext(int port) {
+    public MqttBrokerContext(int port, MqttMessageDispatcher dispatcher, AuthService authService, MqttMessageStore messageStore, BrokerManager brokerManager) {
         mqttMessageHandleScheduler = Schedulers.newBoundedElastic(SysUtils.CPU_NUM * 10, Integer.MAX_VALUE, "kin-mqtt-broker-bs-" + port, 60);
-    }
-
-    void setDispatcher(MqttMessageDispatcher dispatcher) {
         this.dispatcher = dispatcher;
-    }
-
-    void setMessageStore(MqttMessageStore messageStore) {
-        this.messageStore = messageStore;
-    }
-
-    void setAuthService(AuthService authService) {
         this.authService = authService;
-    }
-
-    void setBrokerManager(BrokerManager brokerManager) {
+        this.messageStore = messageStore;
         this.brokerManager = brokerManager;
     }
 

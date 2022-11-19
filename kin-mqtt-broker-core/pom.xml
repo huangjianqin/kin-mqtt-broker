@@ -12,15 +12,35 @@
     <packaging>jar</packaging>
 
     <dependencies>
+        <!-- netty -->
+        <dependency>
+            <groupId>io.projectreactor.netty</groupId>
+            <artifactId>reactor-netty-core</artifactId>
+        </dependency>
+
+        <!-- transport-api -->
+        <dependency>
+            <groupId>org.kin</groupId>
+            <artifactId>kin-transport-common</artifactId>
+        </dependency>
+
         <!-- mqtt codec -->
         <dependency>
             <groupId>io.netty</groupId>
             <artifactId>netty-codec-mqtt</artifactId>
         </dependency>
 
+        <!-- kin-framework工具类 -->
         <dependency>
             <groupId>org.kin</groupId>
-            <artifactId>kin-transport-http</artifactId>
+            <artifactId>kin-framework-java</artifactId>
+        </dependency>
+
+        <!-- mqtt broker组件依赖 -->
+        <dependency>
+            <groupId>org.kin</groupId>
+            <artifactId>kin-mqtt-broker-auth-api</artifactId>
+            <version>${project.version}</version>
         </dependency>
 
         <!-- gossip -->

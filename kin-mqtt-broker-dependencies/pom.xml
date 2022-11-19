@@ -13,26 +13,15 @@
     <properties>
         <kin-framework-java.version>0.1.0.0</kin-framework-java.version>
         <kin-framework-dependencies.version>0.1.0.0</kin-framework-dependencies.version>
-        <kin-rsocket-broker.version>0.1.0.0</kin-rsocket-broker.version>
         <springboot.version>2.5.12</springboot.version>
         <netty.version>4.1.75.Final</netty.version>
-        <rsocket.version>1.1.2</rsocket.version>
-        <paho.version>1.2.5</paho.version>
         <kin-transport-bom.version>0.2.0.0</kin-transport-bom.version>
-        <kin-rpc-bom.version>0.2.0.0</kin-rpc-bom.version>
+        <paho.version>1.2.5</paho.version>
         <scalecube-cluster.version>2.6.12</scalecube-cluster.version>
     </properties>
 
     <dependencyManagement>
         <dependencies>
-            <dependency>
-                <groupId>org.springframework.boot</groupId>
-                <artifactId>spring-boot-dependencies</artifactId>
-                <version>${springboot.version}</version>
-                <type>pom</type>
-                <scope>import</scope>
-            </dependency>
-
             <dependency>
                 <groupId>org.kin</groupId>
                 <artifactId>kin-framework-java</artifactId>
@@ -47,35 +36,13 @@
                 <type>pom</type>
             </dependency>
 
-            <!--            <dependency>-->
-            <!--                <groupId>org.kin</groupId>-->
-            <!--                <artifactId>kin-rsocket-bom</artifactId>-->
-            <!--                <version>${kin-rsocket-broker.version}</version>-->
-            <!--                <scope>import</scope>-->
-            <!--                <type>pom</type>-->
-            <!--                <exclusions>-->
-            <!--                    <exclusion>-->
-            <!--                        <groupId>org.kin</groupId>-->
-            <!--                        <artifactId>kin-transport-netty</artifactId>-->
-            <!--                    </exclusion>-->
-            <!--                </exclusions>-->
-            <!--            </dependency>-->
-
-            <!--            <dependency>-->
-            <!--                <groupId>io.netty</groupId>-->
-            <!--                <artifactId>netty-bom</artifactId>-->
-            <!--                <version>${netty.version}</version>-->
-            <!--                <type>pom</type>-->
-            <!--                <scope>import</scope>-->
-            <!--            </dependency>-->
-
-            <!--            <dependency>-->
-            <!--                <groupId>io.rsocket</groupId>-->
-            <!--                <artifactId>rsocket-bom</artifactId>-->
-            <!--                <version>${rsocket.version}</version>-->
-            <!--                <type>pom</type>-->
-            <!--                <scope>import</scope>-->
-            <!--            </dependency>-->
+            <dependency>
+                <groupId>org.kin</groupId>
+                <artifactId>kin-transport-bom</artifactId>
+                <version>${kin-transport-bom.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
 
             <dependency>
                 <groupId>org.eclipse.paho</groupId>
@@ -85,26 +52,12 @@
             </dependency>
 
             <dependency>
-                <groupId>org.kin</groupId>
-                <artifactId>kin-transport-bom</artifactId>
-                <version>${kin-transport-bom.version}</version>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-dependencies</artifactId>
+                <version>${springboot.version}</version>
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>
-
-            <!--            <dependency>-->
-            <!--                <groupId>org.kin</groupId>-->
-            <!--                <artifactId>kin-rpc-bom</artifactId>-->
-            <!--                <version>${kin-rpc-bom.version}</version>-->
-            <!--                <type>pom</type>-->
-            <!--                <scope>import</scope>-->
-            <!--                <exclusions>-->
-            <!--                    <exclusion>-->
-            <!--                        <groupId>org.kin</groupId>-->
-            <!--                        <artifactId>kin-transport-netty</artifactId>-->
-            <!--                    </exclusion>-->
-            <!--                </exclusions>-->
-            <!--            </dependency>-->
 
             <!-- gossip -->
             <dependency>

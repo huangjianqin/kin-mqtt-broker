@@ -9,7 +9,8 @@ import io.netty.handler.codec.mqtt.MqttMessage;
 import io.netty.handler.codec.mqtt.MqttPublishMessage;
 import org.kin.framework.utils.LazyInstantiation;
 import org.kin.framework.utils.SysUtils;
-import org.kin.mqtt.broker.core.auth.NoneAuthService;
+import org.kin.mqtt.broker.auth.AuthService;
+import org.kin.mqtt.broker.auth.NoneAuthService;
 import org.kin.mqtt.broker.core.cluster.BrokerManager;
 import org.kin.mqtt.broker.core.cluster.ClusterConfig;
 import org.kin.mqtt.broker.core.cluster.gossip.GossipBrokerManager;
@@ -17,6 +18,7 @@ import org.kin.mqtt.broker.core.cluster.gossip.GossipConfig;
 import org.kin.mqtt.broker.core.cluster.standalone.StandaloneBrokerManager;
 import org.kin.mqtt.broker.core.message.MqttMessageWrapper;
 import org.kin.mqtt.broker.core.store.MemoryMessageStore;
+import org.kin.mqtt.broker.core.store.MqttMessageStore;
 import org.kin.transport.netty.ServerTransport;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -50,6 +52,12 @@ public final class MqttBrokerBootstrap extends ServerTransport {
     private LazyInstantiation<BrokerManager> brokerManagerInstantiation;
     /** mqtt broker集群配置 */
     private ClusterConfig clusterConfig;
+    /** mqtt消息外部存储, 默认存储在jvm内存 */
+    private MqttMessageStore messageStore = new MemoryMessageStore();
+    /** auth service, 默认不进行校验 */
+    private AuthService authService = NoneAuthService.INSTANCE;
+    /** mqtt broker集群管理. 默认单节点模式 */
+    private BrokerManager brokerManager = StandaloneBrokerManager.INSTANCE;
 
     public static MqttBrokerBootstrap create() {
         return new MqttBrokerBootstrap();
@@ -113,6 +121,30 @@ public final class MqttBrokerBootstrap extends ServerTransport {
     }
 
     /**
+     * mqtt消息外部存储
+     */
+    public MqttBrokerBootstrap messageStore(MqttMessageStore messageStore) {
+        this.messageStore = messageStore;
+        return this;
+    }
+
+    /**
+     * auth service
+     */
+    public MqttBrokerBootstrap authService(AuthService authService) {
+        this.authService = authService;
+        return this;
+    }
+
+    /**
+     * mqtt broker集群管理
+     */
+    public MqttBrokerBootstrap brokerManager(BrokerManager brokerManager) {
+        this.brokerManager = brokerManager;
+        return this;
+    }
+
+    /**
      * start mqtt server及其admin server
      */
     public MqttBroker start() {
@@ -121,17 +153,9 @@ public final class MqttBrokerBootstrap extends ServerTransport {
             tcpServer = tcpServer.secure(this::secure);
         }
 
-        MqttBrokerContext brokerContext = new MqttBrokerContext(port);
-        brokerContext.setDispatcher(new MqttMessageDispatcher(interceptors));
-        brokerContext.setAuthService(NoneAuthService.INSTANCE);
-        brokerContext.setMessageStore(new MemoryMessageStore());
+        MqttBrokerContext brokerContext = new MqttBrokerContext(port, new MqttMessageDispatcher(interceptors),
+                authService, messageStore, brokerManager);
         BrokerManager brokerManager;
-        if (Objects.isNull(brokerManagerInstantiation)) {
-            brokerManager = StandaloneBrokerManager.INSTANCE;
-        } else {
-            brokerManager = brokerManagerInstantiation.instance();
-        }
-        brokerContext.setBrokerManager(brokerManager);
 
         //启动mqtt broker
         LoopResources loopResources = LoopResources.create("kin-mqtt-server-" + port, 2, SysUtils.DOUBLE_CPU, false);
@@ -165,7 +189,6 @@ public final class MqttBrokerBootstrap extends ServerTransport {
         //集群初始化
         initBrokerManager(brokerContext);
 
-        // TODO: 2022/11/12 admin http server
         return new MqttBroker(brokerContext, disposableServerMono);
     }
 
@@ -238,5 +261,20 @@ public final class MqttBrokerBootstrap extends ServerTransport {
     public ClusterConfig getClusterConfig() {
         return clusterConfig;
     }
-    // TODO: 2022/11/15 getter
+
+    public LazyInstantiation<BrokerManager> getBrokerManagerInstantiation() {
+        return brokerManagerInstantiation;
+    }
+
+    public MqttMessageStore getMessageStore() {
+        return messageStore;
+    }
+
+    public AuthService getAuthService() {
+        return authService;
+    }
+
+    public BrokerManager getBrokerManager() {
+        return brokerManager;
+    }
 }
