@@ -11,10 +11,13 @@ import java.util.Objects;
  * @date 2022/11/12
  */
 public final class MqttBroker implements Closeable {
+    /** mqtt broker context */
+    private final MqttBrokerContext context;
     /** mqtt server disposable */
     private volatile DisposableServer mqttServerDisposable;
 
-    public MqttBroker(Mono<DisposableServer> disposableServerMono) {
+    public MqttBroker(MqttBrokerContext context, Mono<DisposableServer> disposableServerMono) {
+        this.context = context;
         disposableServerMono.doOnNext(d -> mqttServerDisposable = d).subscribe();
     }
 
@@ -23,5 +26,10 @@ public final class MqttBroker implements Closeable {
         if (Objects.nonNull(mqttServerDisposable)) {
             mqttServerDisposable.dispose();
         }
+    }
+
+    //getter
+    public MqttBrokerContext getContext() {
+        return context;
     }
 }

@@ -166,7 +166,7 @@ public final class MqttBrokerBootstrap extends ServerTransport {
         initBrokerManager(brokerContext);
 
         // TODO: 2022/11/12 admin http server
-        return new MqttBroker(disposableServerMono);
+        return new MqttBroker(brokerContext, disposableServerMono);
     }
 
     /**
