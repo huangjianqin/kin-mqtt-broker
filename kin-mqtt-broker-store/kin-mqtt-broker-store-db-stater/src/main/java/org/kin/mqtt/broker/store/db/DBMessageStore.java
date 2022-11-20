@@ -57,13 +57,13 @@ public final class DBMessageStore extends AbstractMessageStore {
         Flux.usingWhen(connectionPool.create(),
                         connection -> Flux.from(
                                 //保存offline消息
-                                connection.createStatement("INSERT INTO kin_mqtt_broker_offline('client_id', 'topic', 'qos', 'retain', 'message', 'create_time', 'properties')" +
+                                connection.createStatement("INSERT INTO kin_mqtt_broker_offline('client_id', 'topic', 'qos', 'retain', 'payload', 'create_time', 'properties')" +
                                                 " values (?,?,?,?,?,?,?)")
                                         .bind(0, replica.getClientId())
                                         .bind(1, replica.getTopic())
                                         .bind(2, replica.getQos())
                                         .bind(3, replica.isRetain() ? 1 : 0)
-                                        .bind(4, JSON.write(replica.getMessage()))
+                                        .bind(4, JSON.write(replica.getPayload()))
                                         .bind(5, replica.getTimestamp())
                                         .bind(6, JSON.write(replica.getProperties()))
                                         .execute()
@@ -87,8 +87,8 @@ public final class DBMessageStore extends AbstractMessageStore {
 
     @Override
     public void saveRetainMessage(MqttMessageReplica replica) {
-        byte[] message = replica.getMessage();
-        if (Objects.isNull(message) || message.length == 0) {
+        byte[] payload = replica.getPayload();
+        if (Objects.isNull(payload) || payload.length == 0) {
             //payload为空, 删除retain消息
             Flux.usingWhen(connectionPool.create(),
                             connection -> Flux.from(
@@ -112,12 +112,12 @@ public final class DBMessageStore extends AbstractMessageStore {
                                         Statement statement;
                                         if (count > 0) {
                                             //已经retain消息, 则update
-                                            statement = connection.createStatement("UPDATE kin_mqtt_broker_retain SET 'client_id' = ?, 'topic' = ?, 'qos' = ?, 'retain' = ?, 'message' = ?, 'create_time' = ?, 'properties' = ?" +
+                                            statement = connection.createStatement("UPDATE kin_mqtt_broker_retain SET 'client_id' = ?, 'topic' = ?, 'qos' = ?, 'retain' = ?, 'payload' = ?, 'create_time' = ?, 'properties' = ?" +
                                                             " WHERE 'topic' = ?")
                                                     .bind(7, replica.getTopic());
                                         } else {
                                             //没有retain消息, 则insert
-                                            statement = connection.createStatement("INSERT INTO kin_mqtt_broker_retain('client_id', 'topic', 'qos', 'retain', 'message', 'create_time', 'properties')" +
+                                            statement = connection.createStatement("INSERT INTO kin_mqtt_broker_retain('client_id', 'topic', 'qos', 'retain', 'payload', 'create_time', 'properties')" +
                                                     " values (?,?,?,?,?,?,?)");
                                         }
 
@@ -126,7 +126,7 @@ public final class DBMessageStore extends AbstractMessageStore {
                                                 .bind(1, replica.getTopic())
                                                 .bind(2, replica.getQos())
                                                 .bind(3, replica.isRetain() ? 1 : 0)
-                                                .bind(4, JSON.write(replica.getMessage()))
+                                                .bind(4, JSON.write(replica.getPayload()))
                                                 .bind(5, replica.getTimestamp())
                                                 .bind(6, JSON.write(replica.getProperties()))
                                                 .execute();
@@ -176,7 +176,7 @@ public final class DBMessageStore extends AbstractMessageStore {
                 .topic(row.get("topic", String.class))
                 .qos(row.get("qos", Integer.class))
                 .setRetain(row.get("retain", Boolean.class))
-                .message(JSON.read(row.get("message", String.class), byte[].class))
+                .payload(JSON.read(row.get("payload", String.class), byte[].class))
                 .timestamp(row.get("create_time", Long.class))
                 .properties(JSON.readMap(row.get("properties", String.class))
                         .entrySet()

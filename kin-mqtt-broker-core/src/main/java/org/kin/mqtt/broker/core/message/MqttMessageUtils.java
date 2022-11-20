@@ -124,7 +124,7 @@ public final class MqttMessageUtils {
                 MqttQoS.valueOf(qos),
                 qos > 0 ? mqttChannel.nextMessageId() : 0,
                 replica.getTopic(),
-                PooledByteBufAllocator.DEFAULT.directBuffer().writeBytes(replica.getMessage()),
+                PooledByteBufAllocator.DEFAULT.directBuffer().writeBytes(replica.getPayload()),
                 replica.getProperties());
     }
 
@@ -306,7 +306,7 @@ public final class MqttMessageUtils {
                 .setRetain(fixedHeader.isRetain())
                 .qos(fixedHeader.qosLevel().value())
                 .properties(MqttMessageUtils.toStringProperties(variableHeader.properties()))
-                .message(MqttMessageUtils.copyPublishPayload(message))
+                .payload(MqttMessageUtils.copyPublishPayload(message))
                 .build();
     }
 }

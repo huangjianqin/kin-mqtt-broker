@@ -33,7 +33,7 @@ public final class MqttMessageWrapper<T extends MqttMessage> {
                 MqttQoS.valueOf(replica.getQos()),
                 0,
                 replica.getTopic(),
-                PooledByteBufAllocator.DEFAULT.buffer().writeBytes(replica.getMessage()),
+                PooledByteBufAllocator.DEFAULT.buffer().writeBytes(replica.getPayload()),
                 replica.getProperties());
         return new MqttMessageWrapper<>(publishMessage, true);
     }

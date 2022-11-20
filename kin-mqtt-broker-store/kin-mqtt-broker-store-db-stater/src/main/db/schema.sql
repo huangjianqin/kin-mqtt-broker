@@ -7,7 +7,7 @@ create table kin_mqtt_broker_offline
     topic       varchar(255) comment 'topic',
     qos         int comment 'mqtt message qos',
     retain      bit comment 'mqtt message retain',
-    message     text comment 'mqtt message content',
+    payload     text comment 'mqtt message payload',
     create_time bigint comment 'create_time',
     properties  tinytext comment 'properties'
 );
@@ -24,7 +24,7 @@ create table kin_mqtt_broker_retain
     topic       varchar(255) comment 'topic',
     qos         int comment 'mqtt message qos',
     retain      bit comment 'mqtt message retain',
-    message     text comment 'mqtt message content',
+    payload     text comment 'mqtt message payload',
     create_time bigint comment 'create_time',
     properties  tinytext comment 'properties'
 );

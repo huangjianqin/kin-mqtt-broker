@@ -25,7 +25,7 @@ public final class MqttMessageReplica implements Serializable {
     /** mqtt消息retain标识 */
     private boolean retain;
     /** mqtt消息payload */
-    private byte[] message;
+    private byte[] payload;
     /** 接收mqtt消息时间戳 */
     private long timestamp;
     /** mqtt消息可变头属性 */
@@ -59,8 +59,8 @@ public final class MqttMessageReplica implements Serializable {
             return this;
         }
 
-        public Builder message(byte[] message) {
-            mqttMessageReplica.message = message;
+        public Builder payload(byte[] payload) {
+            mqttMessageReplica.payload = payload;
             return this;
         }
 
@@ -112,12 +112,12 @@ public final class MqttMessageReplica implements Serializable {
         this.retain = retain;
     }
 
-    public byte[] getMessage() {
-        return message;
+    public byte[] getPayload() {
+        return payload;
     }
 
-    public void setMessage(byte[] message) {
-        this.message = message;
+    public void setPayload(byte[] payload) {
+        this.payload = payload;
     }
 
     public long getTimestamp() {

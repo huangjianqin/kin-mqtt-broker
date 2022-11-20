@@ -63,7 +63,7 @@ public final class RedisMessageStore extends AbstractMessageStore {
     @Override
     public void saveRetainMessage(MqttMessageReplica replica) {
         String topic = replica.getTopic();
-        byte[] payload = replica.getMessage();
+        byte[] payload = replica.getPayload();
         String key = getRetainMessageKey(topic);
         if (Objects.isNull(payload) || payload.length == 0) {
             //payload为空, 删除retain消息
