@@ -2,31 +2,23 @@ package org.kin.mqtt.broker.auth.password;
 
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
+import java.util.Map;
+
 /**
  * @author huangjianqin
  * @date 2022/11/20
  */
 @ConfigurationProperties("org.kin.mqtt.broker.auth")
 public class PasswordAuthProperties {
-    /** username */
-    private String username;
-    /** password */
-    private String password;
+    /** key -> mqtt client id, value -> username & password */
+    private Map<String, UserPassword> users;
 
     //setter && getter
-    public String getUsername() {
-        return username;
+    public Map<String, UserPassword> getUsers() {
+        return users;
     }
 
-    public void setUsername(String username) {
-        this.username = username;
-    }
-
-    public String getPassword() {
-        return password;
-    }
-
-    public void setPassword(String password) {
-        this.password = password;
+    public void setUsers(Map<String, UserPassword> users) {
+        this.users = users;
     }
 }
