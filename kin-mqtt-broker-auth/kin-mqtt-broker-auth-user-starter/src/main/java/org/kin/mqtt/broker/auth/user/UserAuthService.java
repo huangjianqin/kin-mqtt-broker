@@ -1,4 +1,4 @@
-package org.kin.mqtt.broker.auth.password;
+package org.kin.mqtt.broker.auth.user;
 
 import org.kin.mqtt.broker.auth.AuthService;
 import org.springframework.util.CollectionUtils;
@@ -12,11 +12,11 @@ import java.util.*;
  * @author huangjianqin
  * @date 2022/11/20
  */
-public final class PasswordAuthService implements AuthService {
+public final class UserAuthService implements AuthService {
     /** key -> mqtt client id, value -> username & password */
     private Map<String, UserPasswordBytes> users = Collections.emptyMap();
 
-    public PasswordAuthService(PasswordAuthProperties properties) {
+    public UserAuthService(UserAuthProperties properties) {
         Map<String, UserPassword> users = properties.getUsers();
         if (!CollectionUtils.isEmpty(users)) {
             Map<String, UserPasswordBytes> tmp = new HashMap<>(users.size());

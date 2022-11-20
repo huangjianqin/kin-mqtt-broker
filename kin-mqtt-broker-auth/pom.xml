@@ -13,7 +13,7 @@
     <packaging>pom</packaging>
     <modules>
         <module>kin-mqtt-broker-auth-api</module>
-        <module>kin-mqtt-broker-auth-password-starter</module>
+        <module>kin-mqtt-broker-auth-user-starter</module>
         <module>kin-mqtt-broker-auth-http-starter</module>
     </modules>
 

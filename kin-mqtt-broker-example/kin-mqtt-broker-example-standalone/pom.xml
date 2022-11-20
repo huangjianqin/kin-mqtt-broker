@@ -20,7 +20,7 @@
 
         <dependency>
             <groupId>org.kin</groupId>
-            <artifactId>kin-mqtt-broker-auth-password-starter</artifactId>
+            <artifactId>kin-mqtt-broker-auth-user-starter</artifactId>
             <version>${project.version}</version>
         </dependency>
     </dependencies>

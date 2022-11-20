@@ -1,4 +1,4 @@
-package org.kin.mqtt.broker.auth.password;
+package org.kin.mqtt.broker.auth.user;
 
 /**
  * @author huangjianqin

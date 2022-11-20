@@ -1,4 +1,4 @@
-package org.kin.mqtt.broker.auth.password;
+package org.kin.mqtt.broker.auth.user;
 
 import org.kin.mqtt.broker.auth.AuthService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -11,16 +11,15 @@ import org.springframework.context.annotation.Configuration;
  * @author huangjianqin
  * @date 2022/11/20
  */
-@ConditionalOnProperty({"org.kin.mqtt.broker.auth.username",
-        "org.kin.mqtt.broker.auth.password"})
+@ConditionalOnProperty({"org.kin.mqtt.broker.auth.users"})
 @Configuration
-@EnableConfigurationProperties(PasswordAuthProperties.class)
-public class PasswordAuthAutoConfiguration {
+@EnableConfigurationProperties(UserAuthProperties.class)
+public class UserAuthAutoConfiguration {
     @Autowired
-    private PasswordAuthProperties properties;
+    private UserAuthProperties properties;
 
     @Bean
     public AuthService passwordAuthService() {
-        return new PasswordAuthService(properties);
+        return new UserAuthService(properties);
     }
 }
