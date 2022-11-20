@@ -75,13 +75,6 @@
             <groupId>org.eclipse.collections</groupId>
             <artifactId>eclipse-collections</artifactId>
         </dependency>
-
-        <!-- mqtt client, 用于测试 -->
-        <dependency>
-            <groupId>org.eclipse.paho</groupId>
-            <artifactId>org.eclipse.paho.client.mqttv3</artifactId>
-            <scope>test</scope>
-        </dependency>
     </dependencies>
 
 </project>
