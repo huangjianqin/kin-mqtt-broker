@@ -3,13 +3,13 @@
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <parent>
-        <artifactId>kin-mqtt-broker-auth</artifactId>
+        <artifactId>kin-mqtt-broker-store</artifactId>
         <groupId>org.kin</groupId>
         <version>${revision}</version>
     </parent>
     <modelVersion>4.0.0</modelVersion>
 
-    <artifactId>kin-mqtt-broker-auth-api</artifactId>
+    <artifactId>kin-mqtt-broker-store-api</artifactId>
 
     <dependencies>
         <dependency>
@@ -17,6 +17,11 @@
             <artifactId>kin-mqtt-broker-common</artifactId>
             <version>${project.version}</version>
         </dependency>
-    </dependencies>
 
+        <!-- 供idea代码检查 -->
+        <dependency>
+            <groupId>com.google.code.findbugs</groupId>
+            <artifactId>jsr305</artifactId>
+        </dependency>
+    </dependencies>
 </project>

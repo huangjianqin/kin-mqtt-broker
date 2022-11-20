@@ -8,6 +8,7 @@ import org.eclipse.collections.impl.map.mutable.UnifiedMap;
 import org.kin.mqtt.broker.cluster.BrokerManager;
 import org.kin.mqtt.broker.core.message.MqttMessageHandler;
 import org.kin.mqtt.broker.core.message.MqttMessageReplica;
+import org.kin.mqtt.broker.core.message.MqttMessageUtils;
 import org.kin.mqtt.broker.core.message.MqttMessageWrapper;
 import org.kin.mqtt.broker.core.message.handler.*;
 import org.slf4j.Logger;
@@ -86,7 +87,7 @@ public final class MqttMessageDispatcher {
         if (!wrapper.isFromCluster() && mqttMessage instanceof MqttPublishMessage) {
             //先转换成可持久化的消息
             MqttPublishMessage publishMessage = (MqttPublishMessage) mqttMessage;
-            messageReplica = MqttMessageReplica.fromPublishMessage(mqttChannel.getClientId(), publishMessage, wrapper.getTimestamp());
+            messageReplica = MqttMessageUtils.toReplica(mqttChannel.getClientId(), publishMessage, wrapper.getTimestamp());
         }
 
         MqttMessageType mqttMessageType = fixedHeader.messageType();

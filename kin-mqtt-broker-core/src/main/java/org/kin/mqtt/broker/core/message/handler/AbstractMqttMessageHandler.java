@@ -4,8 +4,8 @@ import io.netty.handler.codec.mqtt.MqttMessage;
 import io.netty.handler.codec.mqtt.MqttPublishMessage;
 import org.kin.mqtt.broker.core.MqttChannel;
 import org.kin.mqtt.broker.core.message.MqttMessageHandler;
-import org.kin.mqtt.broker.core.message.MqttMessageReplica;
-import org.kin.mqtt.broker.core.store.MqttMessageStore;
+import org.kin.mqtt.broker.core.message.MqttMessageUtils;
+import org.kin.mqtt.broker.store.MqttMessageStore;
 
 import java.util.function.Supplier;
 
@@ -29,7 +29,7 @@ abstract class AbstractMqttMessageHandler<M extends MqttMessage> implements Mqtt
             return true;
         } else {
             //消息外部存储
-            messageStore.saveOfflineMessage(MqttMessageReplica.fromPublishMessage(mqttChannel.getClientId(), supplier.get(), timestamp));
+            messageStore.saveOfflineMessage(MqttMessageUtils.toReplica(mqttChannel.getClientId(), supplier.get(), timestamp));
             return false;
         }
     }

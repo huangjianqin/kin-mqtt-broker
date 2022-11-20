@@ -1,5 +1,6 @@
 package org.kin.mqtt.broker.auth.user;
 
+import org.kin.mqtt.broker.Constants;
 import org.kin.mqtt.broker.auth.AuthService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnExpression;
@@ -11,7 +12,7 @@ import org.springframework.context.annotation.Configuration;
  * @author huangjianqin
  * @date 2022/11/20
  */
-@ConditionalOnExpression("!'${org.kin.mqtt.broker.auth.users}'.isEmpty()")
+@ConditionalOnExpression("!'${" + Constants.AUTH_PROPERTIES_PREFIX + ".users}'.isEmpty()")
 @Configuration
 @EnableConfigurationProperties(UserAuthProperties.class)
 public class UserAuthAutoConfiguration {

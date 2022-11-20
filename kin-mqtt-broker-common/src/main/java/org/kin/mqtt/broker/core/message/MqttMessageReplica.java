@@ -1,9 +1,6 @@
 package org.kin.mqtt.broker.core.message;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
-import io.netty.handler.codec.mqtt.MqttFixedHeader;
-import io.netty.handler.codec.mqtt.MqttPublishMessage;
-import io.netty.handler.codec.mqtt.MqttPublishVariableHeader;
 
 import java.io.Serializable;
 import java.util.Map;
@@ -33,20 +30,6 @@ public final class MqttMessageReplica implements Serializable {
     private long timestamp;
     /** mqtt消息可变头属性 */
     private Map<String, String> properties;
-
-    public static MqttMessageReplica fromPublishMessage(String clientId, MqttPublishMessage message, long timestamp) {
-        MqttPublishVariableHeader variableHeader = message.variableHeader();
-        MqttFixedHeader fixedHeader = message.fixedHeader();
-        return MqttMessageReplica.builder()
-                .timestamp(timestamp)
-                .clientId(clientId)
-                .topic(variableHeader.topicName())
-                .setRetain(fixedHeader.isRetain())
-                .qos(fixedHeader.qosLevel().value())
-                .properties(MqttMessageUtils.toStringProperties(variableHeader.properties()))
-                .message(MqttMessageUtils.copyPublishPayload(message))
-                .build();
-    }
 
     public static Builder builder() {
         return new Builder();

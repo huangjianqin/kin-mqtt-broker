@@ -49,7 +49,19 @@
         <!-- mqtt broker组件依赖 -->
         <dependency>
             <groupId>org.kin</groupId>
+            <artifactId>kin-mqtt-broker-common</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.kin</groupId>
             <artifactId>kin-mqtt-broker-auth-api</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.kin</groupId>
+            <artifactId>kin-mqtt-broker-store-api</artifactId>
             <version>${project.version}</version>
         </dependency>
 

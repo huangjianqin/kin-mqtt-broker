@@ -7,12 +7,11 @@ import io.netty.handler.codec.mqtt.MqttQoS;
 import org.kin.framework.utils.Extension;
 import org.kin.mqtt.broker.core.MqttBrokerContext;
 import org.kin.mqtt.broker.core.MqttChannel;
-import org.kin.mqtt.broker.core.message.MqttMessageReplica;
 import org.kin.mqtt.broker.core.message.MqttMessageUtils;
 import org.kin.mqtt.broker.core.message.MqttMessageWrapper;
-import org.kin.mqtt.broker.core.store.MqttMessageStore;
 import org.kin.mqtt.broker.core.topic.TopicManager;
 import org.kin.mqtt.broker.core.topic.TopicSubscription;
+import org.kin.mqtt.broker.store.MqttMessageStore;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import reactor.core.publisher.Mono;
@@ -137,7 +136,7 @@ public final class PublishHandler extends AbstractMqttMessageHandler<MqttPublish
         return Mono.fromRunnable(() -> {
             if (message.fixedHeader().isRetain()) {
                 //存储retain消息
-                messageStore.saveRetainMessage(MqttMessageReplica.fromPublishMessage(clientId, message, timestamp));
+                messageStore.saveRetainMessage(MqttMessageUtils.toReplica(clientId, message, timestamp));
             }
         });
     }

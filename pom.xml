@@ -14,6 +14,8 @@
         <module>kin-mqtt-broker-standalone-starter</module>
         <module>kin-mqtt-broker-gossip-starter</module>
         <module>kin-mqtt-broker-example</module>
+        <module>kin-mqtt-broker-store</module>
+        <module>kin-mqtt-broker-common</module>
     </modules>
     <packaging>pom</packaging>
 

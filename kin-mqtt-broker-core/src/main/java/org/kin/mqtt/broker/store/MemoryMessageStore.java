@@ -1,4 +1,4 @@
-package org.kin.mqtt.broker.core.store;
+package org.kin.mqtt.broker.store;
 
 import org.jctools.maps.NonBlockingHashMap;
 import org.kin.mqtt.broker.core.message.MqttMessageReplica;

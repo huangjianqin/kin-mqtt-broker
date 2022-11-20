@@ -1,5 +1,6 @@
 package org.kin.mqtt.broker.auth.user;
 
+import org.kin.mqtt.broker.Constants;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
 import java.util.Map;
@@ -8,7 +9,7 @@ import java.util.Map;
  * @author huangjianqin
  * @date 2022/11/20
  */
-@ConfigurationProperties("org.kin.mqtt.broker.auth")
+@ConfigurationProperties(Constants.AUTH_PROPERTIES_PREFIX)
 public class UserAuthProperties {
     /** key -> mqtt client id, value -> username & password */
     private Map<String, UserPassword> users;

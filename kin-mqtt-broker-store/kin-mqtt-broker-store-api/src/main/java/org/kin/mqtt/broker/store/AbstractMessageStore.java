@@ -1,4 +1,4 @@
-package org.kin.mqtt.broker.core.store;
+package org.kin.mqtt.broker.store;
 
 /**
  * @author huangjianqin

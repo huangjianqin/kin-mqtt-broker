@@ -292,4 +292,21 @@ public final class MqttMessageUtils {
         byteBuf.resetReaderIndex();
         return bytes;
     }
+
+    /**
+     * 将{@link MqttPublishMessage}转换成{@link MqttMessageReplica}
+     */
+    public static MqttMessageReplica toReplica(String clientId, MqttPublishMessage message, long timestamp) {
+        MqttPublishVariableHeader variableHeader = message.variableHeader();
+        MqttFixedHeader fixedHeader = message.fixedHeader();
+        return MqttMessageReplica.builder()
+                .timestamp(timestamp)
+                .clientId(clientId)
+                .topic(variableHeader.topicName())
+                .setRetain(fixedHeader.isRetain())
+                .qos(fixedHeader.qosLevel().value())
+                .properties(MqttMessageUtils.toStringProperties(variableHeader.properties()))
+                .message(MqttMessageUtils.copyPublishPayload(message))
+                .build();
+    }
 }

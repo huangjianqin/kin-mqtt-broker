@@ -1,5 +1,6 @@
 package org.kin.mqtt.broker.auth.http;
 
+import org.kin.mqtt.broker.Constants;
 import org.kin.mqtt.broker.auth.AuthService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -11,7 +12,7 @@ import org.springframework.context.annotation.Configuration;
  * @author huangjianqin
  * @date 2022/11/20
  */
-@ConditionalOnProperty("org.kin.mqtt.broker.auth.url")
+@ConditionalOnProperty(Constants.AUTH_PROPERTIES_PREFIX + ".url")
 @Configuration
 @EnableConfigurationProperties(HttpAuthProperties.class)
 public class HttpAuthAutoConfiguration {

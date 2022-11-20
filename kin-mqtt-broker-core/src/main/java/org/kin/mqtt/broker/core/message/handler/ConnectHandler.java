@@ -9,9 +9,9 @@ import org.kin.mqtt.broker.core.MqttChannelManager;
 import org.kin.mqtt.broker.core.message.MqttMessageReplica;
 import org.kin.mqtt.broker.core.message.MqttMessageUtils;
 import org.kin.mqtt.broker.core.message.MqttMessageWrapper;
-import org.kin.mqtt.broker.core.store.MqttMessageStore;
 import org.kin.mqtt.broker.core.topic.TopicManager;
 import org.kin.mqtt.broker.core.topic.TopicSubscription;
+import org.kin.mqtt.broker.store.MqttMessageStore;
 import reactor.core.publisher.Mono;
 
 import javax.annotation.Nonnull;

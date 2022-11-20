@@ -6,7 +6,7 @@ import org.kin.mqtt.broker.cluster.BrokerManager;
 import org.kin.mqtt.broker.core.Interceptor;
 import org.kin.mqtt.broker.core.MqttBroker;
 import org.kin.mqtt.broker.core.MqttBrokerBootstrap;
-import org.kin.mqtt.broker.core.store.MqttMessageStore;
+import org.kin.mqtt.broker.store.MqttMessageStore;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
