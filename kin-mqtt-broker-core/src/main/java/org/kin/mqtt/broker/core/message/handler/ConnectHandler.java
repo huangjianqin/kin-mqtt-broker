@@ -6,16 +6,17 @@ import org.kin.mqtt.broker.auth.AuthService;
 import org.kin.mqtt.broker.core.MqttBrokerContext;
 import org.kin.mqtt.broker.core.MqttChannel;
 import org.kin.mqtt.broker.core.MqttChannelManager;
-import org.kin.mqtt.broker.core.message.MqttMessageReplica;
 import org.kin.mqtt.broker.core.message.MqttMessageUtils;
 import org.kin.mqtt.broker.core.message.MqttMessageWrapper;
 import org.kin.mqtt.broker.core.topic.TopicManager;
 import org.kin.mqtt.broker.core.topic.TopicSubscription;
 import org.kin.mqtt.broker.store.MqttMessageStore;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 import javax.annotation.Nonnull;
-import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -26,6 +27,8 @@ import java.util.stream.Collectors;
  */
 @Extension("publish")
 public class ConnectHandler extends AbstractMqttMessageHandler<MqttConnectMessage> {
+    private static final Logger log = LoggerFactory.getLogger(ConnectHandler.class);
+
     @Override
     public Mono<Void> handle(MqttMessageWrapper<MqttConnectMessage> wrapper, MqttChannel mqttChannel, MqttBrokerContext brokerContext) {
         return Mono.from(handle0(wrapper, mqttChannel, brokerContext));
@@ -92,7 +95,7 @@ public class ConnectHandler extends AbstractMqttMessageHandler<MqttConnectMessag
         mqttChannel.onConnectSuccess(clientId, variableHeader, payload);
 
         return mqttChannel.sendMessage(MqttMessageUtils.createConnAck(MqttConnectReturnCode.CONNECTION_ACCEPTED, mqttVersion), false)
-                .then(Mono.fromRunnable(() -> sendOfflineMessage(brokerContext.getMessageStore(), mqttChannel)));
+                .then(sendOfflineMessage(brokerContext.getMessageStore(), mqttChannel));
     }
 
 
@@ -113,12 +116,15 @@ public class ConnectHandler extends AbstractMqttMessageHandler<MqttConnectMessag
      * @param messageStore 外部mqtt消息存储
      * @param mqttChannel  mqtt client
      */
-    private void sendOfflineMessage(MqttMessageStore messageStore, MqttChannel mqttChannel) {
-        List<MqttMessageReplica> offlineMessages = messageStore.getOfflineMessage(mqttChannel.getClientId());
-        for (MqttMessageReplica offlineMessage : offlineMessages) {
-            mqttChannel.sendMessage(MqttMessageUtils.createPublish(mqttChannel, offlineMessage), offlineMessage.getQos() > 0)
-                    .subscribe();
-        }
+    private Mono<Void> sendOfflineMessage(MqttMessageStore messageStore, MqttChannel mqttChannel) {
+        return messageStore.getOfflineMessage(mqttChannel.getClientId())
+                //以往异常导致正常流程无法继续
+                .onErrorResume(t -> {
+                    log.error("", t);
+                    return Flux.empty();
+                })
+                .flatMap(replica -> mqttChannel.sendMessage(MqttMessageUtils.createPublish(mqttChannel, replica), replica.getQos() > 0))
+                .then();
     }
 
     @Nonnull

@@ -66,7 +66,7 @@ public final class SubscribeHandler extends AbstractMqttMessageHandler<MqttSubsc
      * @param topic        订阅的topic name
      */
     private Flux<Void> sendRetainMessage(MqttMessageStore messageStore, MqttChannel mqttChannel, String topic) {
-        return Flux.fromIterable(messageStore.getRetainMessage(topic))
+        return messageStore.getRetainMessage(topic)
                 .flatMap(retainMessage -> mqttChannel.sendMessage(MqttMessageUtils.createPublish(mqttChannel, retainMessage), retainMessage.getQos() > 0));
     }
 

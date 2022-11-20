@@ -1,9 +1,9 @@
 package org.kin.mqtt.broker.store;
 
 import org.kin.mqtt.broker.core.message.MqttMessageReplica;
+import reactor.core.publisher.Flux;
 
 import javax.annotation.Nonnull;
-import java.util.List;
 
 /**
  * mqtt消息外部存储
@@ -26,7 +26,7 @@ public interface MqttMessageStore {
      * @return 下线后接收到的消息
      */
     @Nonnull
-    List<MqttMessageReplica> getOfflineMessage(String clientId);
+    Flux<MqttMessageReplica> getOfflineMessage(String clientId);
 
     /**
      * 保留mqtt retain消息
@@ -42,5 +42,5 @@ public interface MqttMessageStore {
      * @return mqtt retain消息
      */
     @Nonnull
-    List<MqttMessageReplica> getRetainMessage(String topic);
+    Flux<MqttMessageReplica> getRetainMessage(String topic);
 }

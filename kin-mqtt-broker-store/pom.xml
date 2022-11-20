@@ -13,6 +13,14 @@
     <packaging>pom</packaging>
     <modules>
         <module>kin-mqtt-broker-store-api</module>
+        <module>kin-mqtt-broker-store-redis-stater</module>
     </modules>
+
+    <dependencies>
+        <dependency>
+            <groupId>io.projectreactor</groupId>
+            <artifactId>reactor-core</artifactId>
+        </dependency>
+    </dependencies>
 
 </project>

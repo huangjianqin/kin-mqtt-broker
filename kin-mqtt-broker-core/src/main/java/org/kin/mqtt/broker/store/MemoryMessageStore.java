@@ -2,6 +2,7 @@ package org.kin.mqtt.broker.store;
 
 import org.jctools.maps.NonBlockingHashMap;
 import org.kin.mqtt.broker.core.message.MqttMessageReplica;
+import reactor.core.publisher.Flux;
 
 import java.util.Collections;
 import java.util.List;
@@ -29,12 +30,12 @@ public final class MemoryMessageStore extends AbstractMessageStore {
     }
 
     @Override
-    public List<MqttMessageReplica> getOfflineMessage(String clientId) {
+    public Flux<MqttMessageReplica> getOfflineMessage(String clientId) {
         List<MqttMessageReplica> replicas = offlineMessages.remove(clientId);
         if (Objects.isNull(replicas)) {
             replicas = Collections.emptyList();
         }
-        return replicas;
+        return Flux.fromIterable(replicas);
     }
 
     @Override
@@ -43,11 +44,11 @@ public final class MemoryMessageStore extends AbstractMessageStore {
     }
 
     @Override
-    public List<MqttMessageReplica> getRetainMessage(String topic) {
-        return retainMessages.entrySet()
+    public Flux<MqttMessageReplica> getRetainMessage(String topic) {
+        return Flux.fromIterable(retainMessages.entrySet()
                 .stream()
                 .filter(e -> e.getKey().matches(toRegexTopic(topic)))
                 .map(Map.Entry::getValue)
-                .collect(Collectors.toList());
+                .collect(Collectors.toList()));
     }
 }
