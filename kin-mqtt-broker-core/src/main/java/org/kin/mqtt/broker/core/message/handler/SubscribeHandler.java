@@ -11,6 +11,8 @@ import org.kin.mqtt.broker.core.message.MqttMessageWrapper;
 import org.kin.mqtt.broker.core.topic.TopicManager;
 import org.kin.mqtt.broker.core.topic.TopicSubscription;
 import org.kin.mqtt.broker.store.MqttMessageStore;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
@@ -25,6 +27,8 @@ import java.util.stream.Collectors;
  */
 @Extension("subscribe")
 public final class SubscribeHandler extends AbstractMqttMessageHandler<MqttSubscribeMessage> {
+    private static final Logger log = LoggerFactory.getLogger(SubscribeHandler.class);
+
     @Override
     public Mono<Void> handle(MqttMessageWrapper<MqttSubscribeMessage> wrapper, MqttChannel mqttChannel, MqttBrokerContext brokerContext) {
         MqttSubscribeMessage message = wrapper.getMessage();
@@ -67,6 +71,11 @@ public final class SubscribeHandler extends AbstractMqttMessageHandler<MqttSubsc
      */
     private Flux<Void> sendRetainMessage(MqttMessageStore messageStore, MqttChannel mqttChannel, String topic) {
         return messageStore.getRetainMessage(topic)
+                //以往异常导致正常流程无法继续
+                .onErrorResume(t -> {
+                    log.error("", t);
+                    return Flux.empty();
+                })
                 .flatMap(retainMessage -> mqttChannel.sendMessage(MqttMessageUtils.createPublish(mqttChannel, retainMessage), retainMessage.getQos() > 0));
     }
 
