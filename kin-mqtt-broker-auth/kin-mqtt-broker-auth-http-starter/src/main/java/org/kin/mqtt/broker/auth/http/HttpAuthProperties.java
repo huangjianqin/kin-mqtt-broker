@@ -6,7 +6,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
  * @author huangjianqin
  * @date 2022/11/20
  */
-@ConfigurationProperties("org.kin.mqtt.broker.auth.http")
+@ConfigurationProperties("org.kin.mqtt.broker.auth")
 public class HttpAuthProperties {
     /** http post url */
     private String url;

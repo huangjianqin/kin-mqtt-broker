@@ -11,7 +11,7 @@ import org.springframework.context.annotation.Configuration;
  * @author huangjianqin
  * @date 2022/11/20
  */
-@ConditionalOnProperty("org.kin.mqtt.broker.auth.http.url")
+@ConditionalOnProperty("org.kin.mqtt.broker.auth.url")
 @Configuration
 @EnableConfigurationProperties(HttpAuthProperties.class)
 public class HttpAuthAutoConfiguration {
