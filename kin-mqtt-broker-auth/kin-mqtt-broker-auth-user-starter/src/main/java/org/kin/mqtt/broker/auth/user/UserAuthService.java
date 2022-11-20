@@ -7,7 +7,7 @@ import reactor.core.publisher.Mono;
 import java.util.*;
 
 /**
- * 基于用户名和密码验证
+ * 基于用户名和密码验证, 支持通过*匹配全部mqtt client
  *
  * @author huangjianqin
  * @date 2022/11/20
@@ -31,6 +31,11 @@ public final class UserAuthService implements AuthService {
     public Mono<Boolean> auth(String userName, byte[] passwordBytes, String clientId) {
         return Mono.fromCallable(() -> {
             UserPasswordBytes userPasswordBytes = users.get(clientId);
+            if (Objects.isNull(userPasswordBytes)) {
+                //尝试通配符*匹配
+                userPasswordBytes = users.get("root");
+            }
+
             if (Objects.nonNull(userPasswordBytes)) {
                 return userPasswordBytes.getUserName().equals(userName) &&
                         Arrays.equals(userPasswordBytes.getPasswordBytes(), passwordBytes);

@@ -3,5 +3,7 @@ org:
     mqtt:
       broker:
         auth:
-          username: hjq
-          password: 123456
+          users:
+            root:
+              username: hjq
+              password: 12345
