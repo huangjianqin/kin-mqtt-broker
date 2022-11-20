@@ -18,6 +18,7 @@
         <kin-transport-bom.version>0.2.0.0</kin-transport-bom.version>
         <paho.version>1.2.5</paho.version>
         <scalecube-cluster.version>2.6.12</scalecube-cluster.version>
+        <r2dhc-pool.version>1.0.0.RELEASE</r2dhc-pool.version>
     </properties>
 
     <dependencyManagement>
@@ -76,6 +77,13 @@
                 <groupId>io.scalecube</groupId>
                 <artifactId>scalecube-transport-netty</artifactId>
                 <version>${scalecube-cluster.version}</version>
+            </dependency>
+
+            <!-- r2dhc-pool -->
+            <dependency>
+                <groupId>io.r2dbc</groupId>
+                <artifactId>r2dbc-pool</artifactId>
+                <version>${r2dhc-pool.version}</version>
             </dependency>
         </dependencies>
     </dependencyManagement>

@@ -17,4 +17,9 @@ public abstract class AbstractMessageStore implements MqttMessageStore {
                 .replaceAll("\\+", "[^/]+")
                 .replaceAll("#", "(.+)") + "$";
     }
+
+    @Override
+    public void dispose() {
+        //默认do nothing
+    }
 }

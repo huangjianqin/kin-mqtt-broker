@@ -1,6 +1,7 @@
 package org.kin.mqtt.broker.store;
 
 import org.kin.mqtt.broker.core.message.MqttMessageReplica;
+import reactor.core.Disposable;
 import reactor.core.publisher.Flux;
 
 import javax.annotation.Nonnull;
@@ -11,7 +12,7 @@ import javax.annotation.Nonnull;
  * @author huangjianqin
  * @date 2022/11/14
  */
-public interface MqttMessageStore {
+public interface MqttMessageStore extends Disposable {
     /**
      * 保存mqtt client下线后接收到的消息
      *

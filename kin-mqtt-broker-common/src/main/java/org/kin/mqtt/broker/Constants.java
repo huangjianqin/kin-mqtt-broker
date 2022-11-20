@@ -13,4 +13,6 @@ public interface Constants {
     String GOSSIP_PROPERTIES_PREFIX = "org.kin.mqtt.broker.gossip";
     /** auth配置前缀 */
     String AUTH_PROPERTIES_PREFIX = "org.kin.mqtt.broker.auth";
+    /** store配置前缀 */
+    String STORE_PROPERTIES_PREFIX = "org.kin.mqtt.broker.store";
 }
