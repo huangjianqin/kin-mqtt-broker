@@ -66,7 +66,7 @@ public final class RedisMessageStore extends AbstractMessageStore {
         byte[] payload = replica.getMessage();
         String key = getRetainMessageKey(topic);
         if (Objects.isNull(payload) || payload.length == 0) {
-            //删除retain消息
+            //payload为空, 删除retain消息
             template.opsForValue().delete(key).subscribe();
         } else {
             //替换retain消息
