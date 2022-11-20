@@ -1,0 +1,7 @@
+org:
+  kin:
+    mqtt:
+      broker:
+        auth:
+          username: hjq
+          password: 123456

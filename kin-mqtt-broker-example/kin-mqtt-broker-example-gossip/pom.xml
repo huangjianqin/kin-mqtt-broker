@@ -17,6 +17,12 @@
             <artifactId>kin-mqtt-broker-gossip-starter</artifactId>
             <version>${project.version}</version>
         </dependency>
+
+        <dependency>
+            <groupId>org.kin</groupId>
+            <artifactId>kin-mqtt-broker-auth-password-starter</artifactId>
+            <version>${project.version}</version>
+        </dependency>
     </dependencies>
 
 </project>

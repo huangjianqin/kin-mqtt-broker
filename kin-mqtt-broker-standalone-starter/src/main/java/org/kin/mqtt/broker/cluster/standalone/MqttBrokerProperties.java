@@ -1,12 +1,13 @@
 package org.kin.mqtt.broker.cluster.standalone;
 
+import org.kin.mqtt.broker.core.Constants;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
 /**
  * @author huangjianqin
  * @date 2022/11/19
  */
-@ConfigurationProperties("org.kin.mqtt.broker")
+@ConfigurationProperties(Constants.PROPERTIES_PREFIX)
 public class MqttBrokerProperties {
     /** mqtt broker port, default 1883 */
     private int port = 1883;

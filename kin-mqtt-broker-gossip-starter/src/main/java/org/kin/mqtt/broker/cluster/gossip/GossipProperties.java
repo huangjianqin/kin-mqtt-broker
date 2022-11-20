@@ -1,12 +1,13 @@
 package org.kin.mqtt.broker.cluster.gossip;
 
+import org.kin.mqtt.broker.core.Constants;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
 /**
  * @author huangjianqin
  * @date 2022/11/19
  */
-@ConfigurationProperties("org.kin.mqtt.broker.gossip")
+@ConfigurationProperties(Constants.PROPERTIES_PREFIX + ".gossip")
 public class GossipProperties {
     /** gossip暴露端口 */
     private int port;

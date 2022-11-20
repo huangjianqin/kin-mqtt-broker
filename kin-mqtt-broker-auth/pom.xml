@@ -13,6 +13,7 @@
     <packaging>pom</packaging>
     <modules>
         <module>kin-mqtt-broker-auth-api</module>
+        <module>kin-mqtt-broker-auth-password-starter</module>
     </modules>
 
     <dependencies>
