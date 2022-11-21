@@ -75,6 +75,12 @@
             <groupId>org.eclipse.collections</groupId>
             <artifactId>eclipse-collections</artifactId>
         </dependency>
+
+        <!-- 表达式引擎 -->
+        <dependency>
+            <groupId>org.apache.commons</groupId>
+            <artifactId>commons-jexl3</artifactId>
+        </dependency>
     </dependencies>
 
 </project>

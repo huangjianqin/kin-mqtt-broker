@@ -5,9 +5,14 @@ import org.kin.framework.utils.SysUtils;
 import org.kin.mqtt.broker.auth.AuthService;
 import org.kin.mqtt.broker.cluster.BrokerManager;
 import org.kin.mqtt.broker.core.topic.TopicManager;
+import org.kin.mqtt.broker.rule.RuleChainDefinition;
+import org.kin.mqtt.broker.rule.RuleChainExecutor;
+import org.kin.mqtt.broker.rule.RuleChainManager;
 import org.kin.mqtt.broker.store.MqttMessageStore;
 import reactor.core.scheduler.Scheduler;
 import reactor.core.scheduler.Schedulers;
+
+import java.util.List;
 
 /**
  * 包含一些mqtt broker共享资源, 全局唯一
@@ -32,13 +37,20 @@ public final class MqttBrokerContext implements Closeable {
     private final BrokerManager brokerManager;
     /** mqtt消息外部存储 */
     private final MqttMessageStore messageStore;
+    /** 规则链管理 */
+    private final RuleChainManager ruleChainManager = new RuleChainManager();
+    /** 规则链执行 */
+    private final RuleChainExecutor ruleChainExecutor = new RuleChainExecutor(ruleChainManager);
 
-    public MqttBrokerContext(int port, MqttMessageDispatcher dispatcher, AuthService authService, BrokerManager brokerManager, MqttMessageStore messageStore) {
+    public MqttBrokerContext(int port, MqttMessageDispatcher dispatcher, AuthService authService,
+                             BrokerManager brokerManager, MqttMessageStore messageStore,
+                             List<RuleChainDefinition> ruleChainDefinitions) {
         mqttMessageHandleScheduler = Schedulers.newBoundedElastic(SysUtils.CPU_NUM * 10, Integer.MAX_VALUE, "kin-mqtt-broker-bs-" + port, 60);
         this.dispatcher = dispatcher;
         this.authService = authService;
         this.brokerManager = brokerManager;
         this.messageStore = messageStore;
+        this.ruleChainManager.addRuleChains(ruleChainDefinitions);
     }
 
     @Override
@@ -79,5 +91,13 @@ public final class MqttBrokerContext implements Closeable {
 
     public BrokerManager getBrokerManager() {
         return brokerManager;
+    }
+
+    public RuleChainManager getRuleChainManager() {
+        return ruleChainManager;
+    }
+
+    public RuleChainExecutor getRuleChainExecutor() {
+        return ruleChainExecutor;
     }
 }

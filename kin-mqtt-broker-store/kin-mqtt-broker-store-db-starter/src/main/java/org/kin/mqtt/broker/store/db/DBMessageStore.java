@@ -7,6 +7,7 @@ import org.kin.framework.utils.JSON;
 import org.kin.framework.utils.StringUtils;
 import org.kin.mqtt.broker.core.message.MqttMessageReplica;
 import org.kin.mqtt.broker.store.AbstractMessageStore;
+import org.kin.mqtt.broker.utils.TopicUtils;
 import org.reactivestreams.Publisher;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -150,7 +151,7 @@ public final class DBMessageStore extends AbstractMessageStore {
                         .filter(row -> {
                             String queryTopic = row.get("topic", String.class);
                             if (StringUtils.isNotBlank(queryTopic)) {
-                                return queryTopic.matches(toRegexTopic(topic));
+                                return queryTopic.matches(TopicUtils.toRegexTopic(topic));
                             }
                             return false;
                         })

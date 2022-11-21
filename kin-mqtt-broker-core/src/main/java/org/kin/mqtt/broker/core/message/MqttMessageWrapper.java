@@ -1,9 +1,7 @@
 package org.kin.mqtt.broker.core.message;
 
-import io.netty.buffer.PooledByteBufAllocator;
 import io.netty.handler.codec.mqtt.MqttMessage;
 import io.netty.handler.codec.mqtt.MqttPublishMessage;
-import io.netty.handler.codec.mqtt.MqttQoS;
 
 /**
  * 对{@link MqttMessage}简单包装, 新增一些额外的信息
@@ -29,13 +27,7 @@ public final class MqttMessageWrapper<T extends MqttMessage> {
     }
 
     public static MqttMessageWrapper<MqttPublishMessage> fromCluster(MqttMessageReplica replica) {
-        MqttPublishMessage publishMessage = MqttMessageUtils.createPublish(false,
-                MqttQoS.valueOf(replica.getQos()),
-                0,
-                replica.getTopic(),
-                PooledByteBufAllocator.DEFAULT.buffer().writeBytes(replica.getPayload()),
-                replica.getProperties());
-        return new MqttMessageWrapper<>(publishMessage, true);
+        return new MqttMessageWrapper<>(MqttMessageUtils.createPublish(replica), true);
     }
 
     //getter

@@ -13,6 +13,7 @@ import org.kin.mqtt.broker.auth.NoneAuthService;
 import org.kin.mqtt.broker.cluster.BrokerManager;
 import org.kin.mqtt.broker.cluster.StandaloneBrokerManager;
 import org.kin.mqtt.broker.core.message.MqttMessageWrapper;
+import org.kin.mqtt.broker.rule.RuleChainDefinition;
 import org.kin.mqtt.broker.store.MemoryMessageStore;
 import org.kin.mqtt.broker.store.MqttMessageStore;
 import org.kin.transport.netty.ServerTransport;
@@ -23,7 +24,7 @@ import reactor.netty.DisposableServer;
 import reactor.netty.resources.LoopResources;
 import reactor.netty.tcp.TcpServer;
 
-import java.util.ArrayList;
+import java.util.LinkedList;
 import java.util.List;
 
 /**
@@ -40,13 +41,15 @@ public final class MqttBrokerBootstrap extends ServerTransport {
     /** 最大消息大小, 默认4MB */
     private int messageMaxSize = 4194304;
     /** 注册的interceptor */
-    private final List<Interceptor> interceptors = new ArrayList<>();
+    private final List<Interceptor> interceptors = new LinkedList<>();
     /** mqtt broker集群管理. 默认单节点模式 */
     private BrokerManager brokerManager = StandaloneBrokerManager.INSTANCE;
     /** mqtt消息外部存储, 默认存储在jvm内存 */
     private MqttMessageStore messageStore = new MemoryMessageStore();
     /** auth service, 默认不进行校验 */
     private AuthService authService = NoneAuthService.INSTANCE;
+    /** 规则链定义 */
+    private List<RuleChainDefinition> ruleChainDefinitions = new LinkedList<>();
 
     public static MqttBrokerBootstrap create() {
         return new MqttBrokerBootstrap();
@@ -114,6 +117,14 @@ public final class MqttBrokerBootstrap extends ServerTransport {
     }
 
     /**
+     * 规则链配置
+     */
+    public MqttBrokerBootstrap ruleChain(RuleChainDefinition definition) {
+        this.ruleChainDefinitions.add(definition);
+        return this;
+    }
+
+    /**
      * start mqtt server及其admin server
      */
     public MqttBroker start() {
@@ -123,7 +134,7 @@ public final class MqttBrokerBootstrap extends ServerTransport {
         }
 
         MqttBrokerContext brokerContext = new MqttBrokerContext(port, new MqttMessageDispatcher(interceptors),
-                authService, brokerManager, messageStore);
+                authService, brokerManager, messageStore, ruleChainDefinitions);
         BrokerManager brokerManager;
 
         //启动mqtt broker
@@ -198,7 +209,7 @@ public final class MqttBrokerBootstrap extends ServerTransport {
                         .publishOn(brokerContext.getMqttMessageHandleScheduler())
                         .subscribe(clusterMessage -> brokerContext.getDispatcher().dispatch(
                                         MqttMessageWrapper.fromCluster(clusterMessage),
-                                        new MqttBrokerChannel(brokerContext, clusterMessage.getClientId()),
+                                        new FakeMqttChannel(brokerContext, clusterMessage.getClientId()),
                                         brokerContext),
                                 t -> log.error("broker manager handle cluster message error", t))))
                 .subscribe();
@@ -227,5 +238,9 @@ public final class MqttBrokerBootstrap extends ServerTransport {
 
     public BrokerManager getBrokerManager() {
         return brokerManager;
+    }
+
+    public List<RuleChainDefinition> getRuleChainDefinitions() {
+        return ruleChainDefinitions;
     }
 }

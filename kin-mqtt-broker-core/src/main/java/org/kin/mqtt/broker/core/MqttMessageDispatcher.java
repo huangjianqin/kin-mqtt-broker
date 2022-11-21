@@ -111,7 +111,8 @@ public final class MqttMessageDispatcher {
             BrokerManager brokerManager = brokerContext.getBrokerManager();
             brokerManager.broadcastMqttMessage(messageReplica).subscribe();
 
-            // TODO: 2022/11/14 dsl规则匹配, 支持定义广播mqtt到指定datasource, 全异步
+            //规则匹配
+            brokerContext.getRuleChainExecutor().execute(brokerContext, messageReplica).subscribe();
         }
     }
 }

@@ -146,7 +146,34 @@ public final class MqttMessageUtils {
         MqttPublishVariableHeader newVariableHeader = new MqttPublishVariableHeader(variableHeader.topicName(), messageId, variableHeader.properties());
         // TODO: 2022/11/14 copy
         return new MqttPublishMessage(newFixedHeader, newVariableHeader, message.payload().copy());
+    }
 
+    /**
+     * 构建publish消息
+     *
+     * @return publish消息
+     */
+    public static MqttPublishMessage createPublish(MqttMessageReplica replica) {
+        return MqttMessageUtils.createPublish(false,
+                MqttQoS.valueOf(replica.getQos()),
+                0,
+                replica.getTopic(),
+                PooledByteBufAllocator.DEFAULT.buffer().writeBytes(replica.getPayload()),
+                replica.getProperties());
+    }
+
+    /**
+     * 构建publish消息
+     *
+     * @return publish消息
+     */
+    public static MqttPublishMessage createPublish(MqttMessageReplica replica, String realTopic) {
+        return MqttMessageUtils.createPublish(false,
+                MqttQoS.valueOf(replica.getQos()),
+                0,
+                replica.getTopic(),
+                PooledByteBufAllocator.DEFAULT.buffer().writeBytes(replica.getPayload()),
+                replica.getProperties());
     }
 
     /**

@@ -2,6 +2,7 @@ package org.kin.mqtt.broker.store;
 
 import org.jctools.maps.NonBlockingHashMap;
 import org.kin.mqtt.broker.core.message.MqttMessageReplica;
+import org.kin.mqtt.broker.utils.TopicUtils;
 import reactor.core.publisher.Flux;
 
 import java.util.Collections;
@@ -47,7 +48,7 @@ public final class MemoryMessageStore extends AbstractMessageStore {
     public Flux<MqttMessageReplica> getRetainMessage(String topic) {
         return Flux.fromIterable(retainMessages.entrySet()
                 .stream()
-                .filter(e -> e.getKey().matches(toRegexTopic(topic)))
+                .filter(e -> e.getKey().matches(TopicUtils.toRegexTopic(topic)))
                 .map(Map.Entry::getValue)
                 .collect(Collectors.toList()));
     }

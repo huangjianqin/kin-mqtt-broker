@@ -2,6 +2,7 @@ package org.kin.mqtt.broker.store.redis;
 
 import org.kin.mqtt.broker.core.message.MqttMessageReplica;
 import org.kin.mqtt.broker.store.AbstractMessageStore;
+import org.kin.mqtt.broker.utils.TopicUtils;
 import org.springframework.data.redis.core.ReactiveRedisTemplate;
 import reactor.core.publisher.Flux;
 
@@ -81,7 +82,7 @@ public final class RedisMessageStore extends AbstractMessageStore {
                 //替换前缀
                 .map(key -> key.replaceAll(RETAIN_MESSAGE_KEY_PREFIX, ""))
                 //过滤不匹配的topic
-                .filter(tp -> tp.matches(toRegexTopic(topic)))
+                .filter(tp -> tp.matches(TopicUtils.toRegexTopic(topic)))
                 //redis get对应topic的retain消息
                 .flatMap(tp -> template.opsForValue()
                         .get(getRetainMessageKey(tp))
