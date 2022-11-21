@@ -13,8 +13,8 @@
     <packaging>pom</packaging>
     <modules>
         <module>kin-mqtt-broker-store-api</module>
-        <module>kin-mqtt-broker-store-redis-stater</module>
-        <module>kin-mqtt-broker-store-db-stater</module>
+        <module>kin-mqtt-broker-store-redis-starter</module>
+        <module>kin-mqtt-broker-store-db-starter</module>
     </modules>
 
     <dependencies>
