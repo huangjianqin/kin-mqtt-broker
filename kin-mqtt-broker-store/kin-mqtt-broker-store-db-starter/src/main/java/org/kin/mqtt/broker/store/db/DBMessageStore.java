@@ -187,7 +187,7 @@ public final class DBMessageStore extends AbstractMessageStore {
     }
 
     @Override
-    public void dispose() {
+    public void close() {
         connectionPool.dispose();
     }
 }

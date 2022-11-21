@@ -6,7 +6,7 @@ package org.kin.mqtt.broker.store;
  */
 public abstract class AbstractMessageStore implements MqttMessageStore {
     @Override
-    public void dispose() {
+    public void close() {
         //默认do nothing
     }
 }

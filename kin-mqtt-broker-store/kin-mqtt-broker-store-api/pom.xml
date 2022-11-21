@@ -18,10 +18,10 @@
             <version>${project.version}</version>
         </dependency>
 
-        <!-- 供idea代码检查 -->
         <dependency>
-            <groupId>com.google.code.findbugs</groupId>
-            <artifactId>jsr305</artifactId>
+            <groupId>org.kin</groupId>
+            <artifactId>kin-framework-java</artifactId>
+            <scope>provided</scope>
         </dependency>
     </dependencies>
 </project>
