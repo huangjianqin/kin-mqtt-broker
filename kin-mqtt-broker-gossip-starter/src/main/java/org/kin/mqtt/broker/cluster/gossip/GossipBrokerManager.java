@@ -123,7 +123,6 @@ public final class GossipBrokerManager implements BrokerManager {
      * gossip消息处理
      */
     private class GossipMessageHandler implements ClusterMessageHandler {
-
         @Override
         public void onMessage(Message message) {
             log.warn("cluster is not support to handle message {} ", message);
@@ -137,26 +136,22 @@ public final class GossipBrokerManager implements BrokerManager {
 
         @Override
         public void onMembershipEvent(MembershipEvent event) {
-            // TODO: 2022/11/16
             Member member = event.member();
             StringJoiner sj = new StringJoiner(":");
             sj.add(member.namespace());
             sj.add(member.alias());
-            sj.add(member.address().toString());
+            String address = member.address().toString();
+            sj.add(address);
             log.info("mqtt broker(namespace:alias:address) '{}' {}", sj, event.type());
 
             switch (event.type()) {
                 case ADDED:
-//                    eventMany.tryEmitNext(ClusterStatus.ADDED);
                     break;
                 case LEAVING:
-//                    eventMany.tryEmitNext(ClusterStatus.LEAVING);
                     break;
                 case REMOVED:
-//                    eventMany.tryEmitNext(ClusterStatus.REMOVED);
                     break;
                 case UPDATED:
-//                    eventMany.tryEmitNext(ClusterStatus.UPDATED);
                     break;
                 default:
                     break;

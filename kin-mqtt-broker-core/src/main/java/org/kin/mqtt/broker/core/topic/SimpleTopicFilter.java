@@ -39,8 +39,6 @@ public final class SimpleTopicFilter implements TopicFilter {
         if (subscriptions.add(subscription)) {
             counter.increment();
             subscription.onLinked();
-            // TODO: 2022/11/13
-//            MetricManagerHolder.metricManager.getMetricRegistry().getMetricCounter(CounterType.SUBSCRIBE).increment();
         }
     }
 
@@ -50,8 +48,6 @@ public final class SimpleTopicFilter implements TopicFilter {
         if (subscriptions.remove(subscription)) {
             counter.decrement();
             subscription.onUnlinked();
-            // TODO: 2022/11/13
-//            MetricManagerHolder.metricManager.getMetricRegistry().getMetricCounter(CounterType.SUBSCRIBE).decrement();
         }
     }
 

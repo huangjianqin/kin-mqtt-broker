@@ -269,12 +269,6 @@ public class MqttChannel {
 
         brokerContext.getChannelManager().register(clientId, this);
         afterDispose(this::close0);
-
-        // TODO: 2022/11/15
-//        metricManager.getMetricRegistry().getMetricCounter(CounterType.CONNECT).increment();
-//        afterDispose(channel -> metricManager.getMetricRegistry().getMetricCounter(CounterType.CONNECT).decrement());
-//
-//        eventRegistry.registry(Event.CONNECT, mqttChannel, message, mqttReceiveContext);
     }
 
     /**
@@ -289,10 +283,6 @@ public class MqttChannel {
             brokerContext.getChannelManager().remove(clientId);
         }
         will = null;
-
-        // TODO: 2022/11/15
-//        eventRegistry.registry(Event.CLOSE, mqttChannel, null, mqttReceiveContext);
-//        metricManager.getMetricRegistry().getMetricCounter(CounterType.CLOSE_EVENT).increment();
     }
 
     /**

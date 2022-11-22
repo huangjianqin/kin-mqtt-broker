@@ -1,5 +1,6 @@
 package org.kin.mqtt.broker.core.message.handler;
 
+import io.micrometer.core.instrument.Metrics;
 import io.netty.handler.codec.mqtt.MqttMessageType;
 import io.netty.handler.codec.mqtt.MqttPublishMessage;
 import io.netty.handler.codec.mqtt.MqttPublishVariableHeader;
@@ -11,6 +12,7 @@ import org.kin.mqtt.broker.core.message.MqttMessageUtils;
 import org.kin.mqtt.broker.core.message.MqttMessageWrapper;
 import org.kin.mqtt.broker.core.topic.TopicManager;
 import org.kin.mqtt.broker.core.topic.TopicSubscription;
+import org.kin.mqtt.broker.metrics.MetricsNames;
 import org.kin.mqtt.broker.store.MqttMessageStore;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -31,8 +33,12 @@ public final class PublishHandler extends AbstractMqttMessageHandler<MqttPublish
     @Override
     public Mono<Void> handle(MqttMessageWrapper<MqttPublishMessage> wrapper, MqttChannel mqttChannel, MqttBrokerContext brokerContext) {
         try {
-            // TODO: 2022/11/15
-//            MetricManagerHolder.metricManager.getMetricRegistry().getMetricCounter(CounterType.PUBLISH_EVENT).increment();
+            if (wrapper.isFromCluster()) {
+                Metrics.counter(MetricsNames.CLUSTER_PUBLISH_MSG_COUNT).increment();
+            } else {
+                Metrics.counter(MetricsNames.PUBLISH_MSG_COUNT).increment();
+            }
+
             String clientId = mqttChannel.getClientId();
             MqttPublishMessage message = wrapper.getMessage();
             long timestamp = wrapper.getTimestamp();

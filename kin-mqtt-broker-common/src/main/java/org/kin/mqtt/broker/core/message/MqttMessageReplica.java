@@ -7,7 +7,7 @@ import java.util.Map;
 
 /**
  * mqtt消息副本, 用于集群广播, 持久化等
- * todo 目前仅仅处理publish消息
+ * 目前仅仅处理publish消息
  *
  * @author huangjianqin
  * @date 2022/11/15

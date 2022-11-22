@@ -1,6 +1,8 @@
 package org.kin.mqtt.broker.core;
 
+import io.micrometer.core.instrument.Metrics;
 import org.jctools.maps.NonBlockingHashMap;
+import org.kin.mqtt.broker.metrics.MetricsNames;
 
 import java.util.Collection;
 import java.util.Map;
@@ -16,7 +18,15 @@ public final class DefaultMqttChannelManager implements MqttChannelManager {
 
     @Override
     public void register(String clientId, MqttChannel mqttChannel) {
+        reportOnline();
         clientId2Channel.put(clientId, mqttChannel);
+    }
+
+    /**
+     * 上报该broker连接的mqtt client数量
+     */
+    private void reportOnline() {
+        Metrics.gauge(MetricsNames.ONLINE_NUM, this, manager -> manager.clientId2Channel.size());
     }
 
     @Override
@@ -26,6 +36,7 @@ public final class DefaultMqttChannelManager implements MqttChannelManager {
 
     @Override
     public MqttChannel remove(String clientId) {
+        reportOnline();
         return clientId2Channel.remove(clientId);
     }
 

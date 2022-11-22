@@ -33,9 +33,6 @@ public final class TreeTopicFilter implements TopicFilter {
         if (addResult) {
             counter.increment();
             subscription.onLinked();
-
-            // TODO: 2022/11/13
-//                MetricManagerHolder.metricManager.getMetricRegistry().getMetricCounter(CounterType.SUBSCRIBE).increment();
         }
     }
 
@@ -48,9 +45,6 @@ public final class TreeTopicFilter implements TopicFilter {
         if (removeResult) {
             counter.decrement();
             subscription.onUnlinked();
-
-            // TODO: 2022/11/13
-//                MetricManagerHolder.metricManager.getMetricRegistry().getMetricCounter(CounterType.SUBSCRIBE).decrement();
         }
     }
 
