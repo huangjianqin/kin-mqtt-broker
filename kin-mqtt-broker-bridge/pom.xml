@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <parent>
+        <artifactId>kin-mqtt-broker-parent</artifactId>
+        <groupId>org.kin</groupId>
+        <version>${revision}</version>
+    </parent>
+    <modelVersion>4.0.0</modelVersion>
+
+    <artifactId>kin-mqtt-broker-bridge</artifactId>
+    <packaging>pom</packaging>
+    <modules>
+        <module>kin-mqtt-broker-bridge-api</module>
+        <module>kin-mqtt-broker-bridge-http</module>
+        <module>kin-mqtt-broker-bridge-http-starter</module>
+        <module>kin-mqtt-broker-bridge-kafka</module>
+        <module>kin-mqtt-broker-bridge-kafka-starter</module>
+        <module>kin-mqtt-broker-bridge-rabbitmq</module>
+    </modules>
+
+    <dependencies>
+        <dependency>
+            <groupId>org.kin</groupId>
+            <artifactId>kin-framework-java</artifactId>
+            <scope>provided</scope>
+        </dependency>
+    </dependencies>
+</project>

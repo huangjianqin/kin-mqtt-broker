@@ -20,6 +20,8 @@
         <scalecube-cluster.version>2.6.12</scalecube-cluster.version>
         <r2dhc-pool.version>1.0.0.RELEASE</r2dhc-pool.version>
         <jexl3.version>3.2.1</jexl3.version>
+        <reactor-kafka.version>1.3.9</reactor-kafka.version>
+        <reactor-rabbitmq.version>1.5.5</reactor-rabbitmq.version>
     </properties>
 
     <dependencyManagement>
@@ -92,6 +94,18 @@
                 <groupId>org.apache.commons</groupId>
                 <artifactId>commons-jexl3</artifactId>
                 <version>${jexl3.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>io.projectreactor.kafka</groupId>
+                <artifactId>reactor-kafka</artifactId>
+                <version>${reactor-kafka.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>io.projectreactor.rabbitmq</groupId>
+                <artifactId>reactor-rabbitmq</artifactId>
+                <version>${reactor-rabbitmq.version}</version>
             </dependency>
         </dependencies>
     </dependencyManagement>

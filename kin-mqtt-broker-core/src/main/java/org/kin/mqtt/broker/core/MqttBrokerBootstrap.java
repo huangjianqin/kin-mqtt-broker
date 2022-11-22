@@ -10,6 +10,8 @@ import io.netty.handler.codec.mqtt.MqttPublishMessage;
 import org.kin.framework.utils.SysUtils;
 import org.kin.mqtt.broker.auth.AuthService;
 import org.kin.mqtt.broker.auth.NoneAuthService;
+import org.kin.mqtt.broker.bridge.Bridge;
+import org.kin.mqtt.broker.bridge.BridgeType;
 import org.kin.mqtt.broker.cluster.BrokerManager;
 import org.kin.mqtt.broker.cluster.StandaloneBrokerManager;
 import org.kin.mqtt.broker.core.message.MqttMessageWrapper;
@@ -24,8 +26,7 @@ import reactor.netty.DisposableServer;
 import reactor.netty.resources.LoopResources;
 import reactor.netty.tcp.TcpServer;
 
-import java.util.LinkedList;
-import java.util.List;
+import java.util.*;
 
 /**
  * mqtt broker启动类
@@ -50,6 +51,8 @@ public final class MqttBrokerBootstrap extends ServerTransport {
     private AuthService authService = NoneAuthService.INSTANCE;
     /** 规则链定义 */
     private List<RuleChainDefinition> ruleChainDefinitions = new LinkedList<>();
+    /** key -> {@link BridgeType}, value -> {key -> bridge name, value -> {@link Bridge}实例} */
+    private Map<BridgeType, Map<String, Bridge>> bridgeMap = new HashMap<>();
 
     public static MqttBrokerBootstrap create() {
         return new MqttBrokerBootstrap();
@@ -125,6 +128,19 @@ public final class MqttBrokerBootstrap extends ServerTransport {
     }
 
     /**
+     * 数据桥接定义
+     */
+    public MqttBrokerBootstrap bridge(Bridge bridge) {
+        BridgeType type = bridge.type();
+        String name = bridge.name();
+        Map<String, Bridge> name2Bridge = bridgeMap.computeIfAbsent(type, k -> new HashMap<>(4));
+        if (Objects.nonNull(name2Bridge.put(name, bridge))) {
+            throw new IllegalArgumentException(String.format("bridge '%s' has registered", name));
+        }
+        return this;
+    }
+
+    /**
      * start mqtt server及其admin server
      */
     public MqttBroker start() {
@@ -134,7 +150,7 @@ public final class MqttBrokerBootstrap extends ServerTransport {
         }
 
         MqttBrokerContext brokerContext = new MqttBrokerContext(port, new MqttMessageDispatcher(interceptors),
-                authService, brokerManager, messageStore, ruleChainDefinitions);
+                authService, brokerManager, messageStore, ruleChainDefinitions, bridgeMap);
         BrokerManager brokerManager;
 
         //启动mqtt broker

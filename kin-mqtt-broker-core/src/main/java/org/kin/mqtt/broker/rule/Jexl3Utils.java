@@ -2,6 +2,7 @@ package org.kin.mqtt.broker.rule;
 
 import org.apache.commons.jexl3.*;
 import org.kin.framework.utils.JSON;
+import org.kin.mqtt.broker.bridge.BridgeAttrNames;
 import org.kin.mqtt.broker.utils.TopicUtils;
 
 import java.util.function.Consumer;
@@ -37,8 +38,10 @@ public final class Jexl3Utils {
         JexlScript script = SCRIPT_ENGINE.createScript(scriptStr);
         MapContext context = new MapContext();
         consumer.accept(context);
-        context.set("JSON", JSON.class);
-        context.set("TopicUtils", TopicUtils.class);
+        context.set(JSON.class.getSimpleName(), JSON.class);
+        context.set(TopicUtils.class.getSimpleName(), TopicUtils.class);
+        context.set(RuleChainAttrNames.class.getSimpleName(), RuleChainAttrNames.class);
+        context.set(BridgeAttrNames.class.getSimpleName(), BridgeAttrNames.class);
         return script.execute(context);
     }
 

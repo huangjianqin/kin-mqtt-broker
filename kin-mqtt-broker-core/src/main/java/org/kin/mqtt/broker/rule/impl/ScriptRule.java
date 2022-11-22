@@ -19,7 +19,7 @@ public class ScriptRule extends AbstractRuleNode {
     }
 
     @Override
-    public Mono<Void> execute(RuleChainContext context) {
+    public final Mono<Void> execute(RuleChainContext context) {
         Object result = Jexl3Utils.execScript(definition.getScript(), c -> {
             //脚本逻辑可以访问RuleChainContext
             c.set("chainContext", context);

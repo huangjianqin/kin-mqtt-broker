@@ -10,6 +10,7 @@ import javax.annotation.Nullable;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 /**
  * @author huangjianqin
@@ -44,7 +45,13 @@ public final class RuleChainManager {
             curNode = parseDefinition(childDefinitions.get(i), nextNode);
             nextNode = curNode;
         }
-        ruleChains.put(definition.getName(), new RuleChain(definition.getName(), definition.getDesc(), curNode));
+        String name = definition.getName();
+        if (Objects.nonNull(
+                ruleChains.put(name, new RuleChain(name, definition.getDesc(), curNode))
+        )) {
+            throw new IllegalStateException(String.format("rule chain name '%s' conflict!!", name));
+        }
+        ;
     }
 
     /**

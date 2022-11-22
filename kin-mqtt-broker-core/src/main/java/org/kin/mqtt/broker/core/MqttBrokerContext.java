@@ -1,8 +1,11 @@
 package org.kin.mqtt.broker.core;
 
 import org.kin.framework.Closeable;
+import org.kin.framework.utils.CollectionUtils;
 import org.kin.framework.utils.SysUtils;
 import org.kin.mqtt.broker.auth.AuthService;
+import org.kin.mqtt.broker.bridge.Bridge;
+import org.kin.mqtt.broker.bridge.BridgeType;
 import org.kin.mqtt.broker.cluster.BrokerManager;
 import org.kin.mqtt.broker.core.topic.TopicManager;
 import org.kin.mqtt.broker.rule.RuleChainDefinition;
@@ -12,7 +15,10 @@ import org.kin.mqtt.broker.store.MqttMessageStore;
 import reactor.core.scheduler.Scheduler;
 import reactor.core.scheduler.Schedulers;
 
+import javax.annotation.Nullable;
+import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 
 /**
  * 包含一些mqtt broker共享资源, 全局唯一
@@ -41,23 +47,52 @@ public final class MqttBrokerContext implements Closeable {
     private final RuleChainManager ruleChainManager = new RuleChainManager();
     /** 规则链执行 */
     private final RuleChainExecutor ruleChainExecutor = new RuleChainExecutor(ruleChainManager);
+    /** key -> {@link BridgeType}, value -> {key -> bridge name, value -> {@link Bridge}实例} */
+    private final Map<BridgeType, Map<String, Bridge>> bridgeMap;
 
     public MqttBrokerContext(int port, MqttMessageDispatcher dispatcher, AuthService authService,
                              BrokerManager brokerManager, MqttMessageStore messageStore,
-                             List<RuleChainDefinition> ruleChainDefinitions) {
+                             List<RuleChainDefinition> ruleChainDefinitions,
+                             Map<BridgeType, Map<String, Bridge>> bridgeMap) {
         mqttMessageHandleScheduler = Schedulers.newBoundedElastic(SysUtils.CPU_NUM * 10, Integer.MAX_VALUE, "kin-mqtt-broker-bs-" + port, 60);
         this.dispatcher = dispatcher;
         this.authService = authService;
         this.brokerManager = brokerManager;
         this.messageStore = messageStore;
         this.ruleChainManager.addRuleChains(ruleChainDefinitions);
+        this.bridgeMap = Collections.unmodifiableMap(bridgeMap);
     }
 
     @Override
     public void close() {
-        retryService.close();
+        //cluster close
         brokerManager.shutdown().subscribe();
+        //retry close
+        retryService.close();
+        //bridge close
+        for (Map.Entry<BridgeType, Map<String, Bridge>> entry : bridgeMap.entrySet()) {
+            for (Bridge bridge : entry.getValue().values()) {
+                bridge.close();
+            }
+        }
         mqttMessageHandleScheduler.dispose();
+    }
+
+    /**
+     * 根据桥接名字和类型获取{@link  Bridge}实例
+     *
+     * @param type 桥接类型
+     * @param name 桥接名字
+     * @return {@link  Bridge}实例
+     */
+    @Nullable
+    public Bridge getBridge(BridgeType type, String name) {
+        Map<String, Bridge> name2Bridge = bridgeMap.get(type);
+        if (CollectionUtils.isNonEmpty(name2Bridge)) {
+            return name2Bridge.get(name);
+        }
+
+        return null;
     }
 
     //getter
@@ -99,5 +134,9 @@ public final class MqttBrokerContext implements Closeable {
 
     public RuleChainExecutor getRuleChainExecutor() {
         return ruleChainExecutor;
+    }
+
+    public Map<BridgeType, Map<String, Bridge>> getBridgeMap() {
+        return bridgeMap;
     }
 }
