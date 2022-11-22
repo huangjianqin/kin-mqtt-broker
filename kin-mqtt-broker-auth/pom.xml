@@ -16,11 +16,4 @@
         <module>kin-mqtt-broker-auth-user-starter</module>
         <module>kin-mqtt-broker-auth-http-starter</module>
     </modules>
-
-    <dependencies>
-        <dependency>
-            <groupId>io.projectreactor</groupId>
-            <artifactId>reactor-core</artifactId>
-        </dependency>
-    </dependencies>
 </project>

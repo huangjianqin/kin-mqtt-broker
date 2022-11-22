@@ -19,12 +19,4 @@
         <module>kin-mqtt-broker-bridge-kafka-starter</module>
         <module>kin-mqtt-broker-bridge-rabbitmq</module>
     </modules>
-
-    <dependencies>
-        <dependency>
-            <groupId>org.kin</groupId>
-            <artifactId>kin-framework-java</artifactId>
-            <scope>provided</scope>
-        </dependency>
-    </dependencies>
 </project>
