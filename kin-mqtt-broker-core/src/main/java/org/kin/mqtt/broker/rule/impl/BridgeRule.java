@@ -37,7 +37,7 @@ public final class BridgeRule extends ScriptRule {
         if (Objects.nonNull(result) && result instanceof String[]) {
             String[] typeAndName = (String[]) result;
             MqttBrokerContext brokerContext = context.getBrokerContext();
-            Bridge bridge = brokerContext.getBridge(BridgeType.valueOf(typeAndName[0]), typeAndName[1]);
+            Bridge bridge = brokerContext.getBridge(BridgeType.getByName(typeAndName[0]), typeAndName[1]);
             if (Objects.nonNull(bridge)) {
                 return bridge.transmit(context.getAttrs());
             }
