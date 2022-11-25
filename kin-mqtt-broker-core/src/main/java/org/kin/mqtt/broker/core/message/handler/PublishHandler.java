@@ -38,7 +38,7 @@ public final class PublishHandler extends AbstractMqttMessageHandler<MqttPublish
 
         //acl访问权限检查
         AclService aclService = brokerContext.getAclService();
-        if (mqttChannel.isFakeChannel()) {
+        if (mqttChannel.isVirtualChannel()) {
             return handle0(wrapper, mqttChannel, brokerContext);
         } else {
             MqttPublishMessage message = wrapper.getMessage();
@@ -71,7 +71,7 @@ public final class PublishHandler extends AbstractMqttMessageHandler<MqttPublish
         //已注册的订阅
         Set<TopicSubscription> subscriptions = topicManager.getSubscriptions(variableHeader.topicName(), qos);
         // http mock
-        if (mqttChannel.isFakeChannel()) {
+        if (mqttChannel.isVirtualChannel()) {
             return broadcastPublish(brokerContext, subscriptions, message, clientId, timestamp);
         }
 

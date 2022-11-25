@@ -217,9 +217,9 @@ public class MqttChannel {
     }
 
     /**
-     * @return 是否是冒牌mqtt channel实例, 即来自于集群, 规则引擎触发的mqtt消息处理
+     * @return 是否是虚拟mqtt channel实例, 即来自于集群, 规则引擎触发的mqtt消息处理
      */
-    public boolean isFakeChannel() {
+    public boolean isVirtualChannel() {
         return false;
     }
 

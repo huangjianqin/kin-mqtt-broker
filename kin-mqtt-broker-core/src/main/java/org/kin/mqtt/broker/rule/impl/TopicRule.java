@@ -1,7 +1,7 @@
 package org.kin.mqtt.broker.rule.impl;
 
-import org.kin.mqtt.broker.core.FakeMqttChannel;
 import org.kin.mqtt.broker.core.MqttBrokerContext;
+import org.kin.mqtt.broker.core.VirtualMqttChannel;
 import org.kin.mqtt.broker.core.message.MqttMessageReplica;
 import org.kin.mqtt.broker.core.message.MqttMessageUtils;
 import org.kin.mqtt.broker.core.message.MqttMessageWrapper;
@@ -32,7 +32,7 @@ public final class TopicRule extends ConditionLessRuleNode {
         //交给mqtt消息handler处理
         return Mono.fromRunnable(() -> brokerContext.getDispatcher().dispatch(
                 MqttMessageWrapper.common(MqttMessageUtils.createPublish(replica, definition.getScript())),
-                new FakeMqttChannel(brokerContext, replica.getClientId()),
+                new VirtualMqttChannel(brokerContext, replica.getClientId()),
                 brokerContext));
     }
 }

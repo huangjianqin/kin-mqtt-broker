@@ -239,7 +239,7 @@ public final class MqttBrokerBootstrap extends ServerTransport {
                         .publishOn(brokerContext.getMqttMessageHandleScheduler())
                         .subscribe(clusterMessage -> brokerContext.getDispatcher().dispatch(
                                         MqttMessageWrapper.fromCluster(clusterMessage),
-                                        new FakeMqttChannel(brokerContext, clusterMessage.getClientId()),
+                                        new VirtualMqttChannel(brokerContext, clusterMessage.getClientId()),
                                         brokerContext),
                                 t -> log.error("broker manager handle cluster message error", t))))
                 .subscribe();
