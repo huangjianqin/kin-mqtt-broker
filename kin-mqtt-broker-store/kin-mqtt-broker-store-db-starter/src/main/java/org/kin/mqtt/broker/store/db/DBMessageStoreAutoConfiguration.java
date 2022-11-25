@@ -22,7 +22,7 @@ public class DBMessageStoreAutoConfiguration {
     @Autowired
     private DBMessageStoreProperties properties;
 
-    @Bean(destroyMethod = "dispose")
+    @Bean(destroyMethod = "close")
     public MqttMessageStore dbMessageStore() {
         return new DBMessageStore(properties);
     }
