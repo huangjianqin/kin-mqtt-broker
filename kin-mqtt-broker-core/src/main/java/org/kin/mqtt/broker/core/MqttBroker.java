@@ -1,10 +1,12 @@
 package org.kin.mqtt.broker.core;
 
 import org.kin.framework.Closeable;
+import reactor.core.Disposable;
 import reactor.core.publisher.Mono;
 import reactor.netty.DisposableServer;
 
-import java.util.Objects;
+import java.util.LinkedList;
+import java.util.List;
 
 /**
  * @author huangjianqin
@@ -13,18 +15,33 @@ import java.util.Objects;
 public final class MqttBroker implements Closeable {
     /** mqtt broker context */
     private final MqttBrokerContext context;
-    /** mqtt server disposable */
-    private volatile DisposableServer mqttServerDisposable;
+    /** mqtt broker disposables */
+    private final List<Disposable> disposables = new LinkedList<>();
 
-    public MqttBroker(MqttBrokerContext context, Mono<DisposableServer> disposableServerMono) {
+    /**
+     * @param context                  mqtt broker context
+     * @param disposableServerMonoList mqtt server disposable mono
+     * @param resCleaner               其他资源清理逻辑
+     */
+    public MqttBroker(MqttBrokerContext context, List<Mono<DisposableServer>> disposableServerMonoList, Runnable resCleaner) {
         this.context = context;
-        disposableServerMono.doOnNext(d -> mqttServerDisposable = d).subscribe();
+        for (Mono<DisposableServer> disposableServerMono : disposableServerMonoList) {
+            disposableServerMono.doOnNext(d -> {
+                synchronized (MqttBroker.this) {
+                    disposables.add(d);
+                    if (disposables.size() == disposableServerMonoList.size() - 1) {
+                        //最后一个disposable, 将清理资源逻辑与其绑定
+                        d.onDispose(resCleaner::run);
+                    }
+                }
+            }).subscribe();
+        }
     }
 
     @Override
-    public void close() {
-        if (Objects.nonNull(mqttServerDisposable)) {
-            mqttServerDisposable.dispose();
+    public synchronized void close() {
+        for (Disposable disposable : disposables) {
+            disposable.dispose();
         }
     }
 

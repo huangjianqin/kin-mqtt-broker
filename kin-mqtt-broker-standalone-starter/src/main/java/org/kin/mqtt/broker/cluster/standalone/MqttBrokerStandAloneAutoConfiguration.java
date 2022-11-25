@@ -41,6 +41,11 @@ public class MqttBrokerStandAloneAutoConfiguration {
         bootstrap.port(mqttBrokerProperties.getPort())
                 .messageMaxSize(mqttBrokerProperties.getMessageMaxSize());
 
+        if (mqttBrokerProperties.isOverWebsocket()) {
+            bootstrap.wsPort(mqttBrokerProperties.getWsPort())
+                    .wsPath(mqttBrokerProperties.getWsPath());
+        }
+
         if (mqttBrokerProperties.isSsl()) {
             bootstrap.ssl(true)
                     .certFile(new File(mqttBrokerProperties.getCertFile()))

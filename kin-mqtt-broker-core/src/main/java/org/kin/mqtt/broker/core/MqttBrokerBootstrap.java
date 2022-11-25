@@ -3,6 +3,9 @@ package org.kin.mqtt.broker.core;
 import com.google.common.base.Preconditions;
 import io.netty.buffer.PooledByteBufAllocator;
 import io.netty.channel.ChannelOption;
+import io.netty.handler.codec.http.HttpObjectAggregator;
+import io.netty.handler.codec.http.HttpServerCodec;
+import io.netty.handler.codec.http.websocketx.WebSocketServerProtocolHandler;
 import io.netty.handler.codec.mqtt.MqttDecoder;
 import io.netty.handler.codec.mqtt.MqttEncoder;
 import io.netty.handler.codec.mqtt.MqttMessage;
@@ -17,6 +20,8 @@ import org.kin.mqtt.broker.bridge.BridgeType;
 import org.kin.mqtt.broker.cluster.BrokerManager;
 import org.kin.mqtt.broker.cluster.StandaloneBrokerManager;
 import org.kin.mqtt.broker.core.message.MqttMessageWrapper;
+import org.kin.mqtt.broker.core.websocket.ByteBuf2WsFrameEncoder;
+import org.kin.mqtt.broker.core.websocket.WsFrame2ByteBufDecoder;
 import org.kin.mqtt.broker.rule.RuleChainDefinition;
 import org.kin.mqtt.broker.store.MemoryMessageStore;
 import org.kin.mqtt.broker.store.MqttMessageStore;
@@ -41,6 +46,10 @@ public final class MqttBrokerBootstrap extends ServerTransport {
 
     /** mqtt broker port, default 1883 */
     private int port = 1883;
+    /** mqtt broker websocket port, default 0, 默认不开启 */
+    private int wsPort;
+    /** websocket握手地址 */
+    private String wsPath = "/";
     /** 最大消息大小, 默认4MB */
     private int messageMaxSize = 4194304;
     /** 注册的interceptor */
@@ -71,6 +80,23 @@ public final class MqttBrokerBootstrap extends ServerTransport {
     public MqttBrokerBootstrap port(int port) {
         Preconditions.checkArgument(port > 0, "port must be greater than 0");
         this.port = port;
+        return this;
+    }
+
+
+    /**
+     * 定义mqtt server websocket port
+     */
+    public MqttBrokerBootstrap wsPort(int wsPort) {
+        this.wsPort = wsPort;
+        return this;
+    }
+
+    /**
+     * websocket握手地址, 默认'/'
+     */
+    public MqttBrokerBootstrap wsPath(String wsPath) {
+        this.wsPath = wsPath;
         return this;
     }
 
@@ -164,11 +190,6 @@ public final class MqttBrokerBootstrap extends ServerTransport {
      * start mqtt server及其admin server
      */
     public MqttBroker start() {
-        TcpServer tcpServer = TcpServer.create();
-        if (isSsl()) {
-            tcpServer = tcpServer.secure(this::secure);
-        }
-
         MqttBrokerContext brokerContext = new MqttBrokerContext(port, new MqttMessageDispatcher(interceptors),
                 authService, brokerManager, messageStore,
                 ruleChainDefinitions, bridgeMap,
@@ -177,6 +198,12 @@ public final class MqttBrokerBootstrap extends ServerTransport {
 
         //启动mqtt broker
         LoopResources loopResources = LoopResources.create("kin-mqtt-server-" + port, 2, SysUtils.DOUBLE_CPU, false);
+        List<Mono<DisposableServer>> disposableServerMonoList = new LinkedList<>();
+        //tcp
+        TcpServer tcpServer = TcpServer.create();
+        if (isSsl()) {
+            tcpServer = tcpServer.secure(this::secure);
+        }
         tcpServer = tcpServer.port(port)
                 .childOption(ChannelOption.ALLOCATOR, PooledByteBufAllocator.DEFAULT)
                 .childOption(ChannelOption.TCP_NODELAY, true)
@@ -191,23 +218,59 @@ public final class MqttBrokerBootstrap extends ServerTransport {
                             .addHandlerFirst(MqttEncoder.INSTANCE);
                     onMqttClientConnected(brokerContext, new MqttChannel(brokerContext, connection));
                 });
-
         //自定义mqtt server配置
         tcpServer = customServerTransport(tcpServer);
         Mono<DisposableServer> disposableServerMono = tcpServer.bind()
                 .doOnNext(d -> {
                     //定义mqtt broker close逻辑
-                    d.onDispose(loopResources);
-                    d.onDispose(brokerContext::close);
                     d.onDispose(() -> log.info("mqtt broker(port:{}) closed", port));
                 })
-                .doOnSuccess(d -> log.info("mqtt server started on port({})", port))
+                .doOnSuccess(d -> log.info("mqtt broker started on port({})", port))
                 .cast(DisposableServer.class);
+        disposableServerMonoList.add(disposableServerMono);
+
+        //websocket
+        if (wsPort > 0) {
+            TcpServer wsServer = TcpServer.create();
+            if (isSsl()) {
+                wsServer = wsServer.secure(this::secure);
+            }
+            wsServer.port(wsPort)
+                    //打印底层event和二进制内容
+//                .wiretap(false)
+                    .childOption(ChannelOption.TCP_NODELAY, true)
+                    .childOption(ChannelOption.SO_KEEPALIVE, true)
+                    .childOption(ChannelOption.SO_REUSEADDR, true)
+                    .option(ChannelOption.ALLOCATOR, PooledByteBufAllocator.DEFAULT)
+                    .metrics(true)
+                    .runOn(loopResources)
+                    .doOnConnection(connection -> {
+                        connection.addHandlerLast(new HttpServerCodec())
+                                .addHandlerLast(new HttpObjectAggregator(65536))
+                                .addHandlerLast(new WebSocketServerProtocolHandler(wsPath, "mqtt, mqttv3.1, mqttv3.1.1"))
+                                .addHandlerLast(new WsFrame2ByteBufDecoder())
+                                .addHandlerLast(new ByteBuf2WsFrameEncoder())
+                                .addHandlerLast(new MqttDecoder(messageMaxSize))
+                                .addHandlerLast(MqttEncoder.INSTANCE);
+                        onMqttClientConnected(brokerContext, new MqttChannel(brokerContext, connection));
+                    });
+            disposableServerMono = wsServer.bind()
+                    .doOnNext(d -> {
+                        //定义mqtt broker over websocket close逻辑
+                        d.onDispose(() -> log.info("mqtt broker over websocket(port:{}) closed", wsPort));
+                    })
+                    .doOnSuccess(d -> log.info("mqtt broker over websocket started on port({})", wsPort))
+                    .cast(DisposableServer.class);
+            disposableServerMonoList.add(disposableServerMono);
+        }
 
         //集群初始化
         initBrokerManager(brokerContext);
 
-        return new MqttBroker(brokerContext, disposableServerMono);
+        return new MqttBroker(brokerContext, disposableServerMonoList, () -> {
+            loopResources.dispose();
+            brokerContext.close();
+        });
     }
 
     /**

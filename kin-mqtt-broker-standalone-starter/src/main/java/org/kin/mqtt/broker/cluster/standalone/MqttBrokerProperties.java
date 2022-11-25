@@ -11,6 +11,10 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 public class MqttBrokerProperties {
     /** mqtt broker port, default 1883 */
     private int port = 1883;
+    /** mqtt broker websocket port, default 0, 默认不开启 */
+    private int wsPort;
+    /** websocket握手地址 */
+    private String wsPath = "/";
     /** 最大消息大小, 默认4MB */
     private int messageMaxSize = 4194304;
     /** 底层tcp连接是否启动ssl */
@@ -22,14 +26,36 @@ public class MqttBrokerProperties {
     /** CA根证书 */
     private String caFile;
 
-    //setter && getter
+    /**
+     * @return 是否开启mqtt broker over websocket
+     */
+    public boolean isOverWebsocket() {
+        return wsPort > 0;
+    }
 
+    //setter && getter
     public int getPort() {
         return port;
     }
 
     public void setPort(int port) {
         this.port = port;
+    }
+
+    public int getWsPort() {
+        return wsPort;
+    }
+
+    public void setWsPort(int wsPort) {
+        this.wsPort = wsPort;
+    }
+
+    public String getWsPath() {
+        return wsPath;
+    }
+
+    public void setWsPath(String wsPath) {
+        this.wsPath = wsPath;
     }
 
     public int getMessageMaxSize() {
