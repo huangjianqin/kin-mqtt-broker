@@ -1,10 +1,10 @@
 package org.kin.mqtt.broker.store.db;
 
-import org.kin.mqtt.broker.Constants;
+import io.r2dbc.pool.ConnectionPool;
+import io.r2dbc.spi.ConnectionFactory;
 import org.kin.mqtt.broker.store.MqttMessageStore;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
-import org.springframework.boot.context.properties.EnableConfigurationProperties;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -12,18 +12,15 @@ import org.springframework.context.annotation.Configuration;
  * @author huangjianqin
  * @date 2022/11/20
  */
-@ConditionalOnProperty({Constants.STORE_PROPERTIES_PREFIX + ".db.driver",
-        Constants.STORE_PROPERTIES_PREFIX + ".db.port",
-        Constants.STORE_PROPERTIES_PREFIX + ".db.user",
-        Constants.STORE_PROPERTIES_PREFIX + ".db.password"})
+@ConditionalOnBean(ConnectionPool.class)
 @Configuration
-@EnableConfigurationProperties(DBMessageStoreProperties.class)
 public class DBMessageStoreAutoConfiguration {
-    @Autowired
-    private DBMessageStoreProperties properties;
 
+    /**
+     * 支持使用自定义配置, {@link DBMessageStoreProperties}或者Spring Data R2DBC(3.0集成在Spring Data Relational), 二选一
+     */
     @Bean(destroyMethod = "close")
-    public MqttMessageStore dbMessageStore() {
-        return new DBMessageStore(properties);
+    public MqttMessageStore dbMessageStore(@Autowired ConnectionFactory connectionFactory) {
+        return new DBMessageStore(connectionFactory);
     }
 }

@@ -1,2 +1,3 @@
 org.springframework.boot.autoconfigure.EnableAutoConfiguration=\
-org.kin.mqtt.broker.store.db.DBMessageStoreAutoConfiguration
+org.kin.mqtt.broker.store.db.DBMessageStoreAutoConfiguration,\
+org.kin.mqtt.broker.store.db.DBMessageStoreAutoPropsConfiguration

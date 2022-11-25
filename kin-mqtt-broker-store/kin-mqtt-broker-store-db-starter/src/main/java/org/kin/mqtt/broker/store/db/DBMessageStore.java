@@ -1,7 +1,5 @@
 package org.kin.mqtt.broker.store.db;
 
-import io.r2dbc.pool.ConnectionPool;
-import io.r2dbc.pool.ConnectionPoolConfiguration;
 import io.r2dbc.spi.*;
 import org.kin.framework.utils.JSON;
 import org.kin.framework.utils.StringUtils;
@@ -13,12 +11,9 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 import javax.annotation.Nonnull;
-import java.time.Duration;
 import java.util.Map;
 import java.util.Objects;
 import java.util.stream.Collectors;
-
-import static io.r2dbc.spi.ConnectionFactoryOptions.*;
 
 /**
  * 基于db存储retain和offline消息
@@ -28,34 +23,15 @@ import static io.r2dbc.spi.ConnectionFactoryOptions.*;
  */
 public final class DBMessageStore extends AbstractMessageStore {
     /** r2dbc连接池 */
-    private final ConnectionPool connectionPool;
+    private final ConnectionFactory connectionFactory;
 
-    public DBMessageStore(DBMessageStoreProperties properties) {
-        ConnectionFactory pooledConnectionFactory = ConnectionFactories.get(ConnectionFactoryOptions.builder()
-                .option(DRIVER, properties.getDriver())
-                .option(HOST, properties.getHost())
-                .option(PORT, properties.getPort())
-                .option(USER, properties.getUser())
-                .option(PASSWORD, properties.getPassword())
-                .option(DATABASE, properties.getDatabase())
-                .build());
-
-        //连接池配置
-        ConnectionPoolConfiguration configuration = ConnectionPoolConfiguration.builder(pooledConnectionFactory)
-                //最大空闲时间
-                .maxIdleTime(Duration.ofMinutes(5))
-                //最小空闲连接数量
-                .minIdle(2)
-                //最大连接数
-                .maxSize(20)
-                .build();
-
-        this.connectionPool = new ConnectionPool(configuration);
+    public DBMessageStore(ConnectionFactory connectionFactory) {
+        this.connectionFactory = connectionFactory;
     }
 
     @Override
     public void saveOfflineMessage(MqttMessageReplica replica) {
-        Flux.usingWhen(connectionPool.create(),
+        Flux.usingWhen(connectionFactory.create(),
                         connection -> Flux.from(
                                 //保存offline消息
                                 connection.createStatement("INSERT INTO kin_mqtt_broker_offline('client_id', 'topic', 'qos', 'retain', 'payload', 'create_time', 'properties')" +
@@ -76,7 +52,7 @@ public final class DBMessageStore extends AbstractMessageStore {
     @Nonnull
     @Override
     public Flux<MqttMessageReplica> getOfflineMessage(String clientId) {
-        return Flux.usingWhen(connectionPool.create(),
+        return Flux.usingWhen(connectionFactory.create(),
                 //根据mqtt client id查询offline消息
                 connection -> Flux.from(connection.createStatement("SELECT * FROM kin_mqtt_broker_offline WHERE client_id = ?")
                                 .bind(0, clientId)
@@ -91,7 +67,7 @@ public final class DBMessageStore extends AbstractMessageStore {
         byte[] payload = replica.getPayload();
         if (Objects.isNull(payload) || payload.length == 0) {
             //payload为空, 删除retain消息
-            Flux.usingWhen(connectionPool.create(),
+            Flux.usingWhen(connectionFactory.create(),
                             connection -> Flux.from(
                                     connection.createStatement("DELETE FROM kin_mqtt_broker_retain WHERE topic = ?")
                                             .bind(0, replica.getTopic())
@@ -101,7 +77,7 @@ public final class DBMessageStore extends AbstractMessageStore {
                     .subscribe();
         } else {
             //替换retain消息
-            Flux.usingWhen(connectionPool.create(),
+            Flux.usingWhen(connectionFactory.create(),
                             connection -> Mono.from(connection.beginTransaction())
                                     .flatMapMany(v -> connection.createStatement("SELECT count(1) FROM kin_mqtt_broker_retain WHERE topic = ?")
                                             .bind(0, replica.getTopic())
@@ -142,7 +118,7 @@ public final class DBMessageStore extends AbstractMessageStore {
     @Nonnull
     @Override
     public Flux<MqttMessageReplica> getRetainMessage(String topic) {
-        return Flux.usingWhen(connectionPool.create(),
+        return Flux.usingWhen(connectionFactory.create(),
                 connection -> Flux.from(
                                 //全量拉取
                                 connection.createStatement("SELECT * FROM kin_mqtt_broker_retain").execute())
@@ -184,10 +160,5 @@ public final class DBMessageStore extends AbstractMessageStore {
                         .stream()
                         .collect(Collectors.toMap(Map.Entry::getKey, e -> e.getValue().toString())))
                 .build();
-    }
-
-    @Override
-    public void close() {
-        connectionPool.dispose();
     }
 }
