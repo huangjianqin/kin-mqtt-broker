@@ -1,7 +1,9 @@
 package org.kin.mqtt.broker.cluster.standalone;
 
 import org.kin.framework.utils.CollectionUtils;
+import org.kin.mqtt.broker.acl.AclService;
 import org.kin.mqtt.broker.auth.AuthService;
+import org.kin.mqtt.broker.bridge.Bridge;
 import org.kin.mqtt.broker.cluster.BrokerManager;
 import org.kin.mqtt.broker.core.Interceptor;
 import org.kin.mqtt.broker.core.MqttBroker;
@@ -32,7 +34,9 @@ public class MqttBrokerStandAloneAutoConfiguration {
     public MqttBroker mqttBroker(@Autowired(required = false) List<Interceptor> interceptors,
                                  @Autowired(required = false) AuthService authService,
                                  @Autowired(required = false) BrokerManager brokerManager,
-                                 @Autowired(required = false) MqttMessageStore messageStore) {
+                                 @Autowired(required = false) MqttMessageStore messageStore,
+                                 @Autowired(required = false) List<Bridge> bridges,
+                                 @Autowired(required = false) AclService aclService) {
         MqttBrokerBootstrap bootstrap = MqttBrokerBootstrap.create();
         bootstrap.port(mqttBrokerProperties.getPort())
                 .messageMaxSize(mqttBrokerProperties.getMessageMaxSize());
@@ -58,6 +62,14 @@ public class MqttBrokerStandAloneAutoConfiguration {
 
         if (Objects.nonNull(messageStore)) {
             bootstrap.messageStore(messageStore);
+        }
+
+        if (CollectionUtils.isNonEmpty(bridges)) {
+            bootstrap.bridges(bridges);
+        }
+
+        if (Objects.nonNull(aclService)) {
+            bootstrap.aclService(aclService);
         }
 
         return bootstrap.start();

@@ -9,7 +9,6 @@
 
 ## 展望
 
-* acl
 * mqtt over websocket
 * coap网关
 * 考虑规则持久化和集群共享场景

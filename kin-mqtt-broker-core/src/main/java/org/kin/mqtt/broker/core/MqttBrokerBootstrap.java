@@ -45,12 +45,12 @@ public final class MqttBrokerBootstrap extends ServerTransport {
     private int messageMaxSize = 4194304;
     /** 注册的interceptor */
     private final List<Interceptor> interceptors = new LinkedList<>();
+    /** auth service, 默认不进行校验 */
+    private AuthService authService = NoneAuthService.INSTANCE;
     /** mqtt broker集群管理. 默认单节点模式 */
     private BrokerManager brokerManager = StandaloneBrokerManager.INSTANCE;
     /** mqtt消息外部存储, 默认存储在jvm内存 */
     private MqttMessageStore messageStore = new MemoryMessageStore();
-    /** auth service, 默认不进行校验 */
-    private AuthService authService = NoneAuthService.INSTANCE;
     /** 规则链定义 */
     private List<RuleChainDefinition> ruleChainDefinitions = new LinkedList<>();
     /** key -> {@link BridgeType}, value -> {key -> bridge name, value -> {@link Bridge}实例} */
@@ -141,6 +141,14 @@ public final class MqttBrokerBootstrap extends ServerTransport {
         if (Objects.nonNull(name2Bridge.put(name, bridge))) {
             throw new IllegalArgumentException(String.format("bridge '%s' has registered", name));
         }
+        return this;
+    }
+
+    /**
+     * 数据桥接定义
+     */
+    public MqttBrokerBootstrap bridges(List<Bridge> bridges) {
+        bridges.forEach(this::bridge);
         return this;
     }
 
