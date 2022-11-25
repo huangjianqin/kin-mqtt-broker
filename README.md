@@ -9,7 +9,6 @@
 
 ## 展望
 
-* mqtt over websocket
 * coap网关
 * 考虑规则持久化和集群共享场景
 * 系统主题, 即broker自身事件, client上下线事件==, publish到指定主题去, client可以订阅这些消息
