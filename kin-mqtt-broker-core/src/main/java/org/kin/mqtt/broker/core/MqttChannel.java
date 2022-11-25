@@ -37,6 +37,8 @@ public class MqttChannel {
     private final MqttBrokerContext brokerContext;
     /** mqtt client connection */
     private final Connection connection;
+    /** mqtt client host */
+    protected String host;
     /** mqtt client id */
     protected String clientId;
     /** mqtt client connect时间, 校验通过后的时间 */
@@ -215,9 +217,9 @@ public class MqttChannel {
     }
 
     /**
-     * @return 是否是集群broker channel实例
+     * @return 是否是冒牌mqtt channel实例, 即来自于集群, 规则引擎触发的mqtt消息处理
      */
-    public boolean isBrokerChannel() {
+    public boolean isFakeChannel() {
         return false;
     }
 
@@ -245,6 +247,7 @@ public class MqttChannel {
             deferCloseWithoutConnMsgDisposable.dispose();
         }
 
+        this.host = connection.address().toString().split(":")[0];
         this.clientId = clientId;
         connectTime = System.currentTimeMillis();
         persistent = !variableHeader.isCleanSession();
@@ -341,6 +344,11 @@ public class MqttChannel {
     }
 
     //getter
+
+    public String getHost() {
+        return host;
+    }
+
     public Set<TopicSubscription> getSubscriptions() {
         return subscriptions;
     }

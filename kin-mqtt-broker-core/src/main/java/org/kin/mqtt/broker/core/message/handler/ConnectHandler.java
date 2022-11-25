@@ -36,9 +36,6 @@ public class ConnectHandler extends AbstractMqttMessageHandler<MqttConnectMessag
 
     private Mono<Void> handle0(MqttMessageWrapper<MqttConnectMessage> wrapper, MqttChannel mqttChannel, MqttBrokerContext brokerContext) {
         MqttConnectMessage message = wrapper.getMessage();
-        // TODO: 2022/11/15
-//            MetricManagerHolder.metricManager.getMetricRegistry().getMetricCounter(CounterType.CONNECT_EVENT).increment();
-//            EventRegistry eventRegistry = mqttReceiveContext.getEventRegistry();
 
         MqttConnectVariableHeader variableHeader = message.variableHeader();
         MqttConnectPayload payload = message.payload();

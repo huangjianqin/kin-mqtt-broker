@@ -4,6 +4,8 @@ import io.netty.handler.codec.mqtt.MqttMessageType;
 import io.netty.handler.codec.mqtt.MqttSubscribeMessage;
 import org.kin.framework.utils.CollectionUtils;
 import org.kin.framework.utils.Extension;
+import org.kin.mqtt.broker.acl.AclAction;
+import org.kin.mqtt.broker.acl.AclService;
 import org.kin.mqtt.broker.core.MqttBrokerContext;
 import org.kin.mqtt.broker.core.MqttChannel;
 import org.kin.mqtt.broker.core.message.MqttMessageUtils;
@@ -18,7 +20,6 @@ import reactor.core.publisher.Mono;
 
 import javax.annotation.Nonnull;
 import java.util.List;
-import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
@@ -32,34 +33,29 @@ public final class SubscribeHandler extends AbstractMqttMessageHandler<MqttSubsc
     @Override
     public Mono<Void> handle(MqttMessageWrapper<MqttSubscribeMessage> wrapper, MqttChannel mqttChannel, MqttBrokerContext brokerContext) {
         MqttSubscribeMessage message = wrapper.getMessage();
-        // TODO: 2022/11/15
-//        MetricManagerHolder.metricManager.getMetricRegistry().getMetricCounter(CounterType.SUBSCRIBE_EVENT).increment();
-        return Mono.fromCallable(() -> {
-            TopicManager topicManager = brokerContext.getTopicManager();
-            Set<TopicSubscription> subscriptions =
-                    message.payload().topicSubscriptions()
-                            .stream()
-                            // TODO: 2022/11/15 acl manager
-//                            .filter(subscribeTopic -> aclManager.check(mqttChannel, subscribeTopic.getTopicFilter(), AclAction.SUBSCRIBE))
-                            .map(subscription -> new TopicSubscription(subscription.topicName(), subscription.qualityOfService(), mqttChannel))
-                            .collect(Collectors.toSet());
-            //注册订阅
-            if (CollectionUtils.isNonEmpty(subscriptions)) {
-                topicManager.addSubscriptions(subscriptions);
-            }
 
-            return subscriptions;
-        }).flatMap(subscriptions -> {
-            MqttMessageStore messageStore = brokerContext.getMessageStore();
-            int messageId = message.variableHeader().messageId();
-            //响应subscribe的qos list
-            List<Integer> respQosList = subscriptions.stream().map(s -> s.getQoS().value()).collect(Collectors.toList());
-            //发送retain消息
-            Flux<Void> sendRetainFlux = Flux.fromIterable(subscriptions)
-                    .flatMap(subscription -> sendRetainMessage(messageStore, mqttChannel, subscription.getTopic()));
-            return Mono.from(mqttChannel.sendMessage(MqttMessageUtils.createSubAck(messageId, respQosList), false))
-                    .thenEmpty(sendRetainFlux);
-        });
+        AclService aclService = brokerContext.getAclService();
+        TopicManager topicManager = brokerContext.getTopicManager();
+        return Flux.fromIterable(message.payload().topicSubscriptions())
+                .filterWhen(st -> aclService.checkPermission(mqttChannel.getHost(), mqttChannel.getClientId(), st.topicName(), AclAction.SUBSCRIBE))
+                .map(st -> new TopicSubscription(st.topicName(), st.qualityOfService(), mqttChannel))
+                .collect(Collectors.toSet())
+                .flatMap(subscriptions -> {
+                    //注册订阅
+                    if (CollectionUtils.isNonEmpty(subscriptions)) {
+                        topicManager.addSubscriptions(subscriptions);
+                    }
+
+                    MqttMessageStore messageStore = brokerContext.getMessageStore();
+                    int messageId = message.variableHeader().messageId();
+                    //响应subscribe的qos list
+                    List<Integer> respQosList = subscriptions.stream().map(s -> s.getQoS().value()).collect(Collectors.toList());
+                    //发送retain消息
+                    Flux<Void> sendRetainFlux = Flux.fromIterable(subscriptions)
+                            .flatMap(subscription -> sendRetainMessage(messageStore, mqttChannel, subscription.getTopic()));
+                    return Mono.from(mqttChannel.sendMessage(MqttMessageUtils.createSubAck(messageId, respQosList), false))
+                            .thenEmpty(sendRetainFlux);
+                });
     }
 
     /**

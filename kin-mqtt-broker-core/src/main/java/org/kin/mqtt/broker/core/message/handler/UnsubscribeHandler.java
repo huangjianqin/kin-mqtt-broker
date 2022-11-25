@@ -23,8 +23,6 @@ public final class UnsubscribeHandler extends AbstractMqttMessageHandler<MqttUns
     public Mono<Void> handle(MqttMessageWrapper<MqttUnsubscribeMessage> wrapper, MqttChannel mqttChannel, MqttBrokerContext brokerContext) {
         MqttUnsubscribeMessage message = wrapper.getMessage();
         return Mono.fromRunnable(() -> {
-            // TODO: 2022/11/15
-//            MetricManagerHolder.metricManager.getMetricRegistry().getMetricCounter(CounterType.UN_SUBSCRIBE_EVENT).increment();
             TopicManager topicManager = brokerContext.getTopicManager();
             message.payload()
                     .topics()

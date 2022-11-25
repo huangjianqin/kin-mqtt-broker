@@ -8,6 +8,8 @@ import io.netty.handler.codec.mqtt.MqttEncoder;
 import io.netty.handler.codec.mqtt.MqttMessage;
 import io.netty.handler.codec.mqtt.MqttPublishMessage;
 import org.kin.framework.utils.SysUtils;
+import org.kin.mqtt.broker.acl.AclService;
+import org.kin.mqtt.broker.acl.NoneAclService;
 import org.kin.mqtt.broker.auth.AuthService;
 import org.kin.mqtt.broker.auth.NoneAuthService;
 import org.kin.mqtt.broker.bridge.Bridge;
@@ -53,6 +55,8 @@ public final class MqttBrokerBootstrap extends ServerTransport {
     private List<RuleChainDefinition> ruleChainDefinitions = new LinkedList<>();
     /** key -> {@link BridgeType}, value -> {key -> bridge name, value -> {@link Bridge}实例} */
     private Map<BridgeType, Map<String, Bridge>> bridgeMap = new HashMap<>();
+    /** 访问控制权限管理 */
+    private AclService aclService = NoneAclService.INSTANCE;
 
     public static MqttBrokerBootstrap create() {
         return new MqttBrokerBootstrap();
@@ -141,6 +145,14 @@ public final class MqttBrokerBootstrap extends ServerTransport {
     }
 
     /**
+     * 访问控制权限管理
+     */
+    public MqttBrokerBootstrap aclService(AclService aclService) {
+        this.aclService = aclService;
+        return this;
+    }
+
+    /**
      * start mqtt server及其admin server
      */
     public MqttBroker start() {
@@ -150,7 +162,9 @@ public final class MqttBrokerBootstrap extends ServerTransport {
         }
 
         MqttBrokerContext brokerContext = new MqttBrokerContext(port, new MqttMessageDispatcher(interceptors),
-                authService, brokerManager, messageStore, ruleChainDefinitions, bridgeMap);
+                authService, brokerManager, messageStore,
+                ruleChainDefinitions, bridgeMap,
+                aclService);
         BrokerManager brokerManager;
 
         //启动mqtt broker

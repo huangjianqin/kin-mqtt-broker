@@ -3,6 +3,7 @@ package org.kin.mqtt.broker.core;
 import org.kin.framework.Closeable;
 import org.kin.framework.utils.CollectionUtils;
 import org.kin.framework.utils.SysUtils;
+import org.kin.mqtt.broker.acl.AclService;
 import org.kin.mqtt.broker.auth.AuthService;
 import org.kin.mqtt.broker.bridge.Bridge;
 import org.kin.mqtt.broker.bridge.BridgeType;
@@ -49,11 +50,14 @@ public final class MqttBrokerContext implements Closeable {
     private final RuleChainExecutor ruleChainExecutor = new RuleChainExecutor(ruleChainManager);
     /** key -> {@link BridgeType}, value -> {key -> bridge name, value -> {@link Bridge}实例} */
     private final Map<BridgeType, Map<String, Bridge>> bridgeMap;
+    /** 访问控制权限管理 */
+    private final AclService aclService;
 
     public MqttBrokerContext(int port, MqttMessageDispatcher dispatcher, AuthService authService,
                              BrokerManager brokerManager, MqttMessageStore messageStore,
                              List<RuleChainDefinition> ruleChainDefinitions,
-                             Map<BridgeType, Map<String, Bridge>> bridgeMap) {
+                             Map<BridgeType, Map<String, Bridge>> bridgeMap,
+                             AclService aclService) {
         mqttMessageHandleScheduler = Schedulers.newBoundedElastic(SysUtils.CPU_NUM * 10, Integer.MAX_VALUE, "kin-mqtt-broker-bs-" + port, 60);
         this.dispatcher = dispatcher;
         this.authService = authService;
@@ -61,6 +65,7 @@ public final class MqttBrokerContext implements Closeable {
         this.messageStore = messageStore;
         this.ruleChainManager.addRuleChains(ruleChainDefinitions);
         this.bridgeMap = Collections.unmodifiableMap(bridgeMap);
+        this.aclService = aclService;
     }
 
     @Override
@@ -138,5 +143,9 @@ public final class MqttBrokerContext implements Closeable {
 
     public Map<BridgeType, Map<String, Bridge>> getBridgeMap() {
         return bridgeMap;
+    }
+
+    public AclService getAclService() {
+        return aclService;
     }
 }

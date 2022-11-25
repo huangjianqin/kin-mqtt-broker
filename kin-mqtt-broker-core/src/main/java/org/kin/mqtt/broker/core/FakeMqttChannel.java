@@ -31,7 +31,7 @@ public final class FakeMqttChannel extends MqttChannel {
     }
 
     @Override
-    public boolean isBrokerChannel() {
+    public boolean isFakeChannel() {
         return true;
     }
 }

@@ -26,9 +26,6 @@ public final class DisconnectHandler extends AbstractMqttMessageHandler<MqttMess
             if (!(connection = mqttChannel.getConnection()).isDisposed()) {
                 connection.dispose();
             }
-
-            // TODO: 2022/11/14
-//            MetricManagerHolder.metricManager.getMetricRegistry().getMetricCounter(CounterType.DIS_CONNECT_EVENT).increment();
         });
     }
 
