@@ -50,7 +50,7 @@ public final class PublishHandler extends AbstractMqttMessageHandler<MqttPublish
                             //允许访问
                             return handle0(wrapper, mqttChannel, brokerContext);
                         } else {
-                            return Mono.error(new IllegalStateException(String.format("mqtt publish message for topis '%s' acl is not allowed, %s", topicName, message)));
+                            return Mono.error(new IllegalStateException(String.format("mqtt publish message for topic '%s' acl is not allowed, %s", topicName, message)));
                         }
                     });
         }

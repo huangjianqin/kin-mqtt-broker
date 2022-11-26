@@ -36,6 +36,22 @@
             <artifactId>kin-framework-java</artifactId>
         </dependency>
 
+        <dependency>
+            <groupId>org.kin</groupId>
+            <artifactId>kin-framework-reactor</artifactId>
+        </dependency>
+
+        <!-- byte buddy(基于ASM) -->
+        <dependency>
+            <groupId>net.bytebuddy</groupId>
+            <artifactId>byte-buddy</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>net.bytebuddy</groupId>
+            <artifactId>byte-buddy-agent</artifactId>
+        </dependency>
+
         <!-- jackson-->
         <dependency>
             <groupId>com.fasterxml.jackson.core</groupId>

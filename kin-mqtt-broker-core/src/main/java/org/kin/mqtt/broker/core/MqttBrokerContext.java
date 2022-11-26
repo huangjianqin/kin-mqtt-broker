@@ -1,6 +1,8 @@
 package org.kin.mqtt.broker.core;
 
 import org.kin.framework.Closeable;
+import org.kin.framework.reactor.event.DefaultReactorEventBus;
+import org.kin.framework.reactor.event.ReactorEventBus;
 import org.kin.framework.utils.CollectionUtils;
 import org.kin.framework.utils.SysUtils;
 import org.kin.mqtt.broker.acl.AclService;
@@ -9,6 +11,7 @@ import org.kin.mqtt.broker.bridge.Bridge;
 import org.kin.mqtt.broker.bridge.BridgeType;
 import org.kin.mqtt.broker.cluster.BrokerManager;
 import org.kin.mqtt.broker.core.topic.TopicManager;
+import org.kin.mqtt.broker.event.MqttEvent;
 import org.kin.mqtt.broker.rule.RuleChainDefinition;
 import org.kin.mqtt.broker.rule.RuleChainExecutor;
 import org.kin.mqtt.broker.rule.RuleChainManager;
@@ -29,7 +32,7 @@ import java.util.Map;
  */
 public final class MqttBrokerContext implements Closeable {
     /** mqtt消息处理的{@link Scheduler} todo 如果datastore datasource auth能支持全异步的形式, 则不需要额外的scheduler也ok */
-    public final Scheduler mqttMessageHandleScheduler;
+    public final Scheduler mqttBsScheduler;
     /** retry task管理 */
     private final RetryService retryService = new DefaultRetryService();
     /** topic管理 */
@@ -52,13 +55,15 @@ public final class MqttBrokerContext implements Closeable {
     private final Map<BridgeType, Map<String, Bridge>> bridgeMap;
     /** 访问控制权限管理 */
     private final AclService aclService;
+    /** 事件总线 */
+    private final ReactorEventBus eventBus;
 
     public MqttBrokerContext(int port, MqttMessageDispatcher dispatcher, AuthService authService,
                              BrokerManager brokerManager, MqttMessageStore messageStore,
                              List<RuleChainDefinition> ruleChainDefinitions,
                              Map<BridgeType, Map<String, Bridge>> bridgeMap,
                              AclService aclService) {
-        mqttMessageHandleScheduler = Schedulers.newBoundedElastic(SysUtils.CPU_NUM * 10, Integer.MAX_VALUE, "kin-mqtt-broker-bs-" + port, 60);
+        mqttBsScheduler = Schedulers.newBoundedElastic(SysUtils.CPU_NUM * 10, Integer.MAX_VALUE, "kin-mqtt-broker-bs-" + port, 60);
         this.dispatcher = dispatcher;
         this.authService = authService;
         this.brokerManager = brokerManager;
@@ -66,6 +71,7 @@ public final class MqttBrokerContext implements Closeable {
         this.ruleChainManager.addRuleChains(ruleChainDefinitions);
         this.bridgeMap = Collections.unmodifiableMap(bridgeMap);
         this.aclService = aclService;
+        this.eventBus = new DefaultReactorEventBus(true, mqttBsScheduler);
     }
 
     @Override
@@ -80,7 +86,7 @@ public final class MqttBrokerContext implements Closeable {
                 bridge.close();
             }
         }
-        mqttMessageHandleScheduler.dispose();
+        mqttBsScheduler.dispose();
     }
 
     /**
@@ -100,9 +106,16 @@ public final class MqttBrokerContext implements Closeable {
         return null;
     }
 
+    /**
+     * 广播事件
+     */
+    public void broadcastEvent(MqttEvent event) {
+        eventBus.post(event);
+    }
+
     //getter
-    public Scheduler getMqttMessageHandleScheduler() {
-        return mqttMessageHandleScheduler;
+    public Scheduler getMqttBsScheduler() {
+        return mqttBsScheduler;
     }
 
     public RetryService getRetryService() {
@@ -147,5 +160,9 @@ public final class MqttBrokerContext implements Closeable {
 
     public AclService getAclService() {
         return aclService;
+    }
+
+    public ReactorEventBus getEventBus() {
+        return eventBus;
     }
 }

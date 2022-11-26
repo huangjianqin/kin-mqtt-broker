@@ -10,6 +10,8 @@ import io.netty.handler.codec.mqtt.MqttDecoder;
 import io.netty.handler.codec.mqtt.MqttEncoder;
 import io.netty.handler.codec.mqtt.MqttMessage;
 import io.netty.handler.codec.mqtt.MqttPublishMessage;
+import org.kin.framework.event.EventListener;
+import org.kin.framework.reactor.event.EventConsumer;
 import org.kin.framework.utils.SysUtils;
 import org.kin.mqtt.broker.acl.AclService;
 import org.kin.mqtt.broker.acl.NoneAclService;
@@ -66,6 +68,8 @@ public final class MqttBrokerBootstrap extends ServerTransport {
     private Map<BridgeType, Map<String, Bridge>> bridgeMap = new HashMap<>();
     /** 访问控制权限管理 */
     private AclService aclService = NoneAclService.INSTANCE;
+    /** 事件consumer */
+    private final List<Object> eventConsumers = new LinkedList<>();
 
     public static MqttBrokerBootstrap create() {
         return new MqttBrokerBootstrap();
@@ -187,6 +191,38 @@ public final class MqttBrokerBootstrap extends ServerTransport {
     }
 
     /**
+     * 事件consumer
+     */
+    public MqttBrokerBootstrap eventConsumers(EventConsumer<?>... consumers) {
+        this.eventConsumers.addAll(Arrays.asList(consumers));
+        return this;
+    }
+
+    /**
+     * 事件consumer
+     * 1. {@link EventConsumer}实现类
+     * 2. 带{@link org.kin.framework.event.EventFunction}的实例
+     */
+    public MqttBrokerBootstrap eventConsumers(Collection<EventConsumer<?>> consumers) {
+        this.eventConsumers.addAll(consumers);
+        return this;
+    }
+
+    /**
+     * 事件consumer
+     * 带{@link org.kin.framework.event.EventFunction}的实例
+     */
+    public MqttBrokerBootstrap eventConsumers(Object... consumers) {
+        for (Object consumer : consumers) {
+            if (!consumer.getClass().isAnnotationPresent(EventListener.class)) {
+                throw new IllegalArgumentException(String.format("%s must be annotated with @%s", consumer.getClass(), EventListener.class.getSimpleName()));
+            }
+        }
+        this.eventConsumers.addAll(Arrays.asList(consumers));
+        return this;
+    }
+
+    /**
      * start mqtt server及其admin server
      */
     public MqttBroker start() {
@@ -295,7 +331,7 @@ public final class MqttBrokerBootstrap extends ServerTransport {
                         publishMessage.retain();
                     }
                 })
-                .publishOn(brokerContext.getMqttMessageHandleScheduler())
+                .publishOn(brokerContext.getMqttBsScheduler())
                 //mqtt消息处理
                 .subscribe(mqttMessage -> brokerContext.getDispatcher().dispatch(MqttMessageWrapper.common(mqttMessage), mqttChannel, brokerContext));
     }
@@ -307,7 +343,7 @@ public final class MqttBrokerBootstrap extends ServerTransport {
         brokerContext.getBrokerManager().start()
                 .then(Mono.fromRunnable(() -> brokerManager.clusterMqttMessages()
                         .onErrorResume(e -> Mono.empty())
-                        .publishOn(brokerContext.getMqttMessageHandleScheduler())
+                        .publishOn(brokerContext.getMqttBsScheduler())
                         .subscribe(clusterMessage -> brokerContext.getDispatcher().dispatch(
                                         MqttMessageWrapper.fromCluster(clusterMessage),
                                         new VirtualMqttChannel(brokerContext, clusterMessage.getClientId()),

@@ -6,6 +6,7 @@ import org.kin.mqtt.broker.core.message.MqttMessageUtils;
 import org.kin.mqtt.broker.core.topic.TopicManager;
 import org.kin.mqtt.broker.core.topic.TopicSubscription;
 import org.kin.mqtt.broker.core.will.Will;
+import org.kin.mqtt.broker.event.MqttClientOfflineEvent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import reactor.core.Disposable;
@@ -286,6 +287,8 @@ public class MqttChannel {
             brokerContext.getChannelManager().remove(clientId);
         }
         will = null;
+
+        brokerContext.broadcastEvent(new MqttClientOfflineEvent(this));
     }
 
     /**
@@ -295,11 +298,11 @@ public class MqttChannel {
      */
     public Mono<Void> close() {
         return Mono.fromRunnable(() -> {
+            offline();
             qos2MessageCache.clear();
             if (!persistent) {
                 subscriptions.clear();
             }
-            offline();
             if (!connection.isDisposed()) {
                 connection.dispose();
             }

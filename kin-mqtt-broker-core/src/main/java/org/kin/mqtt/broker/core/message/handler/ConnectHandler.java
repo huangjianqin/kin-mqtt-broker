@@ -10,6 +10,7 @@ import org.kin.mqtt.broker.core.message.MqttMessageUtils;
 import org.kin.mqtt.broker.core.message.MqttMessageWrapper;
 import org.kin.mqtt.broker.core.topic.TopicManager;
 import org.kin.mqtt.broker.core.topic.TopicSubscription;
+import org.kin.mqtt.broker.event.MqttClientOnlineEvent;
 import org.kin.mqtt.broker.store.MqttMessageStore;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -92,7 +93,8 @@ public class ConnectHandler extends AbstractMqttMessageHandler<MqttConnectMessag
         mqttChannel.onConnectSuccess(clientId, variableHeader, payload);
 
         return mqttChannel.sendMessage(MqttMessageUtils.createConnAck(MqttConnectReturnCode.CONNECTION_ACCEPTED, mqttVersion), false)
-                .then(sendOfflineMessage(brokerContext.getMessageStore(), mqttChannel));
+                .then(sendOfflineMessage(brokerContext.getMessageStore(), mqttChannel))
+                .then(Mono.fromRunnable(() -> brokerContext.broadcastEvent(new MqttClientOnlineEvent(mqttChannel))));
     }
 
 

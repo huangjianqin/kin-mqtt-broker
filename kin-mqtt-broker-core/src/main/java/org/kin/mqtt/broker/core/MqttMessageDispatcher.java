@@ -11,6 +11,7 @@ import org.kin.mqtt.broker.core.message.MqttMessageReplica;
 import org.kin.mqtt.broker.core.message.MqttMessageUtils;
 import org.kin.mqtt.broker.core.message.MqttMessageWrapper;
 import org.kin.mqtt.broker.core.message.handler.*;
+import org.kin.mqtt.broker.event.MqttPublishEvent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import reactor.netty.ReactorNetty;
@@ -84,7 +85,7 @@ public final class MqttMessageDispatcher {
         MqttFixedHeader fixedHeader = mqttMessage.fixedHeader();
         //todo 思考一下没有办法减少字节复制
         MqttMessageReplica messageReplica = null;
-        if (!wrapper.isFromCluster() && mqttMessage instanceof MqttPublishMessage) {
+        if (mqttMessage instanceof MqttPublishMessage) {
             //先转换成可持久化的消息
             MqttPublishMessage publishMessage = (MqttPublishMessage) mqttMessage;
             messageReplica = MqttMessageUtils.toReplica(mqttChannel.getClientId(), publishMessage, wrapper.getTimestamp());
@@ -113,6 +114,8 @@ public final class MqttMessageDispatcher {
 
             //规则匹配
             brokerContext.getRuleChainExecutor().execute(brokerContext, messageReplica).subscribe();
+
+            brokerContext.broadcastEvent(new MqttPublishEvent(mqttChannel, messageReplica));
         }
     }
 }

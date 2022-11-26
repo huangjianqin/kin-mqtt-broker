@@ -12,6 +12,7 @@ import org.kin.mqtt.broker.core.message.MqttMessageUtils;
 import org.kin.mqtt.broker.core.message.MqttMessageWrapper;
 import org.kin.mqtt.broker.core.topic.TopicManager;
 import org.kin.mqtt.broker.core.topic.TopicSubscription;
+import org.kin.mqtt.broker.event.MqttSubscribeEvent;
 import org.kin.mqtt.broker.store.MqttMessageStore;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -54,7 +55,8 @@ public final class SubscribeHandler extends AbstractMqttMessageHandler<MqttSubsc
                     Flux<Void> sendRetainFlux = Flux.fromIterable(subscriptions)
                             .flatMap(subscription -> sendRetainMessage(messageStore, mqttChannel, subscription.getTopic()));
                     return Mono.from(mqttChannel.sendMessage(MqttMessageUtils.createSubAck(messageId, respQosList), false))
-                            .thenEmpty(sendRetainFlux);
+                            .thenEmpty(sendRetainFlux)
+                            .then(Mono.fromRunnable(() -> brokerContext.broadcastEvent(new MqttSubscribeEvent(mqttChannel, subscriptions))));
                 });
     }
 
