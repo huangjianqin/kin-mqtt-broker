@@ -6,7 +6,7 @@ import org.kin.mqtt.broker.core.message.MqttMessageUtils;
 import org.kin.mqtt.broker.core.topic.TopicManager;
 import org.kin.mqtt.broker.core.topic.TopicSubscription;
 import org.kin.mqtt.broker.core.will.Will;
-import org.kin.mqtt.broker.event.MqttClientOfflineEvent;
+import org.kin.mqtt.broker.event.MqttClientDisConnEvent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import reactor.core.Disposable;
@@ -16,6 +16,7 @@ import reactor.netty.ReactorNetty;
 
 import java.time.Duration;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -37,7 +38,9 @@ public class MqttChannel {
     /** broker context */
     private final MqttBrokerContext brokerContext;
     /** mqtt client connection */
-    private final Connection connection;
+    private Connection connection;
+    /** mqtt channel hash code */
+    private int channelHashCode;
     /** mqtt client host */
     protected String host;
     /** mqtt client id */
@@ -140,7 +143,9 @@ public class MqttChannel {
      * @return complete signal
      */
     private Mono<Void> write(Mono<MqttMessage> messageMono) {
-        if (this.connection.channel().isActive() && this.connection.channel().isWritable()) {
+        if (Objects.nonNull(connection) &&
+                this.connection.channel().isActive() &&
+                this.connection.channel().isWritable()) {
             return connection.outbound().sendObject(messageMono).then();
         } else {
             return Mono.empty();
@@ -155,7 +160,7 @@ public class MqttChannel {
      * @return 唯一ID, 即32位connection hashcode + 28位mqtt消息类型 + 4位mqtt消息package id
      */
     public long generateUuid(MqttMessageType type, Integer messageId) {
-        return (long) connection.channel().hashCode() << 32 | (long) type.value() << 28 | messageId << 4 >>> 4;
+        return (long) channelHashCode << 32 | (long) type.value() << 28 | messageId << 4 >>> 4;
     }
 
     /**
@@ -218,6 +223,13 @@ public class MqttChannel {
     }
 
     /**
+     * @return mqtt channel是否离线
+     */
+    public boolean isOffline() {
+        return status == ChannelStatus.OFFLINE;
+    }
+
+    /**
      * @return 是否是虚拟mqtt channel实例, 即来自于集群, 规则引擎触发的mqtt消息处理
      */
     public boolean isVirtualChannel() {
@@ -232,6 +244,7 @@ public class MqttChannel {
     public MqttChannel deferCloseWithoutConnMsg() {
         // registry tcp close event
         deferCloseWithoutConnMsgDisposable = Mono.fromRunnable(() -> {
+            //此时不为null
             if (!connection.isDisposed()) {
                 connection.dispose();
             }
@@ -248,7 +261,9 @@ public class MqttChannel {
             deferCloseWithoutConnMsgDisposable.dispose();
         }
 
+        //此时不为null
         this.host = connection.address().toString().split(":")[0];
+        this.channelHashCode = connection.channel().hashCode();
         this.clientId = clientId;
         connectTime = System.currentTimeMillis();
         persistent = !variableHeader.isCleanSession();
@@ -257,6 +272,7 @@ public class MqttChannel {
 
         //keepalive
         //mqtt client 空闲, broker关闭mqtt client连接
+        //此时不为null
         connection.onReadIdle((long) variableHeader.keepAliveTimeSeconds() * 1000, this::close0);
 
         //will
@@ -282,13 +298,13 @@ public class MqttChannel {
         log.info("mqtt channel closed, {}", this);
 
         offline();
+        will = null;
         if (!persistent) {
+            //非持久化会话
             brokerContext.getTopicManager().removeAllSubscriptions(this);
             brokerContext.getChannelManager().remove(clientId);
         }
-        will = null;
-
-        brokerContext.broadcastEvent(new MqttClientOfflineEvent(this));
+        brokerContext.broadcastEvent(new MqttClientDisConnEvent(this));
     }
 
     /**
@@ -298,6 +314,9 @@ public class MqttChannel {
      */
     public Mono<Void> close() {
         return Mono.fromRunnable(() -> {
+            if (isOffline()) {
+                return;
+            }
             offline();
             qos2MessageCache.clear();
             if (!persistent) {
@@ -315,6 +334,7 @@ public class MqttChannel {
      * @param runnable mqtt client close之后的操作
      */
     private void afterDispose(Runnable runnable) {
+        //此时不为null
         connection.onDispose(runnable::run);
     }
 
@@ -327,6 +347,7 @@ public class MqttChannel {
                 .forEach(subscription -> {
                     MqttChannel channel = subscription.getMqttChannel();
 
+                    //此时不为null
                     ByteBuf byteBuf = connection.channel().alloc().directBuffer();
                     byteBuf.writeBytes(will.getMessage());
                     sendMessage(MqttMessageUtils.createPublish(false,
@@ -347,6 +368,9 @@ public class MqttChannel {
     }
 
     //getter
+    public MqttBrokerContext getBrokerContext() {
+        return brokerContext;
+    }
 
     public String getHost() {
         return host;

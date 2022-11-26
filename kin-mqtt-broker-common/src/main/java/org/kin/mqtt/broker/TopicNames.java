@@ -12,6 +12,8 @@ public interface TopicNames {
     String TREE_ROOT_TOPIC = "$ROOT$";
     /** broker级别内置topic */
     String SYS_TOPIC = "$SYS$";
+    /** broker级别内置topic, 当前broker已注册的client数, 在线+离线(持久化会话) */
+    String SYS_TOPIC_CLIENTS_TOTAL = SYS_TOPIC + "/broker/clients/total";
 
     /**
      * @return 指定主题是否是系统内置主题

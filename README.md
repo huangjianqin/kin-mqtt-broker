@@ -9,7 +9,6 @@
 
 ## 展望
 
-* 系统主题, 即broker自身事件, client上下线事件==, publish到指定主题去, client可以订阅这些消息
 * coap网关
 * 考虑规则持久化和集群共享场景
 * 自动订阅, 检查配置, connect时根据配置给指定client id自动注册订阅, 是否需要支持后台操作, 然后配置是否是持久化
@@ -28,3 +27,4 @@
 * Open-source IoT Platform: https://github.com/actorcloud/ActorCloud
 * Open-source IoT Platform: https://github.com/emqx/emqx
 * Open-source IoT Platform: https://github.com/mqttsnet/thinglinks
+* eclipse-mosquitto所支持的系统主题: https://github.com/mqtt/mqtt.org/wiki/SYS-Topics

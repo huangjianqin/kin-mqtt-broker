@@ -31,8 +31,10 @@ import java.util.Map;
  * @date 2022/11/14
  */
 public final class MqttBrokerContext implements Closeable {
+    /** broker唯一id */
+    private final String brokerId;
     /** mqtt消息处理的{@link Scheduler} todo 如果datastore datasource auth能支持全异步的形式, 则不需要额外的scheduler也ok */
-    public final Scheduler mqttBsScheduler;
+    private final Scheduler mqttBsScheduler;
     /** retry task管理 */
     private final RetryService retryService = new DefaultRetryService();
     /** topic管理 */
@@ -58,11 +60,12 @@ public final class MqttBrokerContext implements Closeable {
     /** 事件总线 */
     private final ReactorEventBus eventBus;
 
-    public MqttBrokerContext(int port, MqttMessageDispatcher dispatcher, AuthService authService,
+    public MqttBrokerContext(String brokerId, int port, MqttMessageDispatcher dispatcher, AuthService authService,
                              BrokerManager brokerManager, MqttMessageStore messageStore,
                              List<RuleChainDefinition> ruleChainDefinitions,
                              Map<BridgeType, Map<String, Bridge>> bridgeMap,
                              AclService aclService) {
+        this.brokerId = brokerId;
         mqttBsScheduler = Schedulers.newBoundedElastic(SysUtils.CPU_NUM * 10, Integer.MAX_VALUE, "kin-mqtt-broker-bs-" + port, 60);
         this.dispatcher = dispatcher;
         this.authService = authService;
@@ -114,6 +117,11 @@ public final class MqttBrokerContext implements Closeable {
     }
 
     //getter
+
+    public String getBrokerId() {
+        return brokerId;
+    }
+
     public Scheduler getMqttBsScheduler() {
         return mqttBsScheduler;
     }

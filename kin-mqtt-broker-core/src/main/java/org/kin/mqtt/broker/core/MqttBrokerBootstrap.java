@@ -12,6 +12,8 @@ import io.netty.handler.codec.mqtt.MqttMessage;
 import io.netty.handler.codec.mqtt.MqttPublishMessage;
 import org.kin.framework.event.EventListener;
 import org.kin.framework.reactor.event.EventConsumer;
+import org.kin.framework.utils.NetUtils;
+import org.kin.framework.utils.StringUtils;
 import org.kin.framework.utils.SysUtils;
 import org.kin.mqtt.broker.acl.AclService;
 import org.kin.mqtt.broker.acl.NoneAclService;
@@ -24,6 +26,7 @@ import org.kin.mqtt.broker.cluster.StandaloneBrokerManager;
 import org.kin.mqtt.broker.core.message.MqttMessageWrapper;
 import org.kin.mqtt.broker.core.websocket.ByteBuf2WsFrameEncoder;
 import org.kin.mqtt.broker.core.websocket.WsFrame2ByteBufDecoder;
+import org.kin.mqtt.broker.event.consumer.TotalClientNumPublisher;
 import org.kin.mqtt.broker.rule.RuleChainDefinition;
 import org.kin.mqtt.broker.store.MemoryMessageStore;
 import org.kin.mqtt.broker.store.MqttMessageStore;
@@ -46,6 +49,8 @@ import java.util.*;
 public final class MqttBrokerBootstrap extends ServerTransport {
     private static final Logger log = LoggerFactory.getLogger(MqttBrokerBootstrap.class);
 
+    /** broker id, 默认是MQTTBroker:{机器ip}:{mqtt tcp port}:{mqtt websocket port} */
+    private String brokerId;
     /** mqtt broker port, default 1883 */
     private int port = 1883;
     /** mqtt broker websocket port, default 0, 默认不开启 */
@@ -76,6 +81,14 @@ public final class MqttBrokerBootstrap extends ServerTransport {
     }
 
     private MqttBrokerBootstrap() {
+    }
+
+    /**
+     * 定义broker唯一id
+     */
+    public MqttBrokerBootstrap brokerId(String brokerId) {
+        this.brokerId = brokerId;
+        return this;
     }
 
     /**
@@ -226,7 +239,11 @@ public final class MqttBrokerBootstrap extends ServerTransport {
      * start mqtt server及其admin server
      */
     public MqttBroker start() {
-        MqttBrokerContext brokerContext = new MqttBrokerContext(port, new MqttMessageDispatcher(interceptors),
+        if (StringUtils.isBlank(brokerId)) {
+            brokerId = "MQTTBroker:" + NetUtils.getIp() + ":" + port + ":" + wsPort;
+        }
+
+        MqttBrokerContext brokerContext = new MqttBrokerContext(brokerId, port, new MqttMessageDispatcher(interceptors),
                 authService, brokerManager, messageStore,
                 ruleChainDefinitions, bridgeMap,
                 aclService);
@@ -307,6 +324,13 @@ public final class MqttBrokerBootstrap extends ServerTransport {
             loopResources.dispose();
             brokerContext.close();
         });
+    }
+
+    /**
+     * 注册broker内置的mqtt event consumer
+     */
+    private void registerInternalEventConsumer() {
+        eventConsumers(new TotalClientNumPublisher());
     }
 
     /**
