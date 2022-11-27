@@ -143,7 +143,7 @@ public final class GossipBrokerManager implements BrokerManager {
             String address = member.address().toString();
             sj.add(address);
             log.info("mqtt broker(namespace:alias:address) '{}' {}", sj, event.type());
-
+            // TODO: 2022/11/28 是否存储集群所有broker的broker id
             switch (event.type()) {
                 case ADDED:
                     break;
