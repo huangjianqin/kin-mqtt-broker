@@ -108,12 +108,15 @@ public final class MqttMessageDispatcher {
 
         //仅仅处理publish消息
         if (Objects.nonNull(messageReplica)) {
-            //集群广播mqtt消息
-            BrokerManager brokerManager = brokerContext.getBrokerManager();
-            brokerManager.broadcastMqttMessage(messageReplica).subscribe();
+            if (!wrapper.isFromCluster()) {
+                //非集群广播消息
+                //往集群广播mqtt消息
+                BrokerManager brokerManager = brokerContext.getBrokerManager();
+                brokerManager.broadcastMqttMessage(messageReplica).subscribe();
 
-            //规则匹配
-            brokerContext.getRuleChainExecutor().execute(brokerContext, messageReplica).subscribe();
+                //规则匹配
+                brokerContext.getRuleChainExecutor().execute(brokerContext, messageReplica).subscribe();
+            }
 
             brokerContext.broadcastEvent(new MqttPublishEvent(mqttChannel, messageReplica));
         }

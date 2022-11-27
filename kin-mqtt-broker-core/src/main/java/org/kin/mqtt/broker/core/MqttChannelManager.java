@@ -14,8 +14,9 @@ public interface MqttChannelManager {
      *
      * @param clientId    mqtt client id
      * @param mqttChannel mqtt channel
+     * @return 是否首次注册, 对于持久化session的mqtt client, 则只有第一次注册才返回true
      */
-    void register(String clientId, MqttChannel mqttChannel);
+    boolean register(String clientId, MqttChannel mqttChannel);
 
     /**
      * 根据client id获取mqtt channel

@@ -3,16 +3,16 @@ package org.kin.mqtt.broker.event;
 import org.kin.mqtt.broker.core.MqttChannel;
 
 /**
- * mqtt client下线事件, 注意持久化mqtt client会触发多次
+ * mqtt client注销成功事件, 即只有非持久化mqtt client下线才会触发
  *
  * @author huangjianqin
- * @date 2022/11/26
+ * @date 2022/11/27
  */
-public final class MqttClientDisConnEvent implements MqttEvent {
+public class MqttClientUnregisterEvent implements MqttEvent {
     /** mqtt client信息 */
     private final MqttChannel mqttChannel;
 
-    public MqttClientDisConnEvent(MqttChannel mqttChannel) {
+    public MqttClientUnregisterEvent(MqttChannel mqttChannel) {
         this.mqttChannel = mqttChannel;
     }
 

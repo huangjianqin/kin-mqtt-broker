@@ -26,10 +26,10 @@ import org.kin.mqtt.broker.cluster.StandaloneBrokerManager;
 import org.kin.mqtt.broker.core.message.MqttMessageWrapper;
 import org.kin.mqtt.broker.core.websocket.ByteBuf2WsFrameEncoder;
 import org.kin.mqtt.broker.core.websocket.WsFrame2ByteBufDecoder;
-import org.kin.mqtt.broker.event.consumer.TotalClientNumPublisher;
 import org.kin.mqtt.broker.rule.RuleChainDefinition;
 import org.kin.mqtt.broker.store.MemoryMessageStore;
 import org.kin.mqtt.broker.store.MqttMessageStore;
+import org.kin.mqtt.broker.systopic.TotalClientNumPublisher;
 import org.kin.transport.netty.ServerTransport;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -75,6 +75,11 @@ public final class MqttBrokerBootstrap extends ServerTransport {
     private AclService aclService = NoneAclService.INSTANCE;
     /** 事件consumer */
     private final List<Object> eventConsumers = new LinkedList<>();
+    /** 是否开启系统topic */
+    private boolean enableSysTopic;
+    /** 系统topic推送间隔(秒), 只针对部分系统topic有效, 默认1分钟 */
+    private int sysTopicInterval = 60;
+
 
     public static MqttBrokerBootstrap create() {
         return new MqttBrokerBootstrap();
@@ -236,11 +241,32 @@ public final class MqttBrokerBootstrap extends ServerTransport {
     }
 
     /**
+     * 是否开启系统topic
+     */
+    public MqttBrokerBootstrap enableSysTopic() {
+        this.enableSysTopic = true;
+        return this;
+    }
+
+    /**
+     * 系统topic推送间隔(秒), 只针对部分系统topic有效, 默认1分钟
+     */
+    public MqttBrokerBootstrap sysTopicInterval(int sysTopicInterval) {
+        this.sysTopicInterval = sysTopicInterval;
+        return this;
+    }
+
+    /**
      * start mqtt server及其admin server
      */
     public MqttBroker start() {
         if (StringUtils.isBlank(brokerId)) {
             brokerId = "MQTTBroker:" + NetUtils.getIp() + ":" + port + ":" + wsPort;
+        }
+
+        //系统topic配置
+        if (enableSysTopic) {
+            configSysTopic();
         }
 
         MqttBrokerContext brokerContext = new MqttBrokerContext(brokerId, port, new MqttMessageDispatcher(interceptors),
@@ -327,13 +353,6 @@ public final class MqttBrokerBootstrap extends ServerTransport {
     }
 
     /**
-     * 注册broker内置的mqtt event consumer
-     */
-    private void registerInternalEventConsumer() {
-        eventConsumers(new TotalClientNumPublisher());
-    }
-
-    /**
      * mqtt client建立连接时触发, mqtt channel配置以及处理mqtt消息逻辑
      */
     private void onMqttClientConnected(MqttBrokerContext brokerContext, MqttChannel mqttChannel) {
@@ -376,6 +395,13 @@ public final class MqttBrokerBootstrap extends ServerTransport {
                 .subscribe();
     }
 
+    /**
+     * 系统topic配置
+     */
+    private void configSysTopic() {
+        eventConsumers(new TotalClientNumPublisher());
+    }
+
     //getter
     public int getPort() {
         return port;
@@ -403,5 +429,29 @@ public final class MqttBrokerBootstrap extends ServerTransport {
 
     public List<RuleChainDefinition> getRuleChainDefinitions() {
         return ruleChainDefinitions;
+    }
+
+    public String getBrokerId() {
+        return brokerId;
+    }
+
+    public int getWsPort() {
+        return wsPort;
+    }
+
+    public String getWsPath() {
+        return wsPath;
+    }
+
+    public AclService getAclService() {
+        return aclService;
+    }
+
+    public boolean isEnableSysTopic() {
+        return enableSysTopic;
+    }
+
+    public long getSysTopicInterval() {
+        return sysTopicInterval;
     }
 }

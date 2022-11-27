@@ -3,7 +3,7 @@ package org.kin.mqtt.broker.event;
 import org.kin.mqtt.broker.core.MqttChannel;
 
 /**
- * mqtt client上线事件
+ * mqtt client上线事件, 注意持久化mqtt client会触发多次
  *
  * @author huangjianqin
  * @date 2022/11/26

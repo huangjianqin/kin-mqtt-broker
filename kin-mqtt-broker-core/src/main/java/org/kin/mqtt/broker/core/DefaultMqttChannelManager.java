@@ -17,9 +17,9 @@ public final class DefaultMqttChannelManager implements MqttChannelManager {
     private final Map<String, MqttChannel> clientId2Channel = new NonBlockingHashMap<>();
 
     @Override
-    public void register(String clientId, MqttChannel mqttChannel) {
+    public boolean register(String clientId, MqttChannel mqttChannel) {
         reportOnline();
-        clientId2Channel.put(clientId, mqttChannel);
+        return Objects.isNull(clientId2Channel.put(clientId, mqttChannel));
     }
 
     /**

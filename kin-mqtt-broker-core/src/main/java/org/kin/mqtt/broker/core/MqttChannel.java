@@ -7,6 +7,8 @@ import org.kin.mqtt.broker.core.topic.TopicManager;
 import org.kin.mqtt.broker.core.topic.TopicSubscription;
 import org.kin.mqtt.broker.core.will.Will;
 import org.kin.mqtt.broker.event.MqttClientDisConnEvent;
+import org.kin.mqtt.broker.event.MqttClientRegisterEvent;
+import org.kin.mqtt.broker.event.MqttClientUnregisterEvent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import reactor.core.Disposable;
@@ -287,7 +289,9 @@ public class MqttChannel {
             afterDispose(this::handleWillAfterClose);
         }
 
-        brokerContext.getChannelManager().register(clientId, this);
+        if (brokerContext.getChannelManager().register(clientId, this)) {
+            brokerContext.broadcastEvent(new MqttClientRegisterEvent(this));
+        }
         afterDispose(this::close0);
     }
 
@@ -300,9 +304,10 @@ public class MqttChannel {
         offline();
         will = null;
         if (!persistent) {
-            //非持久化会话
+            //非持久化session
             brokerContext.getTopicManager().removeAllSubscriptions(this);
             brokerContext.getChannelManager().remove(clientId);
+            brokerContext.broadcastEvent(new MqttClientUnregisterEvent(this));
         }
         brokerContext.broadcastEvent(new MqttClientDisConnEvent(this));
     }
