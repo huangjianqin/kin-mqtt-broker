@@ -33,6 +33,6 @@ public abstract class AbstractSysTopicPublisher {
                 topic,
                 buffer);
         brokerContext.getDispatcher().dispatch(MqttMessageWrapper.common(message),
-                new VirtualMqttChannel(brokerContext, brokerContext.getBrokerId()), brokerContext);
+                new VirtualMqttChannel(brokerContext, brokerContext.getBrokerClientId()), brokerContext);
     }
 }

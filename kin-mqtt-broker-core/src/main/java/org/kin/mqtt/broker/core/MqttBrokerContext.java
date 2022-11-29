@@ -32,7 +32,7 @@ import java.util.Map;
  */
 public final class MqttBrokerContext implements Closeable {
     /** broker唯一id */
-    private final String brokerId;
+    private final int brokerId;
     /** mqtt消息处理的{@link Scheduler} todo 如果datastore datasource auth能支持全异步的形式, 则不需要额外的scheduler也ok */
     private final Scheduler mqttBsScheduler;
     /** retry task管理 */
@@ -60,7 +60,7 @@ public final class MqttBrokerContext implements Closeable {
     /** 事件总线 */
     private final ReactorEventBus eventBus;
 
-    public MqttBrokerContext(String brokerId, int port, MqttMessageDispatcher dispatcher, AuthService authService,
+    public MqttBrokerContext(int brokerId, int port, MqttMessageDispatcher dispatcher, AuthService authService,
                              BrokerManager brokerManager, MqttMessageStore messageStore,
                              List<RuleChainDefinition> ruleChainDefinitions,
                              Map<BridgeType, Map<String, Bridge>> bridgeMap,
@@ -116,9 +116,15 @@ public final class MqttBrokerContext implements Closeable {
         eventBus.post(event);
     }
 
-    //getter
+    /**
+     * @return mqtt broker主动往client发送mqtt消息, 消息头所设置的clientId
+     */
+    public String getBrokerClientId() {
+        return "MQTTBroker-" + brokerId;
+    }
 
-    public String getBrokerId() {
+    //getter
+    public int getBrokerId() {
         return brokerId;
     }
 

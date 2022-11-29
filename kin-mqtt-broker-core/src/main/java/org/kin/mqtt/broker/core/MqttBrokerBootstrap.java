@@ -12,8 +12,6 @@ import io.netty.handler.codec.mqtt.MqttMessage;
 import io.netty.handler.codec.mqtt.MqttPublishMessage;
 import org.kin.framework.event.EventListener;
 import org.kin.framework.reactor.event.EventConsumer;
-import org.kin.framework.utils.NetUtils;
-import org.kin.framework.utils.StringUtils;
 import org.kin.framework.utils.SysUtils;
 import org.kin.mqtt.broker.acl.AclService;
 import org.kin.mqtt.broker.acl.NoneAclService;
@@ -49,8 +47,8 @@ import java.util.*;
 public final class MqttBrokerBootstrap extends ServerTransport {
     private static final Logger log = LoggerFactory.getLogger(MqttBrokerBootstrap.class);
 
-    /** broker id, 默认是MQTTBroker:{机器ip}:{mqtt tcp port}:{mqtt websocket port} */
-    private String brokerId;
+    /** broker id, 默认是0 */
+    private int brokerId;
     /** mqtt broker port, default 1883 */
     private int port = 1883;
     /** mqtt broker websocket port, default 0, 默认不开启 */
@@ -94,7 +92,7 @@ public final class MqttBrokerBootstrap extends ServerTransport {
     /**
      * 定义broker唯一id
      */
-    public MqttBrokerBootstrap brokerId(String brokerId) {
+    public MqttBrokerBootstrap brokerId(int brokerId) {
         this.brokerId = brokerId;
         return this;
     }
@@ -263,10 +261,6 @@ public final class MqttBrokerBootstrap extends ServerTransport {
      * start mqtt server及其admin server
      */
     public MqttBroker start() {
-        if (StringUtils.isBlank(brokerId)) {
-            brokerId = "MQTTBroker:" + NetUtils.getIp() + ":" + port + ":" + wsPort;
-        }
-
         //系统topic配置
         if (enableSysTopic) {
             configSysTopic();
@@ -434,7 +428,7 @@ public final class MqttBrokerBootstrap extends ServerTransport {
         return ruleChainDefinitions;
     }
 
-    public String getBrokerId() {
+    public int getBrokerId() {
         return brokerId;
     }
 
