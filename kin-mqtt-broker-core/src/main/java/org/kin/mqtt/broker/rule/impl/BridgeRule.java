@@ -34,6 +34,7 @@ public final class BridgeRule extends ScriptRule {
      */
     @Override
     protected Mono<Void> postExecScript(RuleChainContext context, Object result) {
+        // TODO: 2022/11/28 不依赖脚本结果来决定桥接类型, 即用户同时要条件判断和桥接, 那么需要创建两个rule, 同时rule chain上下文移除
         if (Objects.nonNull(result) && result instanceof String[]) {
             String[] typeAndName = (String[]) result;
             MqttBrokerContext brokerContext = context.getBrokerContext();
