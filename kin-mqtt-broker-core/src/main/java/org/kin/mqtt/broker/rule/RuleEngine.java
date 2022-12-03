@@ -13,12 +13,12 @@ import reactor.core.publisher.Mono;
  * @author huangjianqin
  * @date 2022/11/21
  */
-public final class RuleChainExecutor {
-    private static final Logger log = LoggerFactory.getLogger(RuleChainExecutor.class);
+public final class RuleEngine {
+    private static final Logger log = LoggerFactory.getLogger(RuleEngine.class);
     /** 规则链 */
     private final RuleChainManager ruleChainManager;
 
-    public RuleChainExecutor(RuleChainManager ruleChainManager) {
+    public RuleEngine(RuleChainManager ruleChainManager) {
         this.ruleChainManager = ruleChainManager;
     }
 

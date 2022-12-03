@@ -13,8 +13,8 @@ import org.kin.mqtt.broker.cluster.BrokerManager;
 import org.kin.mqtt.broker.core.topic.TopicManager;
 import org.kin.mqtt.broker.event.MqttEvent;
 import org.kin.mqtt.broker.rule.RuleChainDefinition;
-import org.kin.mqtt.broker.rule.RuleChainExecutor;
 import org.kin.mqtt.broker.rule.RuleChainManager;
+import org.kin.mqtt.broker.rule.RuleEngine;
 import org.kin.mqtt.broker.store.MqttMessageStore;
 import reactor.core.scheduler.Scheduler;
 import reactor.core.scheduler.Schedulers;
@@ -52,7 +52,7 @@ public final class MqttBrokerContext implements Closeable {
     /** 规则链管理 */
     private final RuleChainManager ruleChainManager = new RuleChainManager();
     /** 规则链执行 */
-    private final RuleChainExecutor ruleChainExecutor = new RuleChainExecutor(ruleChainManager);
+    private final RuleEngine ruleEngine = new RuleEngine(ruleChainManager);
     /** key -> {@link BridgeType}, value -> {key -> bridge name, value -> {@link Bridge}实例} */
     private final Map<BridgeType, Map<String, Bridge>> bridgeMap;
     /** 访问控制权限管理 */
@@ -164,8 +164,8 @@ public final class MqttBrokerContext implements Closeable {
         return ruleChainManager;
     }
 
-    public RuleChainExecutor getRuleChainExecutor() {
-        return ruleChainExecutor;
+    public RuleEngine getRuleEngine() {
+        return ruleEngine;
     }
 
     public Map<BridgeType, Map<String, Bridge>> getBridgeMap() {

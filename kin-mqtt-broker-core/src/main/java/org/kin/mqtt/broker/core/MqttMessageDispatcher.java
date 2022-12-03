@@ -114,9 +114,9 @@ public final class MqttMessageDispatcher {
                 BrokerManager brokerManager = brokerContext.getBrokerManager();
                 brokerManager.broadcastMqttMessage(messageReplica).subscribe();
 
-                // TODO: 2022/11/28 思考规则是否集群所有broker同步, 如果同步, 按目前实现会存在重复publish的bug
                 //规则匹配
-                brokerContext.getRuleChainExecutor().execute(brokerContext, messageReplica).subscribe();
+                //原则上所有节点都会同步rule, 那么集群广播的publish消息不需要再重复处理rule了
+                brokerContext.getRuleEngine().execute(brokerContext, messageReplica).subscribe();
             }
 
             brokerContext.broadcastEvent(new MqttPublishEvent(mqttChannel, messageReplica));
