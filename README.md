@@ -10,7 +10,8 @@
 
 ### 集群
 
-* 基于gossip的节点发现和节点间数据消息同步
+* 基于gossip实现节点发现和元数据同步
+* 基于req-resp实现节点间通讯, 比如广播publish消息
 * 节点分为两种角色
   * core: 负责数据写入和持久化, 这些数据以brokerId来区分, 各自broker仅仅更新属于自己的数据, 如果接收到修改其他broker数据的请求,
     则路由到指定broker中完成更新操作. 同时, 内存中也会维护其余broker的数据, 用于管理台访问. 通过这样子设计保证core节点间
@@ -35,6 +36,15 @@
 目前支持的系统topic name都定义在`TopicNames`. 具体有
 
 * `$SYS$/broker/clients/total`: 当前broker已注册的client数, 在线+离线(持久化会话)
+
+### 数据存储
+
+要求各节点可访问, 保证最终一致性?
+
+* 规则
+* mqtt client session
+* topic retain消息
+* 各节点订阅信息, 可通过集群节点之间广播信息维护一致性?
 
 ## 展望
 
