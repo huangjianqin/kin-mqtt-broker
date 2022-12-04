@@ -14,13 +14,13 @@ import org.springframework.context.annotation.Configuration;
 @ConditionalOnProperty({Constants.GOSSIP_PROPERTIES_PREFIX + ".port",
         Constants.GOSSIP_PROPERTIES_PREFIX + ".seeds"})
 @Configuration
-@EnableConfigurationProperties(GossipProperties.class)
+@EnableConfigurationProperties(GossipConfig.class)
 public class MqttBrokerGossipAutoConfiguration {
     @Autowired
-    private GossipProperties gossipProperties;
+    private GossipConfig gossipConfig;
 
     @Bean
     public GossipBrokerManager gossipBrokerManager() {
-        return new GossipBrokerManager(gossipProperties);
+        return new GossipBrokerManager(gossipConfig);
     }
 }

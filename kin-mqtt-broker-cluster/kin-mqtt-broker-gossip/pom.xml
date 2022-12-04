@@ -3,31 +3,40 @@
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <parent>
-        <artifactId>kin-mqtt-broker-parent</artifactId>
+        <artifactId>kin-mqtt-broker-cluster</artifactId>
         <groupId>org.kin</groupId>
         <version>${revision}</version>
     </parent>
     <modelVersion>4.0.0</modelVersion>
 
-    <artifactId>kin-mqtt-broker-gossip-starter</artifactId>
+    <artifactId>kin-mqtt-broker-gossip</artifactId>
 
     <dependencies>
         <dependency>
             <groupId>org.kin</groupId>
-            <artifactId>kin-mqtt-broker-standalone-starter</artifactId>
+            <artifactId>kin-mqtt-broker-cluster-api</artifactId>
             <version>${project.version}</version>
         </dependency>
 
         <dependency>
             <groupId>org.kin</groupId>
-            <artifactId>kin-mqtt-broker-gossip</artifactId>
-            <version>${project.version}</version>
+            <artifactId>kin-framework-java</artifactId>
+        </dependency>
+
+        <!-- gossip -->
+        <dependency>
+            <groupId>io.scalecube</groupId>
+            <artifactId>scalecube-cluster</artifactId>
         </dependency>
 
         <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-configuration-processor</artifactId>
-            <optional>true</optional>
+            <groupId>io.scalecube</groupId>
+            <artifactId>scalecube-codec-jackson</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>io.scalecube</groupId>
+            <artifactId>scalecube-transport-netty</artifactId>
         </dependency>
     </dependencies>
 

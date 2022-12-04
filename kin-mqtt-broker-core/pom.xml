@@ -93,6 +93,12 @@
             <version>${project.version}</version>
         </dependency>
 
+        <dependency>
+            <groupId>org.kin</groupId>
+            <artifactId>kin-mqtt-broker-cluster-api</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+
         <!-- 高效性能及内存优化的集合类工具 -->
         <dependency>
             <groupId>org.eclipse.collections</groupId>

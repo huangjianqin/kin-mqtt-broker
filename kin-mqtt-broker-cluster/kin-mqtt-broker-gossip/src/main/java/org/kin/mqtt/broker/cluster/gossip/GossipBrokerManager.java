@@ -35,22 +35,22 @@ public final class GossipBrokerManager implements BrokerManager {
     private static final Logger log = LoggerFactory.getLogger(GossipBrokerManager.class);
 
     /** config */
-    private final GossipProperties gossipProperties;
+    private final GossipConfig config;
     /** 来自集群广播的mqtt消息流 */
     private final Sinks.Many<MqttMessageReplica> clusterMqttMessageSink = Sinks.many().multicast().onBackpressureBuffer();
     /** gossip cluster */
     private volatile Mono<Cluster> clusterMono;
 
-    public GossipBrokerManager(GossipProperties gossipProperties) {
-        this.gossipProperties = gossipProperties;
+    public GossipBrokerManager(GossipConfig config) {
+        this.config = config;
     }
 
     @Override
     public Mono<Void> start() {
-        int port = gossipProperties.getPort();
+        int port = config.getPort();
         clusterMono = new ClusterImpl().config(clusterConfig -> clusterConfig.externalHost(NetUtils.getIp()).externalPort(port))
-                .membership(membershipConfig -> membershipConfig.seedMembers(seedMembers(gossipProperties.getSeeds()))
-                        .namespace(gossipProperties.getNamespace())
+                .membership(membershipConfig -> membershipConfig.seedMembers(seedMembers(config.getSeeds()))
+                        .namespace(config.getNamespace())
                         .syncInterval(5_000))
                 .transport(transportConfig -> transportConfig.transportFactory(new TcpTransportFactory())
                         .messageCodec(JacksonMessageCodec.INSTANCE)
