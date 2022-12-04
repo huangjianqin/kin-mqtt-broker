@@ -18,5 +18,6 @@
         <module>kin-mqtt-broker-bridge-kafka</module>
         <module>kin-mqtt-broker-bridge-kafka-starter</module>
         <module>kin-mqtt-broker-bridge-rabbitmq</module>
+        <module>kin-mqtt-broker-bridge-all</module>
     </modules>
 </project>
