@@ -7,6 +7,8 @@ import org.kin.mqtt.broker.core.message.MqttMessageReplica;
 import org.kin.mqtt.broker.store.AbstractMessageStore;
 import org.kin.mqtt.broker.utils.TopicUtils;
 import org.reactivestreams.Publisher;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
@@ -22,6 +24,7 @@ import java.util.stream.Collectors;
  * @date 2022/11/20
  */
 public final class DBMessageStore extends AbstractMessageStore {
+    private static final Logger log = LoggerFactory.getLogger(DBMessageStore.class);
     /** r2dbc连接池 */
     private final ConnectionFactory connectionFactory;
 
@@ -31,20 +34,25 @@ public final class DBMessageStore extends AbstractMessageStore {
 
     @Override
     public void saveOfflineMessage(MqttMessageReplica replica) {
-        Flux.usingWhen(connectionFactory.create(),
-                        connection -> Flux.from(
+        Mono.usingWhen(connectionFactory.create(),
+                        connection -> Mono.from(connection.beginTransaction())
                                 //保存offline消息
-                                connection.createStatement("INSERT INTO kin_mqtt_broker_offline('client_id', 'topic', 'qos', 'retain', 'payload', 'create_time', 'properties')" +
-                                                " values (?,?,?,?,?,?,?)")
-                                        .bind(0, replica.getClientId())
-                                        .bind(1, replica.getTopic())
-                                        .bind(2, replica.getQos())
-                                        .bind(3, replica.isRetain() ? 1 : 0)
-                                        .bind(4, JSON.write(replica.getPayload()))
-                                        .bind(5, replica.getTimestamp())
-                                        .bind(6, JSON.write(replica.getProperties()))
-                                        .execute()
-                        ),
+                                .flatMap(v ->
+                                        Mono.from(connection.createStatement("INSERT INTO kin_mqtt_broker_offline('client_id', 'topic', 'qos', 'retain', 'payload', 'create_time', 'properties')" +
+                                                        " values (?,?,?,?,?,?,?)")
+                                                .bind(0, replica.getClientId())
+                                                .bind(1, replica.getTopic())
+                                                .bind(2, replica.getQos())
+                                                .bind(3, replica.isRetain() ? 1 : 0)
+                                                .bind(4, JSON.write(replica.getPayload()))
+                                                .bind(5, replica.getTimestamp())
+                                                .bind(6, JSON.write(replica.getProperties()))
+                                                .execute()))
+                                .thenEmpty(connection.commitTransaction())
+                                .onErrorResume(t -> {
+                                    log.error("save offline message error, ", t);
+                                    return Mono.from(connection.rollbackTransaction());
+                                }),
                         Connection::close)
                 .subscribe();
     }
@@ -67,25 +75,28 @@ public final class DBMessageStore extends AbstractMessageStore {
         byte[] payload = replica.getPayload();
         if (Objects.isNull(payload) || payload.length == 0) {
             //payload为空, 删除retain消息
-            Flux.usingWhen(connectionFactory.create(),
-                            connection -> Flux.from(
-                                    connection.createStatement("DELETE FROM kin_mqtt_broker_retain WHERE topic = ?")
-                                            .bind(0, replica.getTopic())
-                                            .execute()
-                            ),
+            Mono.usingWhen(connectionFactory.create(),
+                            connection -> Mono.from(connection.beginTransaction())
+                                    .flatMap(v ->
+                                            Mono.from(connection.createStatement("DELETE FROM kin_mqtt_broker_retain WHERE topic = ?")
+                                                    .bind(0, replica.getTopic())
+                                                    .execute()))
+                                    .thenEmpty(connection.commitTransaction())
+                                    .onErrorResume(t -> {
+                                        log.error("delete retain message error, ", t);
+                                        return Mono.from(connection.rollbackTransaction());
+                                    }),
                             Connection::close)
                     .subscribe();
         } else {
             //替换retain消息
-            Flux.usingWhen(connectionFactory.create(),
+            Mono.usingWhen(connectionFactory.create(),
                             connection -> Mono.from(connection.beginTransaction())
-                                    .flatMapMany(v -> connection.createStatement("SELECT count(1) FROM kin_mqtt_broker_retain WHERE topic = ?")
+                                    .flatMap(v -> Mono.from(connection.createStatement("SELECT count(1) FROM kin_mqtt_broker_retain WHERE topic = ?")
                                             .bind(0, replica.getTopic())
-                                            .execute())
-                                    .single()
-                                    .flatMapMany(r -> r.map((row, rowMetadata) -> row.get(0, Integer.class)))
-                                    .single()
-                                    .flatMapMany(count -> {
+                                            .execute()))
+                                    .flatMap(r -> Mono.from(r.map((row, rowMetadata) -> row.get(0, Integer.class))))
+                                    .flatMap(count -> {
                                         Statement statement;
                                         if (count > 0) {
                                             //已经retain消息, 则update
@@ -98,7 +109,7 @@ public final class DBMessageStore extends AbstractMessageStore {
                                                     " values (?,?,?,?,?,?,?)");
                                         }
 
-                                        return statement
+                                        return Mono.from(statement
                                                 .bind(0, replica.getClientId())
                                                 .bind(1, replica.getTopic())
                                                 .bind(2, replica.getQos())
@@ -106,9 +117,13 @@ public final class DBMessageStore extends AbstractMessageStore {
                                                 .bind(4, JSON.write(replica.getPayload()))
                                                 .bind(5, replica.getTimestamp())
                                                 .bind(6, JSON.write(replica.getProperties()))
-                                                .execute();
+                                                .execute());
                                     })
-
+                                    .thenEmpty(connection.commitTransaction())
+                                    .onErrorResume(t -> {
+                                        log.error("update retain message error, ", t);
+                                        return Mono.from(connection.rollbackTransaction());
+                                    })
                             ,
                             Connection::close)
                     .subscribe();
