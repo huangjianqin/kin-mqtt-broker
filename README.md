@@ -62,10 +62,5 @@
 * MQTT: http://mqtt.org/
 * MQTT协议中文: https://mcxiaoke.gitbooks.io/mqtt-cn/content/
 * MQTT 5: https://docs.oasis-open.org/mqtt/mqtt/v5.0/mqtt-v5.0.html
-* Eclipse Mosquitto: open source message broker that implements the MQTT protocol versions 3.1 and
-  3.1.1 https://mosquitto.org/
 * Eclipse Paho: open-source client implementations of MQTT and MQTT-SN messaging protocols https://www.eclipse.org/paho/
-* Open-source IoT Platform: https://github.com/actorcloud/ActorCloud
 * Open-source IoT Platform: https://github.com/emqx/emqx
-* Open-source IoT Platform: https://github.com/mqttsnet/thinglinks
-* eclipse-mosquitto所支持的系统主题: https://github.com/mqtt/mqtt.org/wiki/SYS-Topics
