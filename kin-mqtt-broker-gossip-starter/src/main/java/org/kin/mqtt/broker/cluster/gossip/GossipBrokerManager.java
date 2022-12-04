@@ -101,6 +101,7 @@ public final class GossipBrokerManager implements BrokerManager {
 
     @Override
     public Mono<Void> broadcastMqttMessage(MqttMessageReplica message) {
+        // TODO: 2022/12/4 只想那些有订阅topic的节点广播
         return clusterMono.flatMap(c -> {
                     log.debug("cluster broadcast message {} ", message);
                     return c.spreadGossip(Message.withData(message).build());
