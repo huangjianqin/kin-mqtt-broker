@@ -18,7 +18,7 @@ import org.kin.mqtt.broker.acl.NoneAclService;
 import org.kin.mqtt.broker.auth.AuthService;
 import org.kin.mqtt.broker.auth.NoneAuthService;
 import org.kin.mqtt.broker.bridge.Bridge;
-import org.kin.mqtt.broker.bridge.BridgeType;
+import org.kin.mqtt.broker.bridge.BridgeManager;
 import org.kin.mqtt.broker.cluster.BrokerManager;
 import org.kin.mqtt.broker.cluster.StandaloneBrokerManager;
 import org.kin.mqtt.broker.core.message.MqttMessageWrapper;
@@ -36,7 +36,10 @@ import reactor.netty.DisposableServer;
 import reactor.netty.resources.LoopResources;
 import reactor.netty.tcp.TcpServer;
 
-import java.util.*;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.LinkedList;
+import java.util.List;
 
 /**
  * mqtt broker启动类
@@ -67,8 +70,8 @@ public final class MqttBrokerBootstrap extends ServerTransport {
     private MqttMessageStore messageStore = new MemoryMessageStore();
     /** 规则链定义 */
     private List<RuleChainDefinition> ruleChainDefinitions = new LinkedList<>();
-    /** key -> {@link BridgeType}, value -> {key -> bridge name, value -> {@link Bridge}实例} */
-    private Map<BridgeType, Map<String, Bridge>> bridgeMap = new HashMap<>();
+    /** 数据桥接实现管理 */
+    private final BridgeManager bridgeManager = new BridgeManager();
     /** 访问控制权限管理 */
     private AclService aclService = NoneAclService.INSTANCE;
     /** 事件consumer */
@@ -184,12 +187,7 @@ public final class MqttBrokerBootstrap extends ServerTransport {
      * 数据桥接定义
      */
     public MqttBrokerBootstrap bridge(Bridge bridge) {
-        BridgeType type = bridge.type();
-        String name = bridge.name();
-        Map<String, Bridge> name2Bridge = bridgeMap.computeIfAbsent(type, k -> new HashMap<>(4));
-        if (Objects.nonNull(name2Bridge.put(name, bridge))) {
-            throw new IllegalArgumentException(String.format("bridge '%s' has registered", name));
-        }
+        bridgeManager.addBridge(bridge);
         return this;
     }
 
@@ -268,7 +266,7 @@ public final class MqttBrokerBootstrap extends ServerTransport {
 
         MqttBrokerContext brokerContext = new MqttBrokerContext(brokerId, port, new MqttMessageDispatcher(interceptors),
                 authService, brokerManager, messageStore,
-                ruleChainDefinitions, bridgeMap,
+                ruleChainDefinitions, bridgeManager,
                 aclService);
         BrokerManager brokerManager;
 

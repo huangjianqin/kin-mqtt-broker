@@ -34,7 +34,7 @@ public abstract class BridgeAction<BAD extends BridgeActionDefinition> extends C
         MqttBrokerContext brokerContext = context.getBrokerContext();
         BridgeType bridgeType = type();
         String bridgeName = definition.getBridgeName();
-        Bridge bridge = brokerContext.getBridge(bridgeType, bridgeName);
+        Bridge bridge = brokerContext.getBridgeManager().getBridge(bridgeName);
         if (Objects.isNull(bridge)) {
             //找不到指定桥接实现, 则直接complete, 中断
             return Mono.error(new IllegalStateException(String.format("can not find bridge '%s' for type '%s'", bridgeType, bridgeName)));

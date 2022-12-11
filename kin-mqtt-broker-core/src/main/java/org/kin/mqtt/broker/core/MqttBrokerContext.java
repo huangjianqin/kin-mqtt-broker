@@ -3,12 +3,10 @@ package org.kin.mqtt.broker.core;
 import org.kin.framework.Closeable;
 import org.kin.framework.reactor.event.DefaultReactorEventBus;
 import org.kin.framework.reactor.event.ReactorEventBus;
-import org.kin.framework.utils.CollectionUtils;
 import org.kin.framework.utils.SysUtils;
 import org.kin.mqtt.broker.acl.AclService;
 import org.kin.mqtt.broker.auth.AuthService;
-import org.kin.mqtt.broker.bridge.Bridge;
-import org.kin.mqtt.broker.bridge.BridgeType;
+import org.kin.mqtt.broker.bridge.BridgeManager;
 import org.kin.mqtt.broker.cluster.BrokerManager;
 import org.kin.mqtt.broker.core.topic.TopicManager;
 import org.kin.mqtt.broker.event.MqttEvent;
@@ -19,10 +17,7 @@ import org.kin.mqtt.broker.store.MqttMessageStore;
 import reactor.core.scheduler.Scheduler;
 import reactor.core.scheduler.Schedulers;
 
-import javax.annotation.Nullable;
-import java.util.Collections;
 import java.util.List;
-import java.util.Map;
 
 /**
  * 包含一些mqtt broker共享资源, 全局唯一
@@ -53,8 +48,8 @@ public final class MqttBrokerContext implements Closeable {
     private final RuleChainManager ruleChainManager = new RuleChainManager();
     /** 规则链执行 */
     private final RuleEngine ruleEngine = new RuleEngine(ruleChainManager);
-    /** key -> {@link BridgeType}, value -> {key -> bridge name, value -> {@link Bridge}实例} */
-    private final Map<BridgeType, Map<String, Bridge>> bridgeMap;
+    /** 数据桥接实现管理 */
+    private final BridgeManager bridgeManager;
     /** 访问控制权限管理 */
     private final AclService aclService;
     /** 事件总线 */
@@ -63,7 +58,7 @@ public final class MqttBrokerContext implements Closeable {
     public MqttBrokerContext(int brokerId, int port, MqttMessageDispatcher dispatcher, AuthService authService,
                              BrokerManager brokerManager, MqttMessageStore messageStore,
                              List<RuleChainDefinition> ruleChainDefinitions,
-                             Map<BridgeType, Map<String, Bridge>> bridgeMap,
+                             BridgeManager bridgeManager,
                              AclService aclService) {
         this.brokerId = brokerId;
         mqttBsScheduler = Schedulers.newBoundedElastic(SysUtils.CPU_NUM * 10, Integer.MAX_VALUE, "kin-mqtt-broker-bs-" + port, 60);
@@ -72,7 +67,7 @@ public final class MqttBrokerContext implements Closeable {
         this.brokerManager = brokerManager;
         this.messageStore = messageStore;
         this.ruleChainManager.addRuleChains(ruleChainDefinitions);
-        this.bridgeMap = Collections.unmodifiableMap(bridgeMap);
+        this.bridgeManager = bridgeManager;
         this.aclService = aclService;
         this.eventBus = new DefaultReactorEventBus(true, mqttBsScheduler);
     }
@@ -84,29 +79,9 @@ public final class MqttBrokerContext implements Closeable {
         //retry close
         retryService.close();
         //bridge close
-        for (Map.Entry<BridgeType, Map<String, Bridge>> entry : bridgeMap.entrySet()) {
-            for (Bridge bridge : entry.getValue().values()) {
-                bridge.close();
-            }
-        }
+        bridgeManager.close();
+
         mqttBsScheduler.dispose();
-    }
-
-    /**
-     * 根据桥接名字和类型获取{@link  Bridge}实例
-     *
-     * @param type 桥接类型
-     * @param name 桥接名字
-     * @return {@link  Bridge}实例
-     */
-    @Nullable
-    public Bridge getBridge(BridgeType type, String name) {
-        Map<String, Bridge> name2Bridge = bridgeMap.get(type);
-        if (CollectionUtils.isNonEmpty(name2Bridge)) {
-            return name2Bridge.get(name);
-        }
-
-        return null;
     }
 
     /**
@@ -168,15 +143,15 @@ public final class MqttBrokerContext implements Closeable {
         return ruleEngine;
     }
 
-    public Map<BridgeType, Map<String, Bridge>> getBridgeMap() {
-        return bridgeMap;
-    }
-
     public AclService getAclService() {
         return aclService;
     }
 
     public ReactorEventBus getEventBus() {
         return eventBus;
+    }
+
+    public BridgeManager getBridgeManager() {
+        return bridgeManager;
     }
 }

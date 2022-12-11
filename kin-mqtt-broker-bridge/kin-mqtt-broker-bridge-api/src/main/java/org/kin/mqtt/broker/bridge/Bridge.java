@@ -23,11 +23,14 @@ public interface Bridge extends Closeable {
     Mono<Void> transmit(ContextAttrs attrs);
 
     /**
+     * 数据桥接类型
+     *
      * @return 数据桥接类型
      */
     BridgeType type();
 
     /**
+     * 数据桥接名字
      * @return Bridge name, Bridge唯一标识
      */
     default String name() {
