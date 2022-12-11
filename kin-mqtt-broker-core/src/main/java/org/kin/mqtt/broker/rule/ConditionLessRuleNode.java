@@ -1,5 +1,6 @@
 package org.kin.mqtt.broker.rule;
 
+import org.kin.mqtt.broker.rule.definition.RuleDefinition;
 import reactor.core.publisher.Mono;
 
 /**
@@ -8,12 +9,12 @@ import reactor.core.publisher.Mono;
  * @author huangjianqin
  * @date 2022/11/21
  */
-public abstract class ConditionLessRuleNode extends AbstractRuleNode {
-    protected ConditionLessRuleNode(RuleDefinition definition) {
+public abstract class ConditionLessRuleNode<RD extends RuleDefinition> extends AbstractRuleNode<RD> {
+    protected ConditionLessRuleNode(RD definition) {
         super(definition);
     }
 
-    protected ConditionLessRuleNode(RuleDefinition definition, RuleNode next) {
+    protected ConditionLessRuleNode(RD definition, RuleNode next) {
         super(definition, next);
     }
 

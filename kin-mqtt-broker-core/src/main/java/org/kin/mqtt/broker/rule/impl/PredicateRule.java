@@ -1,8 +1,8 @@
 package org.kin.mqtt.broker.rule.impl;
 
 import org.kin.mqtt.broker.rule.RuleChainContext;
-import org.kin.mqtt.broker.rule.RuleDefinition;
 import org.kin.mqtt.broker.rule.RuleNode;
+import org.kin.mqtt.broker.rule.definition.ScriptRuleDefinition;
 import reactor.core.publisher.Mono;
 
 /**
@@ -10,11 +10,11 @@ import reactor.core.publisher.Mono;
  * @date 2022/11/21
  */
 public final class PredicateRule extends ScriptRule {
-    public PredicateRule(RuleDefinition definition) {
+    public PredicateRule(ScriptRuleDefinition definition) {
         super(definition);
     }
 
-    public PredicateRule(RuleDefinition definition, RuleNode next) {
+    public PredicateRule(ScriptRuleDefinition definition, RuleNode next) {
         super(definition, next);
     }
 

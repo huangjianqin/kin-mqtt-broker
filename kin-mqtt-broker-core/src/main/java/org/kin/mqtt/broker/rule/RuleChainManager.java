@@ -1,10 +1,8 @@
 package org.kin.mqtt.broker.rule;
 
 import org.jctools.maps.NonBlockingHashMap;
-import org.kin.mqtt.broker.rule.impl.BridgeRule;
-import org.kin.mqtt.broker.rule.impl.PredicateRule;
-import org.kin.mqtt.broker.rule.impl.ScriptRule;
-import org.kin.mqtt.broker.rule.impl.TopicRule;
+import org.kin.mqtt.broker.rule.definition.*;
+import org.kin.mqtt.broker.rule.impl.*;
 
 import javax.annotation.Nullable;
 import java.util.*;
@@ -67,17 +65,17 @@ public final class RuleChainManager {
     private RuleNode parseDefinition(RuleDefinition definition, RuleNode next) {
         switch (definition.getType()) {
             case PREDICATE:
-                return new PredicateRule(definition, next);
+                return new PredicateRule((ScriptRuleDefinition) definition, next);
             case SCRIPT:
-                return new ScriptRule(definition, next);
+                return new ScriptRule((ScriptRuleDefinition) definition, next);
             case TOPIC:
-                return new TopicRule(definition, next);
+                return new TopicRule((TopicRuleDefinition) definition, next);
             case HTTP:
-                return new BridgeRule(definition, next);
+                return new HttpBridgeAction((HttpActionDefinition) definition, next);
             case KAFKA:
-                return new BridgeRule(definition, next);
+                return new KafkaBridgeAction((KafkaActionDefinition) definition, next);
             case RABBITMQ:
-                return new BridgeRule(definition, next);
+                return new RabbitMQBridgeAction((RabbitMQActionDefinition) definition, next);
             default:
                 throw new IllegalArgumentException("unable to parse rule definition " + definition);
         }

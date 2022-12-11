@@ -1,5 +1,7 @@
 package org.kin.mqtt.broker.rule;
 
+import org.kin.mqtt.broker.rule.definition.RuleDefinition;
+
 import java.util.LinkedList;
 import java.util.List;
 

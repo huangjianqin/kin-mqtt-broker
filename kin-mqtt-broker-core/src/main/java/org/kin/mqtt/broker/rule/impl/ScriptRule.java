@@ -1,6 +1,10 @@
 package org.kin.mqtt.broker.rule.impl;
 
-import org.kin.mqtt.broker.rule.*;
+import org.kin.mqtt.broker.rule.AbstractRuleNode;
+import org.kin.mqtt.broker.rule.Jexl3Utils;
+import org.kin.mqtt.broker.rule.RuleChainContext;
+import org.kin.mqtt.broker.rule.RuleNode;
+import org.kin.mqtt.broker.rule.definition.ScriptRuleDefinition;
 import reactor.core.publisher.Mono;
 
 /**
@@ -9,12 +13,12 @@ import reactor.core.publisher.Mono;
  * @author huangjianqin
  * @date 2022/11/21
  */
-public class ScriptRule extends AbstractRuleNode {
-    public ScriptRule(RuleDefinition definition) {
+public class ScriptRule extends AbstractRuleNode<ScriptRuleDefinition> {
+    public ScriptRule(ScriptRuleDefinition definition) {
         super(definition);
     }
 
-    public ScriptRule(RuleDefinition definition, RuleNode next) {
+    public ScriptRule(ScriptRuleDefinition definition, RuleNode next) {
         super(definition, next);
     }
 
