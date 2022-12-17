@@ -24,7 +24,7 @@ import org.kin.mqtt.broker.cluster.StandaloneBrokerManager;
 import org.kin.mqtt.broker.core.message.MqttMessageWrapper;
 import org.kin.mqtt.broker.core.websocket.ByteBuf2WsFrameEncoder;
 import org.kin.mqtt.broker.core.websocket.WsFrame2ByteBufDecoder;
-import org.kin.mqtt.broker.rule.RuleChainDefinition;
+import org.kin.mqtt.broker.rule.RuleDefinition;
 import org.kin.mqtt.broker.store.MemoryMessageStore;
 import org.kin.mqtt.broker.store.MqttMessageStore;
 import org.kin.mqtt.broker.systopic.TotalClientNumPublisher;
@@ -69,7 +69,7 @@ public final class MqttBrokerBootstrap extends ServerTransport {
     /** mqtt消息外部存储, 默认存储在jvm内存 */
     private MqttMessageStore messageStore = new MemoryMessageStore();
     /** 规则链定义 */
-    private List<RuleChainDefinition> ruleChainDefinitions = new LinkedList<>();
+    private List<RuleDefinition> ruleDefinitions = new LinkedList<>();
     /** 数据桥接实现管理 */
     private final BridgeManager bridgeManager = new BridgeManager();
     /** 访问控制权限管理 */
@@ -178,8 +178,8 @@ public final class MqttBrokerBootstrap extends ServerTransport {
     /**
      * 规则链配置
      */
-    public MqttBrokerBootstrap ruleChain(RuleChainDefinition definition) {
-        this.ruleChainDefinitions.add(definition);
+    public MqttBrokerBootstrap rule(RuleDefinition definition) {
+        this.ruleDefinitions.add(definition);
         return this;
     }
 
@@ -266,7 +266,7 @@ public final class MqttBrokerBootstrap extends ServerTransport {
 
         MqttBrokerContext brokerContext = new MqttBrokerContext(brokerId, port, new MqttMessageDispatcher(interceptors),
                 authService, brokerManager, messageStore,
-                ruleChainDefinitions, bridgeManager,
+                ruleDefinitions, bridgeManager,
                 aclService);
         BrokerManager brokerManager;
 
@@ -422,8 +422,8 @@ public final class MqttBrokerBootstrap extends ServerTransport {
         return brokerManager;
     }
 
-    public List<RuleChainDefinition> getRuleChainDefinitions() {
-        return ruleChainDefinitions;
+    public List<RuleDefinition> getRuleDefinitions() {
+        return ruleDefinitions;
     }
 
     public int getBrokerId() {

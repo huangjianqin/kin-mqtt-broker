@@ -1,31 +1,32 @@
-package org.kin.mqtt.broker.rule.impl;
+package org.kin.mqtt.broker.rule.action.bridge;
 
 import org.kin.mqtt.broker.core.MqttBrokerContext;
 import org.kin.mqtt.broker.core.VirtualMqttChannel;
 import org.kin.mqtt.broker.core.message.MqttMessageReplica;
 import org.kin.mqtt.broker.core.message.MqttMessageUtils;
 import org.kin.mqtt.broker.core.message.MqttMessageWrapper;
-import org.kin.mqtt.broker.rule.ConditionLessRuleNode;
-import org.kin.mqtt.broker.rule.RuleChainContext;
-import org.kin.mqtt.broker.rule.RuleNode;
-import org.kin.mqtt.broker.rule.definition.TopicRuleDefinition;
+import org.kin.mqtt.broker.rule.RuleContext;
+import org.kin.mqtt.broker.rule.action.Action;
+import org.kin.mqtt.broker.rule.action.ActionDefinition;
+import org.kin.mqtt.broker.rule.action.bridge.definition.MqttTopicActionDefinition;
 import reactor.core.publisher.Mono;
 
 /**
+ * 转发到指定mqtt topic
+ *
  * @author huangjianqin
  * @date 2022/11/21
  */
-public final class TopicRule extends ConditionLessRuleNode<TopicRuleDefinition> {
-    public TopicRule(TopicRuleDefinition definition) {
-        super(definition);
-    }
+public final class MqttTopicAction implements Action {
+    /** mqtt topic转发topic定义 */
+    private final MqttTopicActionDefinition definition;
 
-    public TopicRule(TopicRuleDefinition definition, RuleNode next) {
-        super(definition, next);
+    public MqttTopicAction(MqttTopicActionDefinition definition) {
+        this.definition = definition;
     }
 
     @Override
-    protected Mono<Void> execute0(RuleChainContext context) {
+    public Mono<Void> start(RuleContext context) {
         MqttBrokerContext brokerContext = context.getBrokerContext();
         MqttMessageReplica replica = context.getMessage();
         //script即真正topic
@@ -34,5 +35,10 @@ public final class TopicRule extends ConditionLessRuleNode<TopicRuleDefinition> 
                 MqttMessageWrapper.common(MqttMessageUtils.createPublish(replica, definition.getTopic())),
                 new VirtualMqttChannel(brokerContext, replica.getClientId()),
                 brokerContext));
+    }
+
+    @Override
+    public ActionDefinition definition() {
+        return definition;
     }
 }

@@ -1,11 +1,9 @@
-package org.kin.mqtt.broker.rule.impl;
+package org.kin.mqtt.broker.rule.action.bridge;
 
 import org.kin.mqtt.broker.bridge.BridgeAttrNames;
 import org.kin.mqtt.broker.bridge.BridgeType;
-import org.kin.mqtt.broker.rule.BridgeAction;
-import org.kin.mqtt.broker.rule.RuleChainContext;
-import org.kin.mqtt.broker.rule.RuleNode;
-import org.kin.mqtt.broker.rule.definition.KafkaActionDefinition;
+import org.kin.mqtt.broker.rule.RuleContext;
+import org.kin.mqtt.broker.rule.action.bridge.definition.KafkaActionDefinition;
 
 /**
  * 将publish消息数据桥接到kafka
@@ -14,17 +12,13 @@ import org.kin.mqtt.broker.rule.definition.KafkaActionDefinition;
  * @date 2022/12/11
  * @see org.kin.mqtt.broker.bridge.BridgeType#KAFKA
  */
-public class KafkaBridgeAction extends BridgeAction<KafkaActionDefinition> {
+public final class KafkaBridgeAction extends BridgeAction<KafkaActionDefinition> {
     public KafkaBridgeAction(KafkaActionDefinition definition) {
         super(definition);
     }
 
-    public KafkaBridgeAction(KafkaActionDefinition definition, RuleNode next) {
-        super(definition, next);
-    }
-
     @Override
-    protected void preTransmit(RuleChainContext context) {
+    protected void preStart(RuleContext context) {
         context.getAttrs().updateAttr(BridgeAttrNames.KAFKA_TOPIC, definition.getTopic());
     }
 

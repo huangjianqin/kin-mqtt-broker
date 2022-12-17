@@ -10,9 +10,9 @@ import org.kin.mqtt.broker.bridge.BridgeManager;
 import org.kin.mqtt.broker.cluster.BrokerManager;
 import org.kin.mqtt.broker.core.topic.TopicManager;
 import org.kin.mqtt.broker.event.MqttEvent;
-import org.kin.mqtt.broker.rule.RuleChainDefinition;
-import org.kin.mqtt.broker.rule.RuleChainManager;
+import org.kin.mqtt.broker.rule.RuleDefinition;
 import org.kin.mqtt.broker.rule.RuleEngine;
+import org.kin.mqtt.broker.rule.RuleManager;
 import org.kin.mqtt.broker.store.MqttMessageStore;
 import reactor.core.scheduler.Scheduler;
 import reactor.core.scheduler.Schedulers;
@@ -45,9 +45,9 @@ public final class MqttBrokerContext implements Closeable {
     /** mqtt消息外部存储 */
     private final MqttMessageStore messageStore;
     /** 规则链管理 */
-    private final RuleChainManager ruleChainManager = new RuleChainManager();
+    private final RuleManager ruleManager = new RuleManager();
     /** 规则链执行 */
-    private final RuleEngine ruleEngine = new RuleEngine(ruleChainManager);
+    private final RuleEngine ruleEngine = new RuleEngine(ruleManager);
     /** 数据桥接实现管理 */
     private final BridgeManager bridgeManager;
     /** 访问控制权限管理 */
@@ -57,7 +57,7 @@ public final class MqttBrokerContext implements Closeable {
 
     public MqttBrokerContext(int brokerId, int port, MqttMessageDispatcher dispatcher, AuthService authService,
                              BrokerManager brokerManager, MqttMessageStore messageStore,
-                             List<RuleChainDefinition> ruleChainDefinitions,
+                             List<RuleDefinition> ruleDefinitions,
                              BridgeManager bridgeManager,
                              AclService aclService) {
         this.brokerId = brokerId;
@@ -66,7 +66,7 @@ public final class MqttBrokerContext implements Closeable {
         this.authService = authService;
         this.brokerManager = brokerManager;
         this.messageStore = messageStore;
-        this.ruleChainManager.addRuleChains(ruleChainDefinitions);
+        this.ruleManager.addRules(ruleDefinitions);
         this.bridgeManager = bridgeManager;
         this.aclService = aclService;
         this.eventBus = new DefaultReactorEventBus(true, mqttBsScheduler);
@@ -135,8 +135,8 @@ public final class MqttBrokerContext implements Closeable {
         return brokerManager;
     }
 
-    public RuleChainManager getRuleChainManager() {
-        return ruleChainManager;
+    public RuleManager getRuleChainManager() {
+        return ruleManager;
     }
 
     public RuleEngine getRuleEngine() {

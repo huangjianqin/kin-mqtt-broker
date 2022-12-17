@@ -115,10 +115,10 @@
             <artifactId>micrometer-registry-prometheus</artifactId>
         </dependency>
 
-        <!-- 表达式引擎 -->
+        <!-- 基于sql处理数据流 -->
         <dependency>
-            <groupId>org.apache.commons</groupId>
-            <artifactId>commons-jexl3</artifactId>
+            <groupId>org.kin</groupId>
+            <artifactId>kin-reactor-sql</artifactId>
         </dependency>
     </dependencies>
 

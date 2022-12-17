@@ -1,6 +1,6 @@
-package org.kin.mqtt.broker.rule.definition;
+package org.kin.mqtt.broker.rule.action.bridge.definition;
 
-import org.kin.mqtt.broker.rule.impl.HttpBridgeAction;
+import org.kin.mqtt.broker.rule.action.bridge.HttpBridgeAction;
 
 import java.util.Collections;
 import java.util.Map;
@@ -12,9 +12,12 @@ import java.util.Map;
  * @date 2022/12/11
  * @see HttpBridgeAction
  */
-public class HttpActionDefinition extends BridgeActionDefinition {
+public final class HttpActionDefinition extends BridgeActionDefinition {
     private String uri;
     private Map<String, Object> headers = Collections.emptyMap();
+
+    private HttpActionDefinition() {
+    }
 
     public static Builder builder() {
         return new Builder();

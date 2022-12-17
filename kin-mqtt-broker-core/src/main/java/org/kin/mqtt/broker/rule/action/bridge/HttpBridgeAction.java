@@ -1,11 +1,9 @@
-package org.kin.mqtt.broker.rule.impl;
+package org.kin.mqtt.broker.rule.action.bridge;
 
 import org.kin.mqtt.broker.bridge.BridgeAttrNames;
 import org.kin.mqtt.broker.bridge.BridgeType;
-import org.kin.mqtt.broker.rule.BridgeAction;
-import org.kin.mqtt.broker.rule.RuleChainContext;
-import org.kin.mqtt.broker.rule.RuleNode;
-import org.kin.mqtt.broker.rule.definition.HttpActionDefinition;
+import org.kin.mqtt.broker.rule.RuleContext;
+import org.kin.mqtt.broker.rule.action.bridge.definition.HttpActionDefinition;
 
 /**
  * 将publish消息数据桥接到http接口
@@ -14,17 +12,13 @@ import org.kin.mqtt.broker.rule.definition.HttpActionDefinition;
  * @date 2022/12/11
  * @see org.kin.mqtt.broker.bridge.BridgeType#HTTP
  */
-public class HttpBridgeAction extends BridgeAction<HttpActionDefinition> {
+public final class HttpBridgeAction extends BridgeAction<HttpActionDefinition> {
     public HttpBridgeAction(HttpActionDefinition definition) {
         super(definition);
     }
 
-    public HttpBridgeAction(HttpActionDefinition definition, RuleNode next) {
-        super(definition, next);
-    }
-
     @Override
-    protected void preTransmit(RuleChainContext context) {
+    protected void preStart(RuleContext context) {
         context.getAttrs().updateAttr(BridgeAttrNames.HTTP_URI, definition.getUri());
         context.getAttrs().updateAttr(BridgeAttrNames.HTTP_HEADERS, definition.getHeaders());
     }

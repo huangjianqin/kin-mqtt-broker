@@ -1,6 +1,6 @@
-package org.kin.mqtt.broker.rule.definition;
+package org.kin.mqtt.broker.rule.action.bridge.definition;
 
-import org.kin.mqtt.broker.rule.impl.RabbitMQBridgeAction;
+import org.kin.mqtt.broker.rule.action.bridge.RabbitMQBridgeAction;
 
 /**
  * rabbitmq bridge动作规则定义
@@ -12,6 +12,9 @@ import org.kin.mqtt.broker.rule.impl.RabbitMQBridgeAction;
 public final class RabbitMQActionDefinition extends BridgeActionDefinition {
     /** rabbitmq queue */
     private String queue;
+
+    private RabbitMQActionDefinition() {
+    }
 
     public static Builder builder() {
         return new Builder();

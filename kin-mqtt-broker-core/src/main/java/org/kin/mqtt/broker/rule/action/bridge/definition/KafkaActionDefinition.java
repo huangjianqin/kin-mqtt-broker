@@ -1,6 +1,6 @@
-package org.kin.mqtt.broker.rule.definition;
+package org.kin.mqtt.broker.rule.action.bridge.definition;
 
-import org.kin.mqtt.broker.rule.impl.KafkaBridgeAction;
+import org.kin.mqtt.broker.rule.action.bridge.KafkaBridgeAction;
 
 /**
  * kafka bridge动作规则定义
@@ -12,6 +12,9 @@ import org.kin.mqtt.broker.rule.impl.KafkaBridgeAction;
 public final class KafkaActionDefinition extends BridgeActionDefinition {
     /** kafka topic */
     private String topic;
+
+    private KafkaActionDefinition() {
+    }
 
     public static Builder builder() {
         return new Builder();

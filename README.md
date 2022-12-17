@@ -31,11 +31,12 @@
 
 ### 规则引擎
 
-* 基于jexl3
+* 基于reactor-sql
 * 支持多种数据桥接:
   * http
   * kafka
   * rabbitmq
+  * 内部mqtt topic转发
 
 ### 系统Topic
 

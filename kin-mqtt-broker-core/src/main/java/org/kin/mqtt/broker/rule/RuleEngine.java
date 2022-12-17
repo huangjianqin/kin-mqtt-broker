@@ -16,10 +16,10 @@ import reactor.core.publisher.Mono;
 public final class RuleEngine {
     private static final Logger log = LoggerFactory.getLogger(RuleEngine.class);
     /** 规则链 */
-    private final RuleChainManager ruleChainManager;
+    private final RuleManager ruleManager;
 
-    public RuleEngine(RuleChainManager ruleChainManager) {
-        this.ruleChainManager = ruleChainManager;
+    public RuleEngine(RuleManager ruleManager) {
+        this.ruleManager = ruleManager;
     }
 
     /**
@@ -29,8 +29,9 @@ public final class RuleEngine {
      * @param message       mqtt publish消息副本
      */
     public Mono<Void> execute(MqttBrokerContext brokerContext, MqttMessageReplica message) {
-        return Flux.fromIterable(ruleChainManager.getRuleChains())
-                .flatMap(ruleChain -> ruleChain.execute(new RuleChainContext(brokerContext, message)))
+        return Flux.fromIterable(ruleManager.getAllRule())
+                .filter(rule -> rule.match(message.getTopic()))
+                .doOnNext(rule -> rule.execute(brokerContext, message))
                 .doOnError(t -> log.error("rule execute error, ", t))
                 .then();
     }
