@@ -1,13 +1,15 @@
 package org.kin.mqtt.broker.rule;
 
 import org.jctools.maps.NonBlockingHashMap;
+import org.kin.mqtt.broker.cluster.event.RuleActionAddEvent;
+import org.kin.mqtt.broker.cluster.event.RuleActionRemoveEvent;
+import org.kin.mqtt.broker.cluster.event.RuleAddEvent;
+import org.kin.mqtt.broker.cluster.event.RuleRemoveEvent;
+import org.kin.mqtt.broker.core.MqttBrokerContext;
 import org.kin.mqtt.broker.rule.action.ActionDefinition;
 
 import javax.annotation.Nullable;
-import java.util.Collection;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
+import java.util.*;
 import java.util.stream.Collectors;
 
 /**
@@ -15,8 +17,14 @@ import java.util.stream.Collectors;
  * @date 2022/11/21
  */
 public final class RuleManager {
+    /** broker context */
+    private final MqttBrokerContext brokerContext;
     /** key -> rule name, value -> {@link Rule} */
     private final Map<String, Rule> rules = new NonBlockingHashMap<>();
+
+    public RuleManager(MqttBrokerContext brokerContext) {
+        this.brokerContext = brokerContext;
+    }
 
     /**
      * 批量添加规则
@@ -41,6 +49,7 @@ public final class RuleManager {
         }
 
         rules.put(name, new Rule(definition));
+        brokerContext.broadcastClusterEvent(RuleAddEvent.of(definition.getName()));
     }
 
     /**
@@ -55,6 +64,7 @@ public final class RuleManager {
         }
 
         removed.dispose();
+        brokerContext.broadcastClusterEvent(RuleRemoveEvent.of(name));
     }
 
     /**
@@ -81,6 +91,7 @@ public final class RuleManager {
     public void addAction(String name, ActionDefinition actionDefinition) {
         Rule rule = getRuleOrThrow(name);
         rule.addAction(actionDefinition);
+        brokerContext.broadcastClusterEvent(RuleActionAddEvent.of(name));
     }
 
     /**
@@ -91,7 +102,11 @@ public final class RuleManager {
      */
     public boolean removeAction(String name, ActionDefinition actionDefinition) {
         Rule rule = getRuleOrThrow(name);
-        return rule.removeAction(actionDefinition);
+        boolean result = rule.removeAction(actionDefinition);
+        if (result) {
+            brokerContext.broadcastClusterEvent(RuleActionRemoveEvent.of(name));
+        }
+        return result;
     }
 
     /**
@@ -124,6 +139,6 @@ public final class RuleManager {
      * @return 所有规则实现
      */
     public Collection<Rule> getAllRule() {
-        return rules.values().stream().collect(Collectors.toList());
+        return new ArrayList<>(rules.values());
     }
 }

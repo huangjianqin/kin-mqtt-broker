@@ -10,9 +10,13 @@ import io.scalecube.cluster.transport.api.Message;
 import io.scalecube.net.Address;
 import io.scalecube.reactor.RetryNonSerializedEmitFailureHandler;
 import io.scalecube.transport.netty.tcp.TcpTransportFactory;
+import org.kin.framework.utils.ClassUtils;
+import org.kin.framework.utils.JSON;
 import org.kin.framework.utils.NetUtils;
 import org.kin.mqtt.broker.cluster.BrokerManager;
 import org.kin.mqtt.broker.cluster.MqttBrokerNode;
+import org.kin.mqtt.broker.cluster.event.MqttClusterEvent;
+import org.kin.mqtt.broker.core.MqttBrokerContext;
 import org.kin.mqtt.broker.core.message.MqttMessageReplica;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -21,6 +25,7 @@ import reactor.core.publisher.Mono;
 import reactor.core.publisher.Sinks;
 
 import java.util.List;
+import java.util.Map;
 import java.util.StringJoiner;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -34,8 +39,20 @@ import java.util.stream.Stream;
 public final class GossipBrokerManager implements BrokerManager {
     private static final Logger log = LoggerFactory.getLogger(GossipBrokerManager.class);
 
+    /** gossip消息header, 标识mqtt消息 */
+    private static final String HEADER_MQTT_MESSAGE = "MqttMessage";
+    /** gossip消息header, 标识mqtt事件 */
+    private static final String HEADER_MQTT_EVENT = "MqttEvent";
+    /** gossip消息header, 标识mqtt事件类型 */
+    private static final String HEADER_MQTT_EVENT_TYPE = "MqttEventType";
+
     /** config */
     private final GossipConfig config;
+    /**
+     * mqtt broker context
+     * lazy init
+     */
+    private MqttBrokerContext brokerContext;
     /** 来自集群广播的mqtt消息流 */
     private final Sinks.Many<MqttMessageReplica> clusterMqttMessageSink = Sinks.many().multicast().onBackpressureBuffer();
     /** gossip cluster */
@@ -46,7 +63,8 @@ public final class GossipBrokerManager implements BrokerManager {
     }
 
     @Override
-    public Mono<Void> start() {
+    public Mono<Void> start(MqttBrokerContext brokerContext) {
+        this.brokerContext = brokerContext;
         int port = config.getPort();
         clusterMono = new ClusterImpl().config(clusterConfig -> clusterConfig.externalHost(NetUtils.getIp()).externalPort(port))
                 .membership(membershipConfig -> membershipConfig.seedMembers(seedMembers(config.getSeeds()))
@@ -101,10 +119,26 @@ public final class GossipBrokerManager implements BrokerManager {
 
     @Override
     public Mono<Void> broadcastMqttMessage(MqttMessageReplica message) {
-        // TODO: 2022/12/4 只想那些有订阅topic的节点广播
+        // TODO: 2022/12/4 只想那些有订阅topic的节点广播, 提高性能
         return clusterMono.flatMap(c -> {
                     log.debug("cluster broadcast message {} ", message);
-                    return c.spreadGossip(Message.withData(message).build());
+                    return c.spreadGossip(Message.builder()
+                            .header(HEADER_MQTT_MESSAGE, "true")
+                            .data(message)
+                            .build());
+                })
+                .then();
+    }
+
+    @Override
+    public Mono<Void> broadcastEvent(MqttClusterEvent event) {
+        return clusterMono.flatMap(c -> {
+                    log.debug("cluster broadcast event {} ", event);
+                    return c.spreadGossip(Message.builder()
+                            .header(HEADER_MQTT_EVENT, "true")
+                            .header(HEADER_MQTT_EVENT_TYPE, event.getClass().getName())
+                            .data(JSON.write(event))
+                            .build());
                 })
                 .then();
     }
@@ -132,7 +166,23 @@ public final class GossipBrokerManager implements BrokerManager {
         @Override
         public void onGossip(Message message) {
             log.debug("cluster accept message {} ", message);
-            clusterMqttMessageSink.emitNext(message.data(), new RetryNonSerializedEmitFailureHandler());
+            Map<String, String> headers = message.headers();
+            if (headers.containsKey(HEADER_MQTT_MESSAGE)) {
+                //mqtt message
+                clusterMqttMessageSink.emitNext(message.data(), new RetryNonSerializedEmitFailureHandler());
+            } else if (headers.containsKey(HEADER_MQTT_EVENT)) {
+                //mqtt event
+                String eventTypeStr = null;
+                Class<? extends MqttClusterEvent> eventType;
+                try {
+                    eventTypeStr = headers.getOrDefault(HEADER_MQTT_EVENT_TYPE, "");
+                    eventType = ClassUtils.getClass(eventTypeStr);
+                } catch (Exception e) {
+                    throw new IllegalStateException(String.format("unknown mqtt event class '%s'", eventTypeStr));
+                }
+
+                brokerContext.broadcastEvent(JSON.read((String) message.data(), eventType));
+            }
         }
 
         @Override

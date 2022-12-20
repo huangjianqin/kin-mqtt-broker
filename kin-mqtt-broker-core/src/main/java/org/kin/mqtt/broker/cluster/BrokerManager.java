@@ -1,5 +1,7 @@
 package org.kin.mqtt.broker.cluster;
 
+import org.kin.mqtt.broker.cluster.event.MqttClusterEvent;
+import org.kin.mqtt.broker.core.MqttBrokerContext;
 import org.kin.mqtt.broker.core.message.MqttMessageReplica;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -20,7 +22,7 @@ public interface BrokerManager {
      *
      * @return init complete signal
      */
-    Mono<Void> start();
+    Mono<Void> start(MqttBrokerContext brokerContext);
 
     /**
      * 返回来自集群其他broker的mqtt消息流
@@ -37,12 +39,20 @@ public interface BrokerManager {
     Flux<MqttBrokerNode> getClusterBrokerNodes();
 
     /**
-     * 集群广播mqtt消息, 目前广播publish消息
+     * 集群广播mqtt消息, 目前仅广播publish消息
      *
      * @param message 要广播的mqtt消息
      * @return broadcast complete signal
      */
     Mono<Void> broadcastMqttMessage(MqttMessageReplica message);
+
+    /**
+     * 集群广播集群事件
+     *
+     * @param event 要广播的集群事件
+     * @return broadcast complete signal
+     */
+    Mono<Void> broadcastEvent(MqttClusterEvent event);
 
     /**
      * shutdown

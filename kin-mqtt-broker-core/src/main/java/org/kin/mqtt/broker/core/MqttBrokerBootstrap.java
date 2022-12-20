@@ -378,7 +378,7 @@ public final class MqttBrokerBootstrap extends ServerTransport {
      * {@link BrokerManager}初始化完成之后的操作
      */
     private void initBrokerManager(MqttBrokerContext brokerContext) {
-        brokerContext.getBrokerManager().start()
+        brokerContext.getBrokerManager().start(brokerContext)
                 .then(Mono.fromRunnable(() -> brokerManager.clusterMqttMessages()
                         .onErrorResume(e -> Mono.empty())
                         .publishOn(brokerContext.getMqttBsScheduler())

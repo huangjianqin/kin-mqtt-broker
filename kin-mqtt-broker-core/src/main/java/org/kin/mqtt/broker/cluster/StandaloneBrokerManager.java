@@ -1,5 +1,7 @@
 package org.kin.mqtt.broker.cluster;
 
+import org.kin.mqtt.broker.cluster.event.MqttClusterEvent;
+import org.kin.mqtt.broker.core.MqttBrokerContext;
 import org.kin.mqtt.broker.core.message.MqttMessageReplica;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -18,7 +20,7 @@ public final class StandaloneBrokerManager implements BrokerManager {
     }
 
     @Override
-    public Mono<Void> start() {
+    public Mono<Void> start(MqttBrokerContext brokerContext) {
         return Mono.empty();
     }
 
@@ -34,6 +36,11 @@ public final class StandaloneBrokerManager implements BrokerManager {
 
     @Override
     public Mono<Void> broadcastMqttMessage(MqttMessageReplica message) {
+        return Mono.empty();
+    }
+
+    @Override
+    public Mono<Void> broadcastEvent(MqttClusterEvent event) {
         return Mono.empty();
     }
 

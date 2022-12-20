@@ -17,7 +17,7 @@
         <module>kin-mqtt-broker-common</module>
         <module>kin-mqtt-broker-bridge</module>
         <module>kin-mqtt-broker-acl</module>
-        <module>kin-mqtt-broker-cluster</module>
+        <module>kin-mqtt-broker-gossip</module>
     </modules>
     <packaging>pom</packaging>
 

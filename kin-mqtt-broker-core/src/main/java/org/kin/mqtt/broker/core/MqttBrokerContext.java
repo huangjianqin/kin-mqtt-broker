@@ -8,6 +8,7 @@ import org.kin.mqtt.broker.acl.AclService;
 import org.kin.mqtt.broker.auth.AuthService;
 import org.kin.mqtt.broker.bridge.BridgeManager;
 import org.kin.mqtt.broker.cluster.BrokerManager;
+import org.kin.mqtt.broker.cluster.event.MqttClusterEvent;
 import org.kin.mqtt.broker.core.topic.TopicManager;
 import org.kin.mqtt.broker.event.MqttEvent;
 import org.kin.mqtt.broker.rule.RuleDefinition;
@@ -45,7 +46,7 @@ public final class MqttBrokerContext implements Closeable {
     /** mqtt消息外部存储 */
     private final MqttMessageStore messageStore;
     /** 规则链管理 */
-    private final RuleManager ruleManager = new RuleManager();
+    private final RuleManager ruleManager = new RuleManager(this);
     /** 规则链执行 */
     private final RuleEngine ruleEngine = new RuleEngine(ruleManager);
     /** 数据桥接实现管理 */
@@ -89,6 +90,13 @@ public final class MqttBrokerContext implements Closeable {
      */
     public void broadcastEvent(MqttEvent event) {
         eventBus.post(event);
+    }
+
+    /**
+     * 广播集群事件
+     */
+    public void broadcastClusterEvent(MqttClusterEvent event) {
+        brokerManager.broadcastEvent(event).subscribe();
     }
 
     /**
