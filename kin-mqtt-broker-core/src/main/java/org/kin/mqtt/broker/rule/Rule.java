@@ -141,7 +141,9 @@ public final class Rule implements Disposable {
         }
 
         sink.emitNext(new RuleContext(brokerContext, message), (signalType, emitResult) -> {
-            throw new IllegalStateException(String.format("rule '%s' emit next message error, due to %s %s", definition.getName(), signalType, emitResult));
+            log.error("rule '{}' emit next message error, due to {} {}", definition.getName(), signalType, emitResult);
+            //retry
+            return true;
         });
     }
 
@@ -149,7 +151,9 @@ public final class Rule implements Disposable {
     public void dispose() {
         disposable.dispose();
         sink.emitComplete((signalType, emitResult) -> {
-            throw new IllegalStateException(String.format("rule '%s' dispose error, due to %s %s", definition.getName(), signalType, emitResult));
+            log.error("rule '{}' dispose error, due to {} {}", definition.getName(), signalType, emitResult);
+            //retry
+            return true;
         });
     }
 
