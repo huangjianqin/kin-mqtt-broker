@@ -4,7 +4,6 @@ import io.netty.handler.codec.mqtt.MqttMessage;
 import io.netty.handler.codec.mqtt.MqttMessageIdVariableHeader;
 import io.netty.handler.codec.mqtt.MqttMessageType;
 import io.netty.handler.codec.mqtt.MqttQoS;
-import org.kin.framework.utils.Extension;
 import org.kin.mqtt.broker.core.MqttBrokerContext;
 import org.kin.mqtt.broker.core.MqttChannel;
 import org.kin.mqtt.broker.core.Retry;
@@ -27,7 +26,6 @@ import java.util.stream.Collectors;
  * @author huangjianqin
  * @date 2022/11/14
  */
-@Extension("pubRel")
 public class PubRelHandler extends AbstractMqttMessageHandler<MqttMessage> {
     @Override
     public Mono<Void> handle(MqttMessageWrapper<MqttMessage> wrapper, MqttChannel mqttChannel, MqttBrokerContext brokerContext) {

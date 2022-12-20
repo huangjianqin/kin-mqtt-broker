@@ -5,7 +5,6 @@ import io.netty.handler.codec.mqtt.MqttMessageType;
 import io.netty.handler.codec.mqtt.MqttPublishMessage;
 import io.netty.handler.codec.mqtt.MqttPublishVariableHeader;
 import io.netty.handler.codec.mqtt.MqttQoS;
-import org.kin.framework.utils.Extension;
 import org.kin.mqtt.broker.acl.AclAction;
 import org.kin.mqtt.broker.acl.AclService;
 import org.kin.mqtt.broker.core.MqttBrokerContext;
@@ -26,7 +25,6 @@ import java.util.stream.Collectors;
  * @author huangjianqin
  * @date 2022/11/15
  */
-@Extension("publish")
 public class PublishHandler extends AbstractMqttMessageHandler<MqttPublishMessage> {
     @Override
     public Mono<Void> handle(MqttMessageWrapper<MqttPublishMessage> wrapper, MqttChannel mqttChannel, MqttBrokerContext brokerContext) {

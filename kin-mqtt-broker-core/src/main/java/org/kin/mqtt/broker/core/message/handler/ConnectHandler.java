@@ -1,7 +1,6 @@
 package org.kin.mqtt.broker.core.message.handler;
 
 import io.netty.handler.codec.mqtt.*;
-import org.kin.framework.utils.Extension;
 import org.kin.mqtt.broker.auth.AuthService;
 import org.kin.mqtt.broker.core.MqttBrokerContext;
 import org.kin.mqtt.broker.core.MqttChannel;
@@ -23,7 +22,6 @@ import java.util.Objects;
  * @author huangjianqin
  * @date 2022/11/15
  */
-@Extension("publish")
 public class ConnectHandler extends AbstractMqttMessageHandler<MqttConnectMessage> {
     private static final Logger log = LoggerFactory.getLogger(ConnectHandler.class);
 

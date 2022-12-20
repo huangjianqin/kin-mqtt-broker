@@ -2,7 +2,6 @@ package org.kin.mqtt.broker.core.message.handler;
 
 import io.netty.handler.codec.mqtt.MqttMessageType;
 import io.netty.handler.codec.mqtt.MqttUnsubAckMessage;
-import org.kin.framework.utils.Extension;
 import org.kin.mqtt.broker.core.MqttBrokerContext;
 import org.kin.mqtt.broker.core.MqttChannel;
 import org.kin.mqtt.broker.core.message.MqttMessageWrapper;
@@ -16,7 +15,6 @@ import javax.annotation.Nonnull;
  * @author huangjianqin
  * @date 2022/11/14
  */
-@Extension("unsubAck")
 public class UnsubAckHandler extends AbstractMqttMessageHandler<MqttUnsubAckMessage> {
     @Override
     public Mono<Void> handle(MqttMessageWrapper<MqttUnsubAckMessage> wrapper, MqttChannel mqttChannel, MqttBrokerContext brokerContext) {

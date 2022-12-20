@@ -2,7 +2,6 @@ package org.kin.mqtt.broker.core.message.handler;
 
 import io.netty.handler.codec.mqtt.MqttMessageType;
 import io.netty.handler.codec.mqtt.MqttUnsubscribeMessage;
-import org.kin.framework.utils.Extension;
 import org.kin.mqtt.broker.core.MqttBrokerContext;
 import org.kin.mqtt.broker.core.MqttChannel;
 import org.kin.mqtt.broker.core.message.MqttMessageUtils;
@@ -17,7 +16,6 @@ import javax.annotation.Nonnull;
  * @author huangjianqin
  * @date 2022/11/14
  */
-@Extension("unsubscribe")
 public class UnsubscribeHandler extends AbstractMqttMessageHandler<MqttUnsubscribeMessage> {
     @Override
     public Mono<Void> handle(MqttMessageWrapper<MqttUnsubscribeMessage> wrapper, MqttChannel mqttChannel, MqttBrokerContext brokerContext) {

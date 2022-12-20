@@ -2,7 +2,6 @@ package org.kin.mqtt.broker.core.message.handler;
 
 import io.netty.handler.codec.mqtt.MqttMessageType;
 import io.netty.handler.codec.mqtt.MqttSubAckMessage;
-import org.kin.framework.utils.Extension;
 import org.kin.mqtt.broker.core.MqttBrokerContext;
 import org.kin.mqtt.broker.core.MqttChannel;
 import org.kin.mqtt.broker.core.message.MqttMessageWrapper;
@@ -16,7 +15,6 @@ import javax.annotation.Nonnull;
  * @author huangjianqin
  * @date 2022/11/14
  */
-@Extension("subAck")
 public class SubAckHandler extends AbstractMqttMessageHandler<MqttSubAckMessage> {
     @Override
     public Mono<Void> handle(MqttMessageWrapper<MqttSubAckMessage> wrapper, MqttChannel mqttChannel, MqttBrokerContext brokerContext) {

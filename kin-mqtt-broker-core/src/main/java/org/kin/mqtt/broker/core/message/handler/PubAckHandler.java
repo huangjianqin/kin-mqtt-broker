@@ -4,7 +4,6 @@ import io.netty.handler.codec.mqtt.MqttMessage;
 import io.netty.handler.codec.mqtt.MqttMessageIdVariableHeader;
 import io.netty.handler.codec.mqtt.MqttMessageType;
 import io.netty.handler.codec.mqtt.MqttPubAckMessage;
-import org.kin.framework.utils.Extension;
 import org.kin.mqtt.broker.core.MqttBrokerContext;
 import org.kin.mqtt.broker.core.MqttChannel;
 import org.kin.mqtt.broker.core.Retry;
@@ -20,7 +19,6 @@ import java.util.Optional;
  * @author huangjianqin
  * @date 2022/11/14
  */
-@Extension("pubAck")
 public class PubAckHandler extends AbstractMqttMessageHandler<MqttPubAckMessage> {
     @Override
     public Mono<Void> handle(MqttMessageWrapper<MqttPubAckMessage> wrapper, MqttChannel mqttChannel, MqttBrokerContext brokerContext) {
