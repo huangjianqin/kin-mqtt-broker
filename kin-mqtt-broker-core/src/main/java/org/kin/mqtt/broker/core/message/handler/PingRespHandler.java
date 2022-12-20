@@ -17,7 +17,7 @@ import javax.annotation.Nonnull;
  * @date 2022/11/14
  */
 @Extension("PingResp")
-public final class PingRespHandler extends AbstractMqttMessageHandler<MqttMessage> {
+public class PingRespHandler extends AbstractMqttMessageHandler<MqttMessage> {
     @Override
     public Mono<Void> handle(MqttMessageWrapper<MqttMessage> wrapper, MqttChannel mqttChannel, MqttBrokerContext brokerContext) {
         //暂时do nothing

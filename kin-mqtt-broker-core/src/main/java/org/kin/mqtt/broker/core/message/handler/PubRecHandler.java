@@ -21,7 +21,7 @@ import java.util.Optional;
  * @date 2022/11/14
  */
 @Extension("pubRec")
-public final class PubRecHandler extends AbstractMqttMessageHandler<MqttMessage> {
+public class PubRecHandler extends AbstractMqttMessageHandler<MqttMessage> {
     @Override
     public Mono<Void> handle(MqttMessageWrapper<MqttMessage> wrapper, MqttChannel mqttChannel, MqttBrokerContext brokerContext) {
         MqttMessage message = wrapper.getMessage();

@@ -11,7 +11,7 @@ import java.util.Objects;
  * @author huangjianqin
  * @date 2022/11/13
  */
-public final class TopicSubscription {
+public class TopicSubscription {
     /** 订阅的topic name */
     private final String topic;
     /** 发起订阅的mqtt连接 */

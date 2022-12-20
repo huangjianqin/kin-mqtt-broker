@@ -18,7 +18,7 @@ import java.util.stream.Collectors;
  * @author huangjianqin
  * @date 2022/11/16
  */
-public final class MemoryMessageStore extends AbstractMessageStore {
+public class MemoryMessageStore extends AbstractMessageStore {
     /** key -> client id, value -> 离线接收的mqtt消息 */
     private final Map<String, List<MqttMessageReplica>> offlineMessages = new NonBlockingHashMap<>();
     /** key -> topic, value -> 该topic的retain消息 */

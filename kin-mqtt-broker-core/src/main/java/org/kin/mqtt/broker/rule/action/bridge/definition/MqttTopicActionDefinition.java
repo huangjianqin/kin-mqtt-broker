@@ -12,7 +12,7 @@ import java.util.Objects;
  * @date 2022/12/11
  * @see MqttTopicAction
  */
-public final class MqttTopicActionDefinition implements ActionDefinition {
+public class MqttTopicActionDefinition implements ActionDefinition {
     /** 要转发的topic */
     private String topic;
 

@@ -9,7 +9,7 @@ import java.util.Map;
  * @author huangjianqin
  * @date 2022/11/22
  */
-public final class ContextAttrs extends HashMap<String, Object> {
+public class ContextAttrs extends HashMap<String, Object> {
     private static final long serialVersionUID = -6641783935850596222L;
 
     /**

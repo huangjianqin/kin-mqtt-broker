@@ -9,7 +9,7 @@ import org.kin.mqtt.broker.core.message.MqttMessageReplica;
  * @author huangjianqin
  * @date 2022/11/21
  */
-public final class RuleContext {
+public class RuleContext {
     /** mqtt broker context */
     private final MqttBrokerContext brokerContext;
     /** publish message副本 */

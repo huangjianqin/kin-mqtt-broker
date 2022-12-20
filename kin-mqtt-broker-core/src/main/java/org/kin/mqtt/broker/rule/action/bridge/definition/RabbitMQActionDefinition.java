@@ -9,7 +9,7 @@ import org.kin.mqtt.broker.rule.action.bridge.RabbitMQBridgeAction;
  * @date 2022/12/11
  * @see RabbitMQBridgeAction
  */
-public final class RabbitMQActionDefinition extends BridgeActionDefinition {
+public class RabbitMQActionDefinition extends BridgeActionDefinition {
     /** rabbitmq queue */
     private String queue;
 

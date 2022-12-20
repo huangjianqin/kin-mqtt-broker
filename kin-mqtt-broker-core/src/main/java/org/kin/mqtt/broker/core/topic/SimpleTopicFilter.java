@@ -18,7 +18,7 @@ import java.util.stream.Collectors;
  * @author huangjianqin
  * @date 2022/11/13
  */
-public final class SimpleTopicFilter implements TopicFilter {
+public class SimpleTopicFilter implements TopicFilter {
     /** key -> topic name, value -> */
     private final Map<String, CopyOnWriteArraySet<TopicSubscription>> topic2Subscriptions = new ConcurrentHashMap<>();
     /** 订阅数统计 */

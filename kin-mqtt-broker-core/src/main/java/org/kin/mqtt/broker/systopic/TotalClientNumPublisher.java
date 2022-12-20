@@ -16,7 +16,7 @@ import java.util.Map;
  * @date 2022/11/26
  */
 @EventListener
-public final class TotalClientNumPublisher extends AbstractSysTopicPublisher {
+public class TotalClientNumPublisher extends AbstractSysTopicPublisher {
     @EventFunction
     public void onMqttClientRegister(MqttClientRegisterEvent event) {
         publishTotalClientNum(event.getMqttChannel());

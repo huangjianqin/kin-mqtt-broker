@@ -13,7 +13,7 @@ import java.util.stream.Collectors;
  * @author huangjianqin
  * @date 2022/11/13
  */
-public final class TreeTopicFilter implements TopicFilter {
+public class TreeTopicFilter implements TopicFilter {
     /** 根节点 */
     private final TreeNode root = new TreeNode("$ROOT$");
     /** 订阅数统计 */

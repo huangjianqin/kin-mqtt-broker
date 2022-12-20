@@ -15,7 +15,7 @@ import java.util.Objects;
  * @author huangjianqin
  * @date 2022/11/20
  */
-public final class RedisMessageStore extends AbstractMessageStore {
+public class RedisMessageStore extends AbstractMessageStore {
     /** redis中保存离线消息的key */
     private static final String OFFLINE_MESSAGE_KEY_PREFIX = "KinMQTTBroker:offline:message:";
     /** redis中保存retain消息的key */

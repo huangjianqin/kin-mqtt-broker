@@ -8,7 +8,7 @@ import org.kin.mqtt.broker.core.MqttChannel;
  * @author huangjianqin
  * @date 2022/11/26
  */
-public final class MqttClientConnEvent implements MqttEvent {
+public class MqttClientConnEvent implements MqttEvent {
     /** mqtt client信息 */
     private final MqttChannel mqttChannel;
 

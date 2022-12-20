@@ -12,7 +12,7 @@ import java.util.Objects;
  * @author huangjianqin
  * @date 2022/11/15
  */
-public final class DefaultMqttChannelManager implements MqttChannelManager {
+public class DefaultMqttChannelManager implements MqttChannelManager {
     /** key -> client id, value -> mqtt channel */
     private final Map<String, MqttChannel> clientId2Channel = new NonBlockingHashMap<>();
 

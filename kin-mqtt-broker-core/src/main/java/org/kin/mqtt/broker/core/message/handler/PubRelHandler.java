@@ -28,7 +28,7 @@ import java.util.stream.Collectors;
  * @date 2022/11/14
  */
 @Extension("pubRel")
-public final class PubRelHandler extends AbstractMqttMessageHandler<MqttMessage> {
+public class PubRelHandler extends AbstractMqttMessageHandler<MqttMessage> {
     @Override
     public Mono<Void> handle(MqttMessageWrapper<MqttMessage> wrapper, MqttChannel mqttChannel, MqttBrokerContext brokerContext) {
         MqttMessage message = wrapper.getMessage();

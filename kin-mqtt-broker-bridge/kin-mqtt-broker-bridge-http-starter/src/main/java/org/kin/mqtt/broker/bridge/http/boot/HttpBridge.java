@@ -17,7 +17,7 @@ import java.util.Map;
  * @author huangjianqin
  * @date 2022/11/22
  */
-public final class HttpBridge extends NoErrorBridge {
+public class HttpBridge extends NoErrorBridge {
     private final WebClient webClient;
 
     public HttpBridge() {

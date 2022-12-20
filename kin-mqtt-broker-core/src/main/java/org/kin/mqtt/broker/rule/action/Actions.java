@@ -17,7 +17,7 @@ import java.util.*;
  * @author huangjianqin
  * @date 2022/12/16
  */
-public final class Actions {
+public class Actions {
     private Actions() {
     }
 

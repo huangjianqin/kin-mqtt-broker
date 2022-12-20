@@ -9,7 +9,7 @@ import io.netty.handler.codec.mqtt.MqttPublishMessage;
  * @author huangjianqin
  * @date 2022/11/14
  */
-public final class MqttMessageWrapper<T extends MqttMessage> {
+public class MqttMessageWrapper<T extends MqttMessage> {
     /** 真正mqtt消息 */
     private final T message;
     /** 接受或创建mqtt消息的时间戳ms */

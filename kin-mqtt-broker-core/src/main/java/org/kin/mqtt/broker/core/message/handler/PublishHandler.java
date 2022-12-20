@@ -27,7 +27,7 @@ import java.util.stream.Collectors;
  * @date 2022/11/15
  */
 @Extension("publish")
-public final class PublishHandler extends AbstractMqttMessageHandler<MqttPublishMessage> {
+public class PublishHandler extends AbstractMqttMessageHandler<MqttPublishMessage> {
     @Override
     public Mono<Void> handle(MqttMessageWrapper<MqttPublishMessage> wrapper, MqttChannel mqttChannel, MqttBrokerContext brokerContext) {
         if (wrapper.isFromCluster()) {

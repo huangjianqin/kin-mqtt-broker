@@ -20,7 +20,7 @@ import java.util.Map;
  * @author huangjianqin
  * @date 2022/11/22
  */
-public final class HttpBridge extends NoErrorBridge {
+public class HttpBridge extends NoErrorBridge {
     /** reactor http client */
     private final HttpClient httpClient;
 

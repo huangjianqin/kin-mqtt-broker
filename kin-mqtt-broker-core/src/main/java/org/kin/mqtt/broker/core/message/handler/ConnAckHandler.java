@@ -17,7 +17,7 @@ import javax.annotation.Nonnull;
  * @date 2022/11/14
  */
 @Extension("connAck")
-public final class ConnAckHandler extends AbstractMqttMessageHandler<MqttConnAckMessage> {
+public class ConnAckHandler extends AbstractMqttMessageHandler<MqttConnAckMessage> {
     @Override
     public Mono<Void> handle(MqttMessageWrapper<MqttConnAckMessage> wrapper, MqttChannel mqttChannel, MqttBrokerContext brokerContext) {
         //暂时do nothing

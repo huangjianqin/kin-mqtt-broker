@@ -12,7 +12,7 @@ import org.kin.mqtt.broker.rule.action.bridge.definition.KafkaActionDefinition;
  * @date 2022/12/11
  * @see org.kin.mqtt.broker.bridge.BridgeType#KAFKA
  */
-public final class KafkaBridgeAction extends BridgeAction<KafkaActionDefinition> {
+public class KafkaBridgeAction extends BridgeAction<KafkaActionDefinition> {
     public KafkaBridgeAction(KafkaActionDefinition definition) {
         super(definition);
     }

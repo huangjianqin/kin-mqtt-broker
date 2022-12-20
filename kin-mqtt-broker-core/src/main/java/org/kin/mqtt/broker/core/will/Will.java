@@ -8,7 +8,7 @@ import io.netty.handler.codec.mqtt.MqttQoS;
  * @author huangjianqin
  * @date 2022/11/15
  */
-public final class Will {
+public class Will {
     /** will retain */
     private boolean retain;
     /** will topic */

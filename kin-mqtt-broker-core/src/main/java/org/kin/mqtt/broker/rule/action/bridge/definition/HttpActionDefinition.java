@@ -12,7 +12,7 @@ import java.util.Map;
  * @date 2022/12/11
  * @see HttpBridgeAction
  */
-public final class HttpActionDefinition extends BridgeActionDefinition {
+public class HttpActionDefinition extends BridgeActionDefinition {
     private String uri;
     private Map<String, Object> headers = Collections.emptyMap();
 

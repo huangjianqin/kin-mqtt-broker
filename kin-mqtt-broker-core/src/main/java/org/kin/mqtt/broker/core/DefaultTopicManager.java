@@ -11,7 +11,7 @@ import java.util.stream.Collectors;
  * @author huangjianqin
  * @date 2022/11/13
  */
-public final class DefaultTopicManager implements TopicManager {
+public class DefaultTopicManager implements TopicManager {
     private final TopicFilter simpleFilter = new SimpleTopicFilter();
     private final TopicFilter treeFilter = new TreeTopicFilter();
 

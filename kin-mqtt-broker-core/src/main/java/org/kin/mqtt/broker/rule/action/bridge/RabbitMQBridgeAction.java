@@ -12,7 +12,7 @@ import org.kin.mqtt.broker.rule.action.bridge.definition.RabbitMQActionDefinitio
  * @date 2022/12/11
  * @see org.kin.mqtt.broker.bridge.BridgeType#RABBITMQ
  */
-public final class RabbitMQBridgeAction extends BridgeAction<RabbitMQActionDefinition> {
+public class RabbitMQBridgeAction extends BridgeAction<RabbitMQActionDefinition> {
     public RabbitMQBridgeAction(RabbitMQActionDefinition definition) {
         super(definition);
     }

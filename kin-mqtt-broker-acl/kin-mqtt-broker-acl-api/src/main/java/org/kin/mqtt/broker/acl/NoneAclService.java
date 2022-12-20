@@ -8,7 +8,7 @@ import reactor.core.publisher.Mono;
  * @author huangjianqin
  * @date 2022/11/24
  */
-public final class NoneAclService implements AclService {
+public class NoneAclService implements AclService {
     /** 单例 */
     public static final NoneAclService INSTANCE = new NoneAclService();
 

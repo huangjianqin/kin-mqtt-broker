@@ -21,7 +21,7 @@ import java.util.Optional;
  * @date 2022/11/14
  */
 @Extension("pubAck")
-public final class PubAckHandler extends AbstractMqttMessageHandler<MqttPubAckMessage> {
+public class PubAckHandler extends AbstractMqttMessageHandler<MqttPubAckMessage> {
     @Override
     public Mono<Void> handle(MqttMessageWrapper<MqttPubAckMessage> wrapper, MqttChannel mqttChannel, MqttBrokerContext brokerContext) {
         return Mono.fromRunnable(() -> {

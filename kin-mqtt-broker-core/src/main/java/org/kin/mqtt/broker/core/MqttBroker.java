@@ -12,7 +12,7 @@ import java.util.List;
  * @author huangjianqin
  * @date 2022/11/12
  */
-public final class MqttBroker implements Closeable {
+public class MqttBroker implements Closeable {
     /** mqtt broker context */
     private final MqttBrokerContext context;
     /** mqtt broker disposables */

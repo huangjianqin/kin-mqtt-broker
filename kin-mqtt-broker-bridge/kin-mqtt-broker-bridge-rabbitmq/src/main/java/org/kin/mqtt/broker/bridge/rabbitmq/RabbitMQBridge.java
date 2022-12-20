@@ -20,7 +20,7 @@ import java.nio.charset.StandardCharsets;
  * @author huangjianqin
  * @date 2022/11/22
  */
-public final class RabbitMQBridge extends NoErrorBridge {
+public class RabbitMQBridge extends NoErrorBridge {
     private static final Logger log = LoggerFactory.getLogger(RabbitMQBridge.class);
 
     /** rabbit mq sender */

@@ -8,7 +8,7 @@ import reactor.core.publisher.Mono;
  * @author huangjianqin
  * @date 2022/11/15
  */
-public final class NoneAuthService implements AuthService {
+public class NoneAuthService implements AuthService {
     /** 单例 */
     public static final AuthService INSTANCE = new NoneAuthService();
 

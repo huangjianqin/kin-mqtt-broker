@@ -24,7 +24,7 @@ import java.util.*;
  * @author huangjianqin
  * @date 2022/11/14
  */
-public final class MqttMessageDispatcher {
+public class MqttMessageDispatcher {
     private static final Logger log = LoggerFactory.getLogger(MqttMessageDispatcher.class);
 
     /** key -> mqtt message type, value -> mqtt message handler */

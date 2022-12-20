@@ -14,7 +14,7 @@ import java.util.Objects;
  * @author huangjianqin
  * @date 2022/12/11
  */
-public final class BridgeManager implements Closeable {
+public class BridgeManager implements Closeable {
     /** mqtt broker context */
     private MqttBrokerContext brokerContext;
     /** key -> bridge name, value -> {@link Bridge} */

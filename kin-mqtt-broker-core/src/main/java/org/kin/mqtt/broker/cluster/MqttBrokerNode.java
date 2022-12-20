@@ -6,7 +6,7 @@ package org.kin.mqtt.broker.cluster;
  * @author huangjianqin
  * @date 2022/11/15
  */
-public final class MqttBrokerNode {
+public class MqttBrokerNode {
     /** broker name */
     private String name;
     /** host */

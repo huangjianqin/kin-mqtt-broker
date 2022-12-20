@@ -12,7 +12,7 @@ import java.util.*;
  * @author huangjianqin
  * @date 2022/11/20
  */
-public final class UserAuthService implements AuthService {
+public class UserAuthService implements AuthService {
     /** key -> mqtt client id, value -> username & password */
     private Map<String, UserPasswordBytes> users = Collections.emptyMap();
 

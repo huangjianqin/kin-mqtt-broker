@@ -20,7 +20,7 @@ import java.time.Instant;
  * @author huangjianqin
  * @date 2022/11/22
  */
-public final class KafkaBridge extends NoErrorBridge {
+public class KafkaBridge extends NoErrorBridge {
     private final ReactiveKafkaProducerTemplate<String, String> sender;
 
     public KafkaBridge(ReactiveKafkaProducerTemplate<String, String> sender) {

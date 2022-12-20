@@ -12,7 +12,7 @@ import reactor.core.publisher.Mono;
  * @author huangjianqin
  * @date 2022/11/16
  */
-public final class VirtualMqttChannel extends MqttChannel {
+public class VirtualMqttChannel extends MqttChannel {
     public VirtualMqttChannel(MqttBrokerContext brokerContext, String clientId) {
         super(brokerContext, null);
         super.clientId = clientId;

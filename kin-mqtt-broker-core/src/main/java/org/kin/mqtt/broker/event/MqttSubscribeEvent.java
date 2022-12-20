@@ -11,7 +11,7 @@ import java.util.Set;
  * @author huangjianqin
  * @date 2022/11/26
  */
-public final class MqttSubscribeEvent implements MqttEvent {
+public class MqttSubscribeEvent implements MqttEvent {
     /** mqtt client信息 */
     private final MqttChannel mqttChannel;
     /** 该client的订阅 */

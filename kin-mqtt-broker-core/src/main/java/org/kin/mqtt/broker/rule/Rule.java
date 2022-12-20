@@ -25,7 +25,7 @@ import java.util.function.Function;
  * @author huangjianqin
  * @date 2022/12/16
  */
-public final class Rule implements Disposable {
+public class Rule implements Disposable {
     private static final Logger log = LoggerFactory.getLogger(Rule.class);
     private static final Function<RuleContext, Map<String, Object>> PAYLOAD_MAPPER = ctx -> {
         MqttMessageReplica message = ctx.getMessage();

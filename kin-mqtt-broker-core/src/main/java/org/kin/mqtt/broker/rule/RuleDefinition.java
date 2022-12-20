@@ -10,7 +10,7 @@ import java.util.Set;
  * @author huangjianqin
  * @date 2022/11/21
  */
-public final class RuleDefinition {
+public class RuleDefinition {
     /**
      * 规则名
      */

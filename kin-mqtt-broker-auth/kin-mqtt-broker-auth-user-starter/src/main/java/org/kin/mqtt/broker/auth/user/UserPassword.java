@@ -6,7 +6,7 @@ import java.nio.charset.StandardCharsets;
  * @author huangjianqin
  * @date 2022/11/20
  */
-public final class UserPassword {
+public class UserPassword {
     /** username */
     private String username;
     /** password */

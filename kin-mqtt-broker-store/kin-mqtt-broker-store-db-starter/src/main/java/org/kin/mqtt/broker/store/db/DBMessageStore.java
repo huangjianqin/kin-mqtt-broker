@@ -23,7 +23,7 @@ import java.util.stream.Collectors;
  * @author huangjianqin
  * @date 2022/11/20
  */
-public final class DBMessageStore extends AbstractMessageStore {
+public class DBMessageStore extends AbstractMessageStore {
     private static final Logger log = LoggerFactory.getLogger(DBMessageStore.class);
     /** r2dbc连接池 */
     private final ConnectionFactory connectionFactory;

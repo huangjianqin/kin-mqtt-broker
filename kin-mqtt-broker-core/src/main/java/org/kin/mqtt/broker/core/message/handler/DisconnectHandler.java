@@ -18,7 +18,7 @@ import javax.annotation.Nonnull;
  * @date 2022/11/14
  */
 @Extension("disconnect")
-public final class DisconnectHandler extends AbstractMqttMessageHandler<MqttMessage> {
+public class DisconnectHandler extends AbstractMqttMessageHandler<MqttMessage> {
     @Override
     public Mono<Void> handle(MqttMessageWrapper<MqttMessage> wrapper, MqttChannel mqttChannel, MqttBrokerContext brokerContext) {
         return Mono.fromRunnable(() -> {

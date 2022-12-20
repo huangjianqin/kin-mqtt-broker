@@ -12,7 +12,7 @@ import reactor.core.publisher.Mono;
  * @author huangjianqin
  * @date 2022/11/16
  */
-public final class StandaloneBrokerManager implements BrokerManager {
+public class StandaloneBrokerManager implements BrokerManager {
     /** 单例 */
     public static final BrokerManager INSTANCE = new StandaloneBrokerManager();
 

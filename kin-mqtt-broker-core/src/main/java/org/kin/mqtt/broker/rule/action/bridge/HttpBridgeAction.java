@@ -12,7 +12,7 @@ import org.kin.mqtt.broker.rule.action.bridge.definition.HttpActionDefinition;
  * @date 2022/12/11
  * @see org.kin.mqtt.broker.bridge.BridgeType#HTTP
  */
-public final class HttpBridgeAction extends BridgeAction<HttpActionDefinition> {
+public class HttpBridgeAction extends BridgeAction<HttpActionDefinition> {
     public HttpBridgeAction(HttpActionDefinition definition) {
         super(definition);
     }

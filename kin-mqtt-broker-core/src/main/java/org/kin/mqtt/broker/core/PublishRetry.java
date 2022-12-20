@@ -12,7 +12,7 @@ import java.util.concurrent.TimeUnit;
  * @author huangjianqin
  * @date 2022/11/13
  */
-public final class PublishRetry implements Retry {
+public class PublishRetry implements Retry {
     private static final Logger log = LoggerFactory.getLogger(PublishRetry.class);
     /** 默认最大重试次数 */
     public static final int DEFAULT_MAX_RETRY_TIMES = 5;

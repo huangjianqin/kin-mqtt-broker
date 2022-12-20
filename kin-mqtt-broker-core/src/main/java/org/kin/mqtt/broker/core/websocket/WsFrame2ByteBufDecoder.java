@@ -11,7 +11,7 @@ import java.util.List;
  * @author huangjianqin
  * @date 2022/11/25
  */
-public final class WsFrame2ByteBufDecoder extends MessageToMessageDecoder<BinaryWebSocketFrame> {
+public class WsFrame2ByteBufDecoder extends MessageToMessageDecoder<BinaryWebSocketFrame> {
     @Override
     protected void decode(ChannelHandlerContext channelHandlerContext, BinaryWebSocketFrame wsFrame, List<Object> out) {
         ByteBuf buf = wsFrame.content();

@@ -36,7 +36,7 @@ import java.util.stream.Stream;
  * @author huangjianqin
  * @date 2022/11/16
  */
-public final class GossipBrokerManager implements BrokerManager {
+public class GossipBrokerManager implements BrokerManager {
     private static final Logger log = LoggerFactory.getLogger(GossipBrokerManager.class);
 
     /** gossip消息header, 标识mqtt消息 */

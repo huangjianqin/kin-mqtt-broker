@@ -14,7 +14,7 @@ import static io.netty.handler.codec.mqtt.MqttConnectReturnCode.*;
  * @author huangjianqin
  * @date 2022/11/14
  */
-public final class MqttMessageUtils {
+public class MqttMessageUtils {
     private MqttMessageUtils() {
     }
 

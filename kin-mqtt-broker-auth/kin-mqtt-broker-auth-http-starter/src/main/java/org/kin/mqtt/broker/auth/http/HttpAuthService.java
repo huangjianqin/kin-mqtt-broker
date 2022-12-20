@@ -14,7 +14,7 @@ import java.util.Map;
  * @author huangjianqin
  * @date 2022/11/20
  */
-public final class HttpAuthService implements AuthService {
+public class HttpAuthService implements AuthService {
     /** http post url */
     private final String url;
 

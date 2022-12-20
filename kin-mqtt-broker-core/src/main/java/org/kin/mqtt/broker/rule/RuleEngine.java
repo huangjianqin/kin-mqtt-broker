@@ -13,7 +13,7 @@ import reactor.core.publisher.Mono;
  * @author huangjianqin
  * @date 2022/11/21
  */
-public final class RuleEngine {
+public class RuleEngine {
     private static final Logger log = LoggerFactory.getLogger(RuleEngine.class);
     /** 规则链 */
     private final RuleManager ruleManager;

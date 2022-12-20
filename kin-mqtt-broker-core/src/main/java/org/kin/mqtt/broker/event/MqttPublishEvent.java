@@ -9,7 +9,7 @@ import org.kin.mqtt.broker.core.message.MqttMessageReplica;
  * @author huangjianqin
  * @date 2022/11/26
  */
-public final class MqttPublishEvent implements MqttEvent {
+public class MqttPublishEvent implements MqttEvent {
     /** mqtt client信息 */
     private final MqttChannel mqttChannel;
     /** publish消息副本 */

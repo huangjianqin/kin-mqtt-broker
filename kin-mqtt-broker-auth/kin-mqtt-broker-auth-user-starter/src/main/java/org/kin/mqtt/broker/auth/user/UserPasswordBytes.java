@@ -4,7 +4,7 @@ package org.kin.mqtt.broker.auth.user;
  * @author huangjianqin
  * @date 2022/11/20
  */
-public final class UserPasswordBytes {
+public class UserPasswordBytes {
     /** username */
     private final String userName;
     /** password bytes */

@@ -25,7 +25,7 @@ import java.util.Map;
  * @author huangjianqin
  * @date 2022/11/22
  */
-public final class KafkaBridge extends NoErrorBridge {
+public class KafkaBridge extends NoErrorBridge {
     /** 默认kafka broker地址 */
     private final static String DEFAULT_BOOTSTRAP_SERVERS = "localhost:9092";
 

@@ -17,7 +17,7 @@ import javax.annotation.Nonnull;
  * @date 2022/11/14
  */
 @Extension("unsubAck")
-public final class UnsubAckHandler extends AbstractMqttMessageHandler<MqttUnsubAckMessage> {
+public class UnsubAckHandler extends AbstractMqttMessageHandler<MqttUnsubAckMessage> {
     @Override
     public Mono<Void> handle(MqttMessageWrapper<MqttUnsubAckMessage> wrapper, MqttChannel mqttChannel, MqttBrokerContext brokerContext) {
         //暂时do nothing

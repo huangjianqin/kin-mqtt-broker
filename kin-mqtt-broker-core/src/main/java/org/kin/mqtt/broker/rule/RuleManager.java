@@ -16,7 +16,7 @@ import java.util.stream.Collectors;
  * @author huangjianqin
  * @date 2022/11/21
  */
-public final class RuleManager {
+public class RuleManager {
     /** broker context */
     private final MqttBrokerContext brokerContext;
     /** key -> rule name, value -> {@link Rule} */

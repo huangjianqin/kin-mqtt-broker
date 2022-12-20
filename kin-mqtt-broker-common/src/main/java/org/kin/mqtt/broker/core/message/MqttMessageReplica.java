@@ -13,7 +13,7 @@ import java.util.Map;
  * @date 2022/11/15
  */
 @JsonInclude(JsonInclude.Include.NON_EMPTY)
-public final class MqttMessageReplica implements Serializable {
+public class MqttMessageReplica implements Serializable {
     private static final long serialVersionUID = 8598710380202474132L;
 
     /** 发送该mqtt消息的mqtt client */

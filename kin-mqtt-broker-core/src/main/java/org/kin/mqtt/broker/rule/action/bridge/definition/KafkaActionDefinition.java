@@ -9,7 +9,7 @@ import org.kin.mqtt.broker.rule.action.bridge.KafkaBridgeAction;
  * @date 2022/12/11
  * @see KafkaBridgeAction
  */
-public final class KafkaActionDefinition extends BridgeActionDefinition {
+public class KafkaActionDefinition extends BridgeActionDefinition {
     /** kafka topic */
     private String topic;
 

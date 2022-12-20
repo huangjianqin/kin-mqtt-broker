@@ -17,7 +17,7 @@ import reactor.core.publisher.Mono;
  * @author huangjianqin
  * @date 2022/11/21
  */
-public final class MqttTopicAction implements Action {
+public class MqttTopicAction implements Action {
     /** mqtt topic转发topic定义 */
     private final MqttTopicActionDefinition definition;
 

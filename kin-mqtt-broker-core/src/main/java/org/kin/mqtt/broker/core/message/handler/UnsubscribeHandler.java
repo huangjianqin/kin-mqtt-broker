@@ -18,7 +18,7 @@ import javax.annotation.Nonnull;
  * @date 2022/11/14
  */
 @Extension("unsubscribe")
-public final class UnsubscribeHandler extends AbstractMqttMessageHandler<MqttUnsubscribeMessage> {
+public class UnsubscribeHandler extends AbstractMqttMessageHandler<MqttUnsubscribeMessage> {
     @Override
     public Mono<Void> handle(MqttMessageWrapper<MqttUnsubscribeMessage> wrapper, MqttChannel mqttChannel, MqttBrokerContext brokerContext) {
         MqttUnsubscribeMessage message = wrapper.getMessage();

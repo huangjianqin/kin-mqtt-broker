@@ -47,7 +47,7 @@ import java.util.List;
  * @author huangjianqin
  * @date 2022/11/6
  */
-public final class MqttBrokerBootstrap extends ServerTransport {
+public class MqttBrokerBootstrap extends ServerTransport {
     private static final Logger log = LoggerFactory.getLogger(MqttBrokerBootstrap.class);
 
     /** broker id, 默认是0 */

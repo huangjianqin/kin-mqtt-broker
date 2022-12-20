@@ -17,7 +17,7 @@ import javax.annotation.Nonnull;
  * @date 2022/11/14
  */
 @Extension("subAck")
-public final class SubAckHandler extends AbstractMqttMessageHandler<MqttSubAckMessage> {
+public class SubAckHandler extends AbstractMqttMessageHandler<MqttSubAckMessage> {
     @Override
     public Mono<Void> handle(MqttMessageWrapper<MqttSubAckMessage> wrapper, MqttChannel mqttChannel, MqttBrokerContext brokerContext) {
         //暂时do nothing

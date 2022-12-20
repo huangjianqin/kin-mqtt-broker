@@ -28,7 +28,7 @@ import java.util.stream.Collectors;
  * @date 2022/11/15
  */
 @Extension("subscribe")
-public final class SubscribeHandler extends AbstractMqttMessageHandler<MqttSubscribeMessage> {
+public class SubscribeHandler extends AbstractMqttMessageHandler<MqttSubscribeMessage> {
     private static final Logger log = LoggerFactory.getLogger(SubscribeHandler.class);
 
     @Override
