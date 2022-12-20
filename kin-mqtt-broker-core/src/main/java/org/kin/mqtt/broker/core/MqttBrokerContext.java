@@ -71,6 +71,9 @@ public final class MqttBrokerContext implements Closeable {
         this.bridgeManager = bridgeManager;
         this.aclService = aclService;
         this.eventBus = new DefaultReactorEventBus(true, mqttBsScheduler);
+
+        //init
+        bridgeManager.initBrokerContext(this);
     }
 
     @Override

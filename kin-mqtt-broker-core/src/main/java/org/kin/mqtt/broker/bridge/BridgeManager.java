@@ -2,6 +2,9 @@ package org.kin.mqtt.broker.bridge;
 
 import org.jctools.maps.NonBlockingHashMap;
 import org.kin.framework.Closeable;
+import org.kin.mqtt.broker.cluster.event.BridgeAddEvent;
+import org.kin.mqtt.broker.cluster.event.BridgeRemoveEvent;
+import org.kin.mqtt.broker.core.MqttBrokerContext;
 
 import javax.annotation.Nullable;
 import java.util.Map;
@@ -12,8 +15,19 @@ import java.util.Objects;
  * @date 2022/12/11
  */
 public final class BridgeManager implements Closeable {
+    /** mqtt broker context */
+    private MqttBrokerContext brokerContext;
     /** key -> bridge name, value -> {@link Bridge} */
     private final Map<String, Bridge> bridgeMap = new NonBlockingHashMap<>();
+
+    /**
+     * 初始化mqtt broker context
+     *
+     * @param brokerContext mqtt broker context
+     */
+    public void initBrokerContext(MqttBrokerContext brokerContext) {
+        this.brokerContext = brokerContext;
+    }
 
     /**
      * 添加数据桥接实现
@@ -27,6 +41,7 @@ public final class BridgeManager implements Closeable {
         }
 
         bridgeMap.put(bridgeName, bridge);
+        brokerContext.broadcastClusterEvent(BridgeAddEvent.of(bridgeName));
     }
 
     /**
@@ -36,7 +51,12 @@ public final class BridgeManager implements Closeable {
      * @return 是否移除成功
      */
     public boolean removeBridge(String bridgeName) {
-        return Objects.nonNull(bridgeMap.remove(bridgeName));
+        Bridge removed = bridgeMap.remove(bridgeName);
+        if (Objects.nonNull(removed)) {
+            brokerContext.broadcastClusterEvent(BridgeRemoveEvent.of(bridgeName));
+            removed.close();
+        }
+        return Objects.nonNull(removed);
     }
 
     /**
