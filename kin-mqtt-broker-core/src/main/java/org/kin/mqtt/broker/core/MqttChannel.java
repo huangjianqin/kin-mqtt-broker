@@ -2,6 +2,11 @@ package org.kin.mqtt.broker.core;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.handler.codec.mqtt.*;
+import org.jctools.maps.NonBlockingHashMap;
+import org.jctools.maps.NonBlockingHashSet;
+import org.kin.framework.utils.CollectionUtils;
+import org.kin.mqtt.broker.cluster.event.SubscriptionsAddEvent;
+import org.kin.mqtt.broker.cluster.event.SubscriptionsRemoveEvent;
 import org.kin.mqtt.broker.core.message.MqttMessageUtils;
 import org.kin.mqtt.broker.core.topic.TopicManager;
 import org.kin.mqtt.broker.core.topic.TopicSubscription;
@@ -21,9 +26,8 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.CopyOnWriteArraySet;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Collectors;
 
 /**
  * mqtt client连接
@@ -60,7 +64,7 @@ public class MqttChannel {
     /** 用于控制建立connection后, client还不发送connect消息, 则broker主动关闭connection */
     private Disposable deferCloseWithoutConnMsgDisposable;
     /** mqtt client 订阅 */
-    private final Set<TopicSubscription> subscriptions = new CopyOnWriteArraySet<>();
+    private final Set<TopicSubscription> subscriptions = new NonBlockingHashSet<>();
     /** mqtt response 消息id */
     private final AtomicInteger messageIdGenerator = new AtomicInteger();
     /**
@@ -68,7 +72,7 @@ public class MqttChannel {
      *
      * @see io.netty.handler.codec.mqtt.MqttQoS#AT_LEAST_ONCE
      */
-    private final Map<Integer, MqttPublishMessage> qos2MessageCache = new ConcurrentHashMap<>();
+    private final Map<Integer, MqttPublishMessage> qos2MessageCache = new NonBlockingHashMap<>();
 
     public MqttChannel(MqttBrokerContext brokerContext, Connection connection) {
         this.brokerContext = brokerContext;
@@ -296,6 +300,24 @@ public class MqttChannel {
     }
 
     /**
+     * 重新绑定topic订阅缓存的channel
+     * 适用于持久化session重新上线, 替换mqtt channel
+     */
+    public void relinkSubscriptions(Set<TopicSubscription> subscriptions) {
+        if (CollectionUtils.isEmpty(subscriptions)) {
+            return;
+        }
+
+        this.subscriptions.addAll(subscriptions);
+        for (TopicSubscription subscription : this.subscriptions) {
+            subscription.onRelink(this);
+        }
+
+        //集群广播topic订阅注册事件
+        brokerContext.broadcastClusterEvent(SubscriptionsAddEvent.of(subscriptions.stream().map(TopicSubscription::getTopic).collect(Collectors.toList())));
+    }
+
+    /**
      * connection close主要逻辑
      */
     private void close0() {
@@ -303,13 +325,17 @@ public class MqttChannel {
 
         offline();
         will = null;
+        SubscriptionsRemoveEvent subscriptionsRemoveEvent = SubscriptionsRemoveEvent.of(subscriptions.stream().map(TopicSubscription::getTopic).collect(Collectors.toList()));
         if (!persistent) {
             //非持久化session
+            //!!会清空this.subscriptions
             brokerContext.getTopicManager().removeAllSubscriptions(this);
             brokerContext.getChannelManager().remove(clientId);
             brokerContext.broadcastEvent(new MqttClientUnregisterEvent(this));
         }
         brokerContext.broadcastEvent(new MqttClientDisConnEvent(this));
+        //无论session是否持久化, 都集群广播topic订阅移除事件
+        brokerContext.broadcastClusterEvent(subscriptionsRemoveEvent);
     }
 
     /**

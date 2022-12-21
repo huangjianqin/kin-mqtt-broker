@@ -15,7 +15,7 @@ public class TopicSubscription {
     /** 订阅的topic name */
     private final String topic;
     /** 发起订阅的mqtt连接 */
-    private final MqttChannel mqttChannel;
+    private MqttChannel mqttChannel;
     /** 订阅qos */
     private final MqttQoS qoS;
 
@@ -53,6 +53,13 @@ public class TopicSubscription {
      */
     public void onUnlinked() {
         mqttChannel.removeSubscription(this);
+    }
+
+    /**
+     * 重新绑定mqtt channel
+     */
+    public void onRelink(MqttChannel mqttChannel) {
+        this.mqttChannel = mqttChannel;
     }
 
     //getter

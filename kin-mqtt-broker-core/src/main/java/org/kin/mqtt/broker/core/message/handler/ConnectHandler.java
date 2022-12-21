@@ -7,7 +7,7 @@ import org.kin.mqtt.broker.core.MqttChannel;
 import org.kin.mqtt.broker.core.MqttChannelManager;
 import org.kin.mqtt.broker.core.message.MqttMessageUtils;
 import org.kin.mqtt.broker.core.message.MqttMessageWrapper;
-import org.kin.mqtt.broker.core.topic.TopicManager;
+import org.kin.mqtt.broker.core.topic.TopicSubscription;
 import org.kin.mqtt.broker.event.MqttClientConnEvent;
 import org.kin.mqtt.broker.store.MqttMessageStore;
 import org.slf4j.Logger;
@@ -17,6 +17,7 @@ import reactor.core.publisher.Mono;
 
 import javax.annotation.Nonnull;
 import java.util.Objects;
+import java.util.Set;
 
 /**
  * @author huangjianqin
@@ -70,19 +71,22 @@ public class ConnectHandler extends AbstractMqttMessageHandler<MqttConnectMessag
     private Mono<Void> handle1(MqttChannel oldMqttChannel, MqttChannel mqttChannel, MqttBrokerContext brokerContext,
                                MqttConnectVariableHeader variableHeader, MqttConnectPayload payload,
                                String clientId, byte mqttVersion) {
-        TopicManager topicManager = brokerContext.getTopicManager();
         MqttChannelManager channelManager = brokerContext.getChannelManager();
 
         //old channel处理
+        Set<TopicSubscription> relinkSubscriptions = null;
         if (Objects.nonNull(oldMqttChannel)) {
             //持久化session重新上线才会走进这里
-            // remove old channel
+            //remove old channel
             channelManager.remove(clientId);
-            topicManager.removeAllSubscriptions(oldMqttChannel);
+            relinkSubscriptions = oldMqttChannel.getSubscriptions();
         }
 
         //连接成功后, mqtt channel设置
         mqttChannel.onConnectSuccess(clientId, variableHeader, payload);
+        if (Objects.nonNull(relinkSubscriptions)) {
+            mqttChannel.relinkSubscriptions(relinkSubscriptions);
+        }
 
         return mqttChannel.sendMessage(MqttMessageUtils.createConnAck(MqttConnectReturnCode.CONNECTION_ACCEPTED, mqttVersion), false)
                 .then(sendOfflineMessage(brokerContext.getMessageStore(), mqttChannel))

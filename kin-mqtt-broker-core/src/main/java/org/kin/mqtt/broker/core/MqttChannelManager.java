@@ -4,6 +4,7 @@ import java.util.Collection;
 
 /**
  * mqtt channel管理
+ * todo 持久化session支持存库和集群共享
  *
  * @author huangjianqin
  * @date 2022/11/15

@@ -1,14 +1,14 @@
 package org.kin.mqtt.broker.core.topic;
 
 import io.netty.handler.codec.mqtt.MqttQoS;
+import org.jctools.maps.NonBlockingHashMap;
+import org.jctools.maps.NonBlockingHashSet;
 import org.kin.framework.utils.CollectionUtils;
 
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.CopyOnWriteArraySet;
 import java.util.concurrent.atomic.LongAdder;
 import java.util.stream.Collectors;
 
@@ -20,13 +20,13 @@ import java.util.stream.Collectors;
  */
 public class SimpleTopicFilter implements TopicFilter {
     /** key -> topic name, value -> */
-    private final Map<String, CopyOnWriteArraySet<TopicSubscription>> topic2Subscriptions = new ConcurrentHashMap<>();
+    private final Map<String, NonBlockingHashSet<TopicSubscription>> topic2Subscriptions = new NonBlockingHashMap<>();
     /** 订阅数统计 */
     private final LongAdder counter = new LongAdder();
 
     @Override
     public Set<TopicSubscription> getSubscriptions(String topic, MqttQoS qoS) {
-        CopyOnWriteArraySet<TopicSubscription> subscriptions = topic2Subscriptions.get(topic);
+        NonBlockingHashSet<TopicSubscription> subscriptions = topic2Subscriptions.get(topic);
         if (CollectionUtils.isEmpty(subscriptions)) {
             return Collections.emptySet();
         }
@@ -35,7 +35,7 @@ public class SimpleTopicFilter implements TopicFilter {
 
     @Override
     public void addSubscription(TopicSubscription subscription) {
-        CopyOnWriteArraySet<TopicSubscription> subscriptions = topic2Subscriptions.computeIfAbsent(subscription.getTopic(), t -> new CopyOnWriteArraySet<>());
+        NonBlockingHashSet<TopicSubscription> subscriptions = topic2Subscriptions.computeIfAbsent(subscription.getTopic(), t -> new NonBlockingHashSet<>());
         if (subscriptions.add(subscription)) {
             counter.increment();
             subscription.onLinked();
@@ -44,7 +44,7 @@ public class SimpleTopicFilter implements TopicFilter {
 
     @Override
     public void removeSubscription(TopicSubscription subscription) {
-        CopyOnWriteArraySet<TopicSubscription> subscriptions = topic2Subscriptions.computeIfAbsent(subscription.getTopic(), t -> new CopyOnWriteArraySet<>());
+        NonBlockingHashSet<TopicSubscription> subscriptions = topic2Subscriptions.computeIfAbsent(subscription.getTopic(), t -> new NonBlockingHashSet<>());
         if (subscriptions.remove(subscription)) {
             counter.decrement();
             subscription.onUnlinked();

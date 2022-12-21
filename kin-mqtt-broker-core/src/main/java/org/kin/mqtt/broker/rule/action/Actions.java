@@ -1,6 +1,6 @@
 package org.kin.mqtt.broker.rule.action;
 
-import org.kin.framework.collection.CopyOnWriteMap;
+import org.jctools.maps.NonBlockingHashMap;
 import org.kin.framework.utils.ClassUtils;
 import org.kin.mqtt.broker.rule.action.bridge.HttpBridgeAction;
 import org.kin.mqtt.broker.rule.action.bridge.KafkaBridgeAction;
@@ -21,7 +21,7 @@ public class Actions {
     private Actions() {
     }
 
-    private static Map<Class<? extends ActionDefinition>, ActionFactory<? extends ActionDefinition, ? extends Action>> ACTIONS = new CopyOnWriteMap<>();
+    private static Map<Class<? extends ActionDefinition>, ActionFactory<? extends ActionDefinition, ? extends Action>> ACTIONS = new NonBlockingHashMap<>();
 
     static {
         registerActions(new ActionFactory<HttpActionDefinition, HttpBridgeAction>() {

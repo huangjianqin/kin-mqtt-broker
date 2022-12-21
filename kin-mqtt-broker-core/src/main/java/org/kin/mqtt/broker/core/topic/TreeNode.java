@@ -1,10 +1,10 @@
 package org.kin.mqtt.broker.core.topic;
 
 import org.jctools.maps.NonBlockingHashMap;
+import org.jctools.maps.NonBlockingHashSet;
 import org.kin.framework.utils.CollectionUtils;
 
 import java.util.*;
-import java.util.concurrent.CopyOnWriteArraySet;
 import java.util.stream.Collectors;
 
 /**
@@ -18,7 +18,7 @@ final class TreeNode {
     /** topic */
     private final String topic;
     /** 已注册的订阅 */
-    private final Set<TopicSubscription> subscriptions = new CopyOnWriteArraySet<>();
+    private final Set<TopicSubscription> subscriptions = new NonBlockingHashSet<>();
     /** 子节点 */
     private final Map<String, TreeNode> childNodes = new NonBlockingHashMap<>();
 
