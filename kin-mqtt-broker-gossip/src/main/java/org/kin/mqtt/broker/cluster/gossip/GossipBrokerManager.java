@@ -29,6 +29,7 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.Sinks;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -218,8 +219,12 @@ public class GossipBrokerManager implements BrokerManager {
 
         @Override
         public void consume(ReactorEventBus eventBus, SubscriptionsAddEvent event) {
-            GossipNode node = clusterBrokers.get(event.getAddress());
-            node.addSubscriptions(event.getSubscriptionRegexs());
+            Collection<String> subscriptionRegexs = event.getSubscriptionRegexs();
+            String address = event.getAddress();
+            log.debug("mqtt broker('{}') add subscriptions '{}'", address, subscriptionRegexs);
+
+            GossipNode node = clusterBrokers.get(address);
+            node.addSubscriptions(subscriptionRegexs);
         }
     }
 
@@ -230,8 +235,12 @@ public class GossipBrokerManager implements BrokerManager {
 
         @Override
         public void consume(ReactorEventBus eventBus, SubscriptionsRemoveEvent event) {
-            GossipNode node = clusterBrokers.get(event.getAddress());
-            node.removeSubscriptions(event.getSubscriptionRegexs());
+            Collection<String> subscriptionRegexs = event.getSubscriptionRegexs();
+            String address = event.getAddress();
+            log.debug("mqtt broker('{}') remove subscriptions '{}'", address, subscriptionRegexs);
+
+            GossipNode node = clusterBrokers.get(address);
+            node.removeSubscriptions(subscriptionRegexs);
         }
     }
 }
