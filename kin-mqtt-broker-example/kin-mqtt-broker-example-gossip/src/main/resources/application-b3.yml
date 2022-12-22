@@ -3,11 +3,11 @@ org:
     mqtt:
       broker:
         gossip:
-          port: 5001
-          alias: 'MQTTBroker1883'
+          port: 5003
+          alias: 'MQTTBroker1885'
           seeds: 'localhost:5001;localhost:5002;localhost:5003'
           namespace: mqtt-broker
-        port: 1883
+        port: 1885
         auth:
           users:
             JavaSubscriber:
@@ -17,4 +17,4 @@ org:
               username: java
               password: 12345
 server:
-  port: 8001
+  port: 8003

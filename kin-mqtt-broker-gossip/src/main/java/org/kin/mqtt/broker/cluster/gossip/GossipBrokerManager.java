@@ -15,7 +15,6 @@ import org.kin.framework.reactor.event.EventConsumer;
 import org.kin.framework.reactor.event.ReactorEventBus;
 import org.kin.framework.utils.ClassUtils;
 import org.kin.framework.utils.JSON;
-import org.kin.framework.utils.NetUtils;
 import org.kin.mqtt.broker.cluster.BrokerManager;
 import org.kin.mqtt.broker.cluster.MqttBrokerNode;
 import org.kin.mqtt.broker.cluster.event.AbstractMqttClusterEvent;
@@ -73,7 +72,9 @@ public class GossipBrokerManager implements BrokerManager {
         eventBus.register(new SubscriptionsRemoveEventConsumer());
 
         int port = config.getPort();
-        clusterMono = new ClusterImpl().config(clusterConfig -> clusterConfig.externalHost(NetUtils.getIp()).externalPort(port))
+        clusterMono = new ClusterImpl().config(clusterConfig -> clusterConfig.externalHost(config.getHost())
+                        .memberAlias(config.getAlias())
+                        .externalPort(port))
                 .membership(membershipConfig -> membershipConfig.seedMembers(seedMembers(config.getSeeds()))
                         .namespace(config.getNamespace())
                         .syncInterval(5_000))
@@ -125,6 +126,9 @@ public class GossipBrokerManager implements BrokerManager {
 
     @Override
     public Mono<Void> broadcastEvent(MqttClusterEvent event) {
+        if (event instanceof AbstractMqttClusterEvent) {
+            ((AbstractMqttClusterEvent) event).setAddress(config.getHost() + ":" + config.getPort());
+        }
         return clusterMono.flatMap(c -> {
                     log.debug("cluster broadcast event {} ", event);
                     return c.spreadGossip(Message.builder()
@@ -171,11 +175,7 @@ public class GossipBrokerManager implements BrokerManager {
                 throw new IllegalStateException(String.format("unknown mqtt event class '%s'", eventTypeStr));
             }
 
-            MqttClusterEvent event = JSON.read((String) message.data(), eventType);
-            if (event instanceof AbstractMqttClusterEvent) {
-                ((AbstractMqttClusterEvent) event).setAddress(message.sender().toString());
-            }
-            brokerContext.broadcastEvent(event);
+            brokerContext.broadcastEvent(JSON.read((String) message.data(), eventType));
         }
 
         @Override

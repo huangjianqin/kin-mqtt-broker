@@ -104,15 +104,23 @@
             <artifactId>eclipse-collections</artifactId>
         </dependency>
 
-        <dependency>
-            <groupId>io.micrometer</groupId>
-            <artifactId>micrometer-registry-prometheus</artifactId>
-        </dependency>
+        <!-- todo -->
+        <!--        <dependency>-->
+        <!--            <groupId>io.micrometer</groupId>-->
+        <!--            <artifactId>micrometer-registry-prometheus</artifactId>-->
+        <!--        </dependency>-->
 
         <!-- 基于sql处理数据流 -->
         <dependency>
             <groupId>org.kin</groupId>
             <artifactId>kin-reactor-sql</artifactId>
+        </dependency>
+
+        <!-- mqtt client, 用于测试 -->
+        <dependency>
+            <groupId>org.eclipse.paho</groupId>
+            <artifactId>org.eclipse.paho.client.mqttv3</artifactId>
+            <scope>test</scope>
         </dependency>
     </dependencies>
 

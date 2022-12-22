@@ -41,6 +41,7 @@ public class UserAuthService implements AuthService {
                         Arrays.equals(userPasswordBytes.getPasswordBytes(), passwordBytes);
             }
 
+            //找不到任何user, 则直接reject
             return false;
         });
     }

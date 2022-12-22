@@ -18,7 +18,6 @@ import org.kin.mqtt.broker.acl.NoneAclService;
 import org.kin.mqtt.broker.auth.AuthService;
 import org.kin.mqtt.broker.auth.NoneAuthService;
 import org.kin.mqtt.broker.bridge.Bridge;
-import org.kin.mqtt.broker.bridge.BridgeManager;
 import org.kin.mqtt.broker.cluster.BrokerManager;
 import org.kin.mqtt.broker.cluster.StandaloneBrokerManager;
 import org.kin.mqtt.broker.core.message.MqttMessageWrapper;
@@ -70,8 +69,8 @@ public class MqttBrokerBootstrap extends ServerTransport {
     private MqttMessageStore messageStore = new MemoryMessageStore();
     /** 规则链定义 */
     private List<RuleDefinition> ruleDefinitions = new LinkedList<>();
-    /** 数据桥接实现管理 */
-    private final BridgeManager bridgeManager = new BridgeManager();
+    /** 数据桥接实现 */
+    private final List<Bridge> bridges = new LinkedList();
     /** 访问控制权限管理 */
     private AclService aclService = NoneAclService.INSTANCE;
     /** 事件consumer */
@@ -187,7 +186,7 @@ public class MqttBrokerBootstrap extends ServerTransport {
      * 数据桥接定义
      */
     public MqttBrokerBootstrap bridge(Bridge bridge) {
-        bridgeManager.addBridge(bridge);
+        bridges.add(bridge);
         return this;
     }
 
@@ -266,7 +265,7 @@ public class MqttBrokerBootstrap extends ServerTransport {
 
         MqttBrokerContext brokerContext = new MqttBrokerContext(brokerId, port, new MqttMessageDispatcher(interceptors),
                 authService, brokerManager, messageStore,
-                ruleDefinitions, bridgeManager,
+                ruleDefinitions,
                 aclService);
         BrokerManager brokerManager;
 
@@ -340,6 +339,8 @@ public class MqttBrokerBootstrap extends ServerTransport {
 
         //集群初始化
         initBrokerManager(brokerContext);
+        //init bridge manager
+        addBridges(brokerContext);
 
         return new MqttBroker(brokerContext, disposableServerMonoList, () -> {
             loopResources.dispose();
@@ -395,6 +396,13 @@ public class MqttBrokerBootstrap extends ServerTransport {
      */
     private void configSysTopic() {
         eventConsumers(new TotalClientNumPublisher());
+    }
+
+    /**
+     * 注册{@link  Bridge}实现
+     */
+    private void addBridges(MqttBrokerContext brokerContext) {
+        bridges.forEach(b -> brokerContext.getBridgeManager().addBridge(b));
     }
 
     //getter
