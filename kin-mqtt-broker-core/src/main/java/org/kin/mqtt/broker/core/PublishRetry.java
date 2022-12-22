@@ -60,19 +60,20 @@ public class PublishRetry implements Retry {
             }
         } else {
             //下一次重试发现已取消, 则clean, 即异步clean
-            cleaner.run();
+            onClean();
         }
     }
 
     @Override
     public void cancel() {
-        cancelled = true;
-        retryService.removeRetry(getId());
-        if (curTimes == 0) {
-            //没重试过, 必须释放bytebuf
-            cleaner.run();
-        }
         log.debug("id={} retry cancelled", getId());
+        cancelled = true;
+        onClean();
+    }
+
+    private void onClean() {
+        retryService.removeRetry(getId());
+        cleaner.run();
     }
 
     @Override

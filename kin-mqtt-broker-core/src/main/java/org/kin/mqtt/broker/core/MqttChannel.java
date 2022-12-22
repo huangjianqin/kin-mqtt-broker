@@ -321,6 +321,10 @@ public class MqttChannel {
      * connection close主要逻辑
      */
     private void close0() {
+        if (isOffline()) {
+            return;
+        }
+
         log.info("mqtt channel closed, {}", this);
 
         offline();

@@ -54,7 +54,7 @@ public class GossipBrokerManager implements BrokerManager {
      */
     private MqttBrokerContext brokerContext;
     /** 来自集群广播的mqtt消息流 */
-    private final Sinks.Many<MqttMessageReplica> clusterMqttMessageSink = Sinks.many().multicast().onBackpressureBuffer();
+    private final Sinks.Many<MqttMessageReplica> clusterMqttMessageSink = Sinks.many().unicast().onBackpressureBuffer();
     /** gossip cluster */
     private volatile Mono<Cluster> clusterMono;
     /** 集群节点信息, key -> host:port */
@@ -140,7 +140,7 @@ public class GossipBrokerManager implements BrokerManager {
         return Mono.fromRunnable(() -> {
             clusterMono.subscribe(Cluster::shutdown);
             //close sink
-            clusterMqttMessageSink.emitComplete(new RetryNonSerializedEmitFailureHandler());
+            clusterMqttMessageSink.emitComplete(RetryNonSerializedEmitFailureHandler.RETRY_NON_SERIALIZED);
         });
     }
 
@@ -154,7 +154,7 @@ public class GossipBrokerManager implements BrokerManager {
         public void onMessage(Message message) {
             //mqtt message
             log.debug("cluster accept message {} ", message);
-            clusterMqttMessageSink.emitNext(message.data(), new RetryNonSerializedEmitFailureHandler());
+            clusterMqttMessageSink.emitNext(message.data(), RetryNonSerializedEmitFailureHandler.RETRY_NON_SERIALIZED);
         }
 
         @Override

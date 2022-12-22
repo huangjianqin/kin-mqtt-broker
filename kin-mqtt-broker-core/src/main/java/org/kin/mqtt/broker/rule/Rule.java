@@ -1,5 +1,6 @@
 package org.kin.mqtt.broker.rule;
 
+import org.kin.framework.reactor.utils.RetryNonSerializedEmitFailureHandler;
 import org.kin.framework.utils.JSON;
 import org.kin.mqtt.broker.core.MqttBrokerContext;
 import org.kin.mqtt.broker.core.message.MqttMessageReplica;
@@ -51,7 +52,7 @@ public class Rule implements Disposable {
     /** 匹配的mqtt topic */
     private final String topicRegex;
     /** 消费队列 */
-    private final Sinks.Many<RuleContext> sink = Sinks.many().multicast().onBackpressureBuffer();
+    private final Sinks.Many<RuleContext> sink = Sinks.many().unicast().onBackpressureBuffer();
     /** 动作实现 */
     private final List<Action> actions;
     /** sql执行结果订阅disposable */
@@ -140,21 +141,13 @@ public class Rule implements Disposable {
             this.brokerContext = brokerContext;
         }
 
-        sink.emitNext(new RuleContext(brokerContext, message), (signalType, emitResult) -> {
-            log.error("rule '{}' emit next message error, due to {} {}", definition.getName(), signalType, emitResult);
-            //retry
-            return true;
-        });
+        sink.emitNext(new RuleContext(brokerContext, message), RetryNonSerializedEmitFailureHandler.RETRY_NON_SERIALIZED);
     }
 
     @Override
     public void dispose() {
         disposable.dispose();
-        sink.emitComplete((signalType, emitResult) -> {
-            log.error("rule '{}' dispose error, due to {} {}", definition.getName(), signalType, emitResult);
-            //retry
-            return true;
-        });
+        sink.emitComplete(RetryNonSerializedEmitFailureHandler.RETRY_NON_SERIALIZED);
     }
 
     //getter

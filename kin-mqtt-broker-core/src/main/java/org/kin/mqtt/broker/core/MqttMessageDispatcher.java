@@ -99,7 +99,7 @@ public class MqttMessageDispatcher {
                     .contextWrite(context -> context.putNonNull(MqttBrokerContext.class, brokerContext))
                     .subscribe(v -> {
                             },
-                            error -> log.error("handle {} message from channel {} error, {}", mqttMessageType, mqttChannel, error),
+                            error -> log.error("handle {} message from channel {} error", mqttMessageType, mqttChannel, error),
                             //释放onMqttClientConnected里面的retain(), 还有initBrokerManager的MqttMessageReplica.fromCluster(....)
                             () -> ReactorNetty.safeRelease(mqttMessage.payload()));
         } else {

@@ -29,7 +29,7 @@ public class MqttBroker implements Closeable {
             disposableServerMono.doOnNext(d -> {
                 synchronized (MqttBroker.this) {
                     disposables.add(d);
-                    if (disposables.size() == disposableServerMonoList.size() - 1) {
+                    if (disposables.size() == disposableServerMonoList.size()) {
                         //最后一个disposable, 将清理资源逻辑与其绑定
                         d.onDispose(resCleaner::run);
                     }
