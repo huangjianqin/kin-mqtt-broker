@@ -18,7 +18,6 @@ import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
-import java.io.File;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Objects;
@@ -42,21 +41,7 @@ public class MqttBrokerStandAloneAutoConfiguration {
                                  @Autowired(required = false) MqttMessageStore messageStore,
                                  @Autowired(required = false) List<Bridge> bridges,
                                  @Autowired(required = false) AclService aclService) {
-        MqttBrokerBootstrap bootstrap = MqttBrokerBootstrap.create();
-        bootstrap.port(mqttBrokerProperties.getPort())
-                .messageMaxSize(mqttBrokerProperties.getMessageMaxSize());
-
-        if (mqttBrokerProperties.isOverWebsocket()) {
-            bootstrap.wsPort(mqttBrokerProperties.getWsPort())
-                    .wsPath(mqttBrokerProperties.getWsPath());
-        }
-
-        if (mqttBrokerProperties.isSsl()) {
-            bootstrap.ssl(true)
-                    .certFile(new File(mqttBrokerProperties.getCertFile()))
-                    .certKeyFile(new File(mqttBrokerProperties.getCertKeyFile()))
-                    .caFile(new File(mqttBrokerProperties.getCaFile()));
-        }
+        MqttBrokerBootstrap bootstrap = MqttBrokerBootstrap.create(mqttBrokerProperties);
 
         if (CollectionUtils.isNonEmpty(interceptors)) {
             bootstrap.interceptors(interceptors);

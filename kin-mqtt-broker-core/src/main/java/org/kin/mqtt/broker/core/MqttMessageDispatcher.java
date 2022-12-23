@@ -92,7 +92,7 @@ public class MqttMessageDispatcher {
         }
 
         MqttMessageType mqttMessageType = fixedHeader.messageType();
-        log.info("prepare to handle {} message from channel {}", mqttMessageType, mqttChannel);
+        log.debug("prepare to handle {} message from channel {}", mqttMessageType, mqttChannel);
         MqttMessageHandler<MqttMessage> messageHandler = type2handler.get(mqttMessageType);
         if (Objects.nonNull(messageHandler)) {
             messageHandler.handle((MqttMessageWrapper<MqttMessage>) wrapper, mqttChannel, brokerContext)

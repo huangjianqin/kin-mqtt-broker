@@ -1,6 +1,5 @@
 package org.kin.mqtt.broker.core;
 
-import com.google.common.base.Preconditions;
 import io.netty.buffer.PooledByteBufAllocator;
 import io.netty.channel.ChannelOption;
 import io.netty.handler.codec.http.HttpObjectAggregator;
@@ -49,16 +48,7 @@ import java.util.List;
 public class MqttBrokerBootstrap extends ServerTransport {
     private static final Logger log = LoggerFactory.getLogger(MqttBrokerBootstrap.class);
 
-    /** broker id, 默认是0 */
-    private int brokerId;
-    /** mqtt broker port, default 1883 */
-    private int port = 1883;
-    /** mqtt broker websocket port, default 0, 默认不开启 */
-    private int wsPort;
-    /** websocket握手地址 */
-    private String wsPath = "/";
-    /** 最大消息大小, 默认4MB */
-    private int messageMaxSize = 4194304;
+    private final MqttBrokerConfig config;
     /** 注册的interceptor */
     private final List<Interceptor> interceptors = new LinkedList<>();
     /** auth service, 默认不进行校验 */
@@ -75,62 +65,17 @@ public class MqttBrokerBootstrap extends ServerTransport {
     private AclService aclService = NoneAclService.INSTANCE;
     /** 事件consumer */
     private final List<Object> eventConsumers = new LinkedList<>();
-    // TODO: 2022/11/28 系统topic配置单独配置, 不要一个个字段堆在bootstrap类
-    // TODO: 2022/11/28 同步spring boot properties
-    /** 是否开启系统topic */
-    private boolean enableSysTopic;
-    /** 系统topic推送间隔(秒), 只针对部分系统topic有效, 默认1分钟 */
-    private int sysTopicInterval = 60;
-
 
     public static MqttBrokerBootstrap create() {
-        return new MqttBrokerBootstrap();
+        return new MqttBrokerBootstrap(MqttBrokerConfig.create());
     }
 
-    private MqttBrokerBootstrap() {
+    public static MqttBrokerBootstrap create(MqttBrokerConfig config) {
+        return new MqttBrokerBootstrap(config);
     }
 
-    /**
-     * 定义broker唯一id
-     */
-    public MqttBrokerBootstrap brokerId(int brokerId) {
-        this.brokerId = brokerId;
-        return this;
-    }
-
-    /**
-     * 定义mqtt server port
-     */
-    public MqttBrokerBootstrap port(int port) {
-        Preconditions.checkArgument(port > 0, "port must be greater than 0");
-        this.port = port;
-        return this;
-    }
-
-
-    /**
-     * 定义mqtt server websocket port
-     */
-    public MqttBrokerBootstrap wsPort(int wsPort) {
-        this.wsPort = wsPort;
-        return this;
-    }
-
-    /**
-     * websocket握手地址, 默认'/'
-     */
-    public MqttBrokerBootstrap wsPath(String wsPath) {
-        this.wsPath = wsPath;
-        return this;
-    }
-
-    /**
-     * 最大消息大小设置
-     */
-    public MqttBrokerBootstrap messageMaxSize(int messageMaxSize) {
-        Preconditions.checkArgument(port > 0, "messageMaxSize must be greater than 0");
-        this.messageMaxSize = messageMaxSize;
-        return this;
+    private MqttBrokerBootstrap(MqttBrokerConfig config) {
+        this.config = config;
     }
 
     /**
@@ -238,31 +183,18 @@ public class MqttBrokerBootstrap extends ServerTransport {
     }
 
     /**
-     * 是否开启系统topic
-     */
-    public MqttBrokerBootstrap enableSysTopic() {
-        this.enableSysTopic = true;
-        return this;
-    }
-
-    /**
-     * 系统topic推送间隔(秒), 只针对部分系统topic有效, 默认1分钟
-     */
-    public MqttBrokerBootstrap sysTopicInterval(int sysTopicInterval) {
-        this.sysTopicInterval = sysTopicInterval;
-        return this;
-    }
-
-    /**
      * start mqtt server及其admin server
      */
     public MqttBroker start() {
+        config.selfCheck();
+
         //系统topic配置
-        if (enableSysTopic) {
+        if (config.isEnableSysTopic()) {
             configSysTopic();
         }
 
-        MqttBrokerContext brokerContext = new MqttBrokerContext(brokerId, port, new MqttMessageDispatcher(interceptors),
+        int port = config.getPort();
+        MqttBrokerContext brokerContext = new MqttBrokerContext(config.getBrokerId(), port, new MqttMessageDispatcher(interceptors),
                 authService, brokerManager, messageStore,
                 ruleDefinitions,
                 aclService);
@@ -286,7 +218,7 @@ public class MqttBrokerBootstrap extends ServerTransport {
                 .metrics(true)
                 .runOn(loopResources)
                 .doOnConnection(connection -> {
-                    connection.addHandlerFirst(new MqttDecoder(messageMaxSize))
+                    connection.addHandlerFirst(new MqttDecoder(config.getMessageMaxSize()))
                             .addHandlerFirst(MqttEncoder.INSTANCE);
                     onMqttClientConnected(brokerContext, new MqttChannel(brokerContext, connection));
                 });
@@ -302,6 +234,7 @@ public class MqttBrokerBootstrap extends ServerTransport {
         disposableServerMonoList.add(disposableServerMono);
 
         //websocket
+        int wsPort = config.getWsPort();
         if (wsPort > 0) {
             TcpServer wsServer = TcpServer.create();
             if (isSsl()) {
@@ -319,10 +252,10 @@ public class MqttBrokerBootstrap extends ServerTransport {
                     .doOnConnection(connection -> {
                         connection.addHandlerLast(new HttpServerCodec())
                                 .addHandlerLast(new HttpObjectAggregator(65536))
-                                .addHandlerLast(new WebSocketServerProtocolHandler(wsPath, "mqtt, mqttv3.1, mqttv3.1.1"))
+                                .addHandlerLast(new WebSocketServerProtocolHandler(config.getWsPath(), "mqtt, mqttv3.1, mqttv3.1.1"))
                                 .addHandlerLast(new WsFrame2ByteBufDecoder())
                                 .addHandlerLast(new ByteBuf2WsFrameEncoder())
-                                .addHandlerLast(new MqttDecoder(messageMaxSize))
+                                .addHandlerLast(new MqttDecoder(config.getMessageMaxSize()))
                                 .addHandlerLast(MqttEncoder.INSTANCE);
                         onMqttClientConnected(brokerContext, new MqttChannel(brokerContext, connection));
                     });
@@ -405,12 +338,8 @@ public class MqttBrokerBootstrap extends ServerTransport {
     }
 
     //getter
-    public int getPort() {
-        return port;
-    }
-
-    public int getMessageMaxSize() {
-        return messageMaxSize;
+    public MqttBrokerConfig getConfig() {
+        return config;
     }
 
     public List<Interceptor> getInterceptors() {
@@ -433,27 +362,7 @@ public class MqttBrokerBootstrap extends ServerTransport {
         return ruleDefinitions;
     }
 
-    public int getBrokerId() {
-        return brokerId;
-    }
-
-    public int getWsPort() {
-        return wsPort;
-    }
-
-    public String getWsPath() {
-        return wsPath;
-    }
-
     public AclService getAclService() {
         return aclService;
-    }
-
-    public boolean isEnableSysTopic() {
-        return enableSysTopic;
-    }
-
-    public long getSysTopicInterval() {
-        return sysTopicInterval;
     }
 }

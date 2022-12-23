@@ -27,6 +27,9 @@ public class RuleDefinition {
     private RuleDefinition() {
     }
 
+    /**
+     * 检查配置是符合要求
+     */
     public void selfCheck() {
         Preconditions.checkArgument(StringUtils.isNotBlank(name), "rule name must be not blank");
         Preconditions.checkArgument(StringUtils.isNotBlank(sql), "rule sql must be not blank");
