@@ -331,6 +331,7 @@ public class MqttChannel {
         will = null;
         SubscriptionsRemoveEvent subscriptionsRemoveEvent = SubscriptionsRemoveEvent.of(subscriptions.stream().map(TopicSubscription::getTopic).collect(Collectors.toList()));
         if (!persistent) {
+            // TODO: 2022/12/23 持久化session支持存库和集群共享, 是不是得全部释放, 然后加载进来时, 自动注册
             //非持久化session
             //!!会清空this.subscriptions
             brokerContext.getTopicManager().removeAllSubscriptions(this);
