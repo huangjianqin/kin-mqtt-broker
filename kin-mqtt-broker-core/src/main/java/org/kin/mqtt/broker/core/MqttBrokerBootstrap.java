@@ -75,7 +75,6 @@ public class MqttBrokerBootstrap extends ServerTransport {
     private AclService aclService = NoneAclService.INSTANCE;
     /** 事件consumer */
     private final List<Object> eventConsumers = new LinkedList<>();
-    // TODO: 2022/11/28 ignore_sys_message 规则引擎是否忽略系统topic, 默认true
     // TODO: 2022/11/28 系统topic配置单独配置, 不要一个个字段堆在bootstrap类
     // TODO: 2022/11/28 同步spring boot properties
     /** 是否开启系统topic */
