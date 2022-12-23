@@ -1,5 +1,7 @@
 package org.kin.mqtt.broker.rule;
 
+import com.google.common.base.Preconditions;
+import org.kin.framework.utils.StringUtils;
 import org.kin.mqtt.broker.rule.action.ActionDefinition;
 
 import java.util.Set;
@@ -23,6 +25,11 @@ public class RuleDefinition {
     private Set<ActionDefinition> actionDefs;
 
     private RuleDefinition() {
+    }
+
+    public void selfCheck() {
+        Preconditions.checkArgument(StringUtils.isNotBlank(name), "rule name must be not blank");
+        Preconditions.checkArgument(StringUtils.isNotBlank(sql), "rule sql must be not blank");
     }
 
     /**

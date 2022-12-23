@@ -43,6 +43,8 @@ public class RuleManager {
      * @param definition 规则定义
      */
     public void addRule(RuleDefinition definition) {
+        definition.selfCheck();
+
         String name = definition.getName();
         if (rules.containsKey(name)) {
             throw new IllegalStateException(String.format("rule '%s' has registered", name));
