@@ -83,7 +83,6 @@ public class MqttMessageDispatcher {
         //handle mqtt message
         MqttMessage mqttMessage = wrapper.getMessage();
         MqttFixedHeader fixedHeader = mqttMessage.fixedHeader();
-        //todo 思考一下没有办法减少字节复制
         MqttMessageReplica messageReplica = null;
         if (mqttMessage instanceof MqttPublishMessage) {
             //先转换成可持久化的消息
