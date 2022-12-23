@@ -3,8 +3,6 @@ package org.kin.mqtt.broker.core;
 import io.netty.util.HashedWheelTimer;
 import org.jctools.maps.NonBlockingHashMap;
 import org.kin.framework.utils.CollectionUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.util.List;
 import java.util.Map;
@@ -16,7 +14,6 @@ import java.util.stream.Collectors;
  * @date 2022/11/13
  */
 final class DefaultRetryService extends HashedWheelTimer implements RetryService {
-    private static final Logger log = LoggerFactory.getLogger(DefaultRetryService.class);
     /** key -> retry id, value -> {@link Retry} */
     private final Map<Long, Retry> id2Retry = new NonBlockingHashMap<>();
 

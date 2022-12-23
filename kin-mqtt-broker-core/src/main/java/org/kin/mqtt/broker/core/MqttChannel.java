@@ -2,10 +2,9 @@ package org.kin.mqtt.broker.core;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.handler.codec.mqtt.*;
+import io.netty.util.Timeout;
 import org.jctools.maps.NonBlockingHashMap;
 import org.jctools.maps.NonBlockingHashSet;
-import org.kin.framework.utils.CollectionUtils;
-import org.kin.mqtt.broker.cluster.event.SubscriptionsAddEvent;
 import org.kin.mqtt.broker.cluster.event.SubscriptionsRemoveEvent;
 import org.kin.mqtt.broker.core.message.MqttMessageUtils;
 import org.kin.mqtt.broker.core.topic.TopicManager;
@@ -26,6 +25,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
@@ -53,8 +53,10 @@ public class MqttChannel {
     protected String clientId;
     /** mqtt client connect时间, 校验通过后的时间 */
     private long connectTime;
-    /** 是否是会话持久化 */
-    private boolean persistent;
+    /** 连接断开时, 是否是清除会话 */
+    private boolean cleanSession;
+    /** 会话过期时间(秒) */
+    private int sessionExpiryInterval;
     /** mqtt client user name */
     private String userName;
     /** mqtt channel status */
@@ -64,15 +66,17 @@ public class MqttChannel {
     /** 用于控制建立connection后, client还不发送connect消息, 则broker主动关闭connection */
     private Disposable deferCloseWithoutConnMsgDisposable;
     /** mqtt client 订阅 */
-    private final Set<TopicSubscription> subscriptions = new NonBlockingHashSet<>();
+    private Set<TopicSubscription> subscriptions;
     /** mqtt response 消息id */
-    private final AtomicInteger messageIdGenerator = new AtomicInteger();
+    private AtomicInteger messageIdGenerator;
     /**
      * at least once消息缓存
      *
      * @see io.netty.handler.codec.mqtt.MqttQoS#AT_LEAST_ONCE
      */
-    private final Map<Integer, MqttPublishMessage> qos2MessageCache = new NonBlockingHashMap<>();
+    private Map<Integer, MqttPublishMessage> qos2MessageCache;
+    /** session过期定时任务 */
+    private Timeout sessionExpiryTimeout;
 
     public MqttChannel(MqttBrokerContext brokerContext, Connection connection) {
         this.brokerContext = brokerContext;
@@ -259,22 +263,35 @@ public class MqttChannel {
     }
 
     /**
-     * 连接成功后的处理
+     * 接受connect消息并成功通过校验后, 执行channel初始化
      */
-    public void onConnectSuccess(String clientId, MqttConnectVariableHeader variableHeader, MqttConnectPayload payload) {
+    @SuppressWarnings("unchecked")
+    public void onConnect(String clientId, MqttConnectVariableHeader variableHeader,
+                          MqttConnectPayload payload) {
         //关闭延迟关闭没有发起connect的mqtt client
         if (deferCloseWithoutConnMsgDisposable != null && !deferCloseWithoutConnMsgDisposable.isDisposed()) {
             deferCloseWithoutConnMsgDisposable.dispose();
+            //release, 后面没用了释放对象
+            deferCloseWithoutConnMsgDisposable = null;
         }
 
+        //初始化字段
         //此时不为null
         this.host = connection.address().toString().split(":")[0];
         this.channelHashCode = connection.channel().hashCode();
         this.clientId = clientId;
         connectTime = System.currentTimeMillis();
-        persistent = !variableHeader.isCleanSession();
+        cleanSession = variableHeader.isCleanSession();
         status = ChannelStatus.ONLINE;
         userName = payload.userName();
+        MqttProperties properties = variableHeader.properties();
+        MqttProperties.MqttProperty<Integer> sessionExpiryIntervalProp = properties.getProperty(MqttProperties.MqttPropertyType.SESSION_EXPIRY_INTERVAL.value());
+        if (Objects.nonNull(sessionExpiryIntervalProp)) {
+            updateSessionExpiryInterval(sessionExpiryIntervalProp.value());
+        }
+        subscriptions = new NonBlockingHashSet<>();
+        messageIdGenerator = new AtomicInteger();
+        qos2MessageCache = new NonBlockingHashMap<>();
 
         //keepalive
         //mqtt client 空闲, broker关闭mqtt client连接
@@ -289,32 +306,68 @@ public class MqttChannel {
                     .message(payload.willMessageInBytes())
                     .qoS(MqttQoS.valueOf(variableHeader.willQos()))
                     .build();
-
+            //注册dispose后will逻辑
             afterDispose(this::handleWillAfterClose);
         }
 
+        //注册dispose逻辑
+        afterDispose(this::close0);
+
+        //register channel
         if (brokerContext.getChannelManager().register(clientId, this)) {
             brokerContext.broadcastEvent(new MqttClientRegisterEvent(this));
         }
-        afterDispose(this::close0);
     }
 
     /**
-     * 重新绑定topic订阅缓存的channel
-     * 适用于持久化session重新上线, 替换mqtt channel
+     * 基于新connection恢复原channel状态
      */
-    public void relinkSubscriptions(Set<TopicSubscription> subscriptions) {
-        if (CollectionUtils.isEmpty(subscriptions)) {
-            return;
+    @SuppressWarnings("unchecked")
+    public void onReconnect(MqttChannel newMqttChannel, MqttConnectVariableHeader variableHeader,
+                            MqttConnectPayload payload) {
+        //防止自动断开新connection
+        Disposable deferCloseWithoutConnMsgDisposable = newMqttChannel.deferCloseWithoutConnMsgDisposable;
+        if (deferCloseWithoutConnMsgDisposable != null && !deferCloseWithoutConnMsgDisposable.isDisposed()) {
+            deferCloseWithoutConnMsgDisposable.dispose();
         }
 
-        this.subscriptions.addAll(subscriptions);
-        for (TopicSubscription subscription : this.subscriptions) {
-            subscription.onRelink(this);
+        //取消session过期
+        cancelSessionExpiryTimeout();
+
+        //初始化字段
+        //替换connection
+        this.connection = newMqttChannel.connection;
+        //此时不为null
+        this.host = connection.address().toString().split(":")[0];
+        this.channelHashCode = connection.channel().hashCode();
+        cleanSession = variableHeader.isCleanSession();
+        status = ChannelStatus.ONLINE;
+        userName = payload.userName();
+        MqttProperties properties = variableHeader.properties();
+        MqttProperties.MqttProperty<Integer> sessionExpiryIntervalProp = properties.getProperty(MqttProperties.MqttPropertyType.SESSION_EXPIRY_INTERVAL.value());
+        if (Objects.nonNull(sessionExpiryIntervalProp)) {
+            updateSessionExpiryInterval(sessionExpiryIntervalProp.value());
         }
 
-        //集群广播topic订阅注册事件
-        brokerContext.broadcastClusterEvent(SubscriptionsAddEvent.of(subscriptions.stream().map(TopicSubscription::getTopic).collect(Collectors.toList())));
+        //keepalive
+        //mqtt client 空闲, broker关闭mqtt client连接
+        //此时不为null
+        connection.onReadIdle((long) variableHeader.keepAliveTimeSeconds() * 1000, this::close0);
+
+        //will
+        if (variableHeader.isWillFlag()) {
+            will = Will.builder()
+                    .setRetain(variableHeader.isWillRetain())
+                    .topic(payload.willTopic())
+                    .message(payload.willMessageInBytes())
+                    .qoS(MqttQoS.valueOf(variableHeader.willQos()))
+                    .build();
+            //注册dispose后will逻辑
+            afterDispose(this::handleWillAfterClose);
+        }
+
+        //注册dispose逻辑
+        afterDispose(this::close0);
     }
 
     /**
@@ -327,20 +380,50 @@ public class MqttChannel {
 
         log.info("mqtt channel closed, {}", this);
 
-        offline();
-        will = null;
+        releaseSessionLessField();
         SubscriptionsRemoveEvent subscriptionsRemoveEvent = SubscriptionsRemoveEvent.of(subscriptions.stream().map(TopicSubscription::getTopic).collect(Collectors.toList()));
-        if (!persistent) {
+        if (cleanSession) {
             // TODO: 2022/12/23 持久化session支持存库和集群共享, 是不是得全部释放, 然后加载进来时, 自动注册
             //非持久化session
             //!!会清空this.subscriptions
             brokerContext.getTopicManager().removeAllSubscriptions(this);
             brokerContext.getChannelManager().remove(clientId);
             brokerContext.broadcastEvent(new MqttClientUnregisterEvent(this));
+        } else {
+            if (sessionExpiryInterval > 0) {
+                long expiryTime = connectTime + TimeUnit.SECONDS.toMillis(sessionExpiryInterval) - System.currentTimeMillis();
+                if (expiryTime > 0) {
+                    //调度session过期
+                    sessionExpiryTimeout = brokerContext.getBsTimer().newTimeout(t -> cleanSession(), expiryTime, TimeUnit.MILLISECONDS);
+                } else {
+                    //已过期
+                    cleanSession();
+                }
+            }
         }
         brokerContext.broadcastEvent(new MqttClientDisConnEvent(this));
         //无论session是否持久化, 都集群广播topic订阅移除事件
         brokerContext.broadcastClusterEvent(subscriptionsRemoveEvent);
+    }
+
+    /**
+     * 清空与会话无关的字段实例, 仅保留session状态相关的实例
+     */
+    private void releaseSessionLessField() {
+        connection = null;
+        userName = null;
+        will = null;
+        deferCloseWithoutConnMsgDisposable = null;
+    }
+
+    /**
+     * 清空会话状态
+     */
+    public void cleanSession() {
+        //取消channel注册
+        brokerContext.getChannelManager().remove(clientId);
+        //取消订阅
+        brokerContext.getTopicManager().removeAllSubscriptions(this);
     }
 
     /**
@@ -354,10 +437,6 @@ public class MqttChannel {
                 return;
             }
             offline();
-            qos2MessageCache.clear();
-            if (!persistent) {
-                subscriptions.clear();
-            }
             if (!connection.isDisposed()) {
                 connection.dispose();
             }
@@ -403,6 +482,36 @@ public class MqttChannel {
         status = ChannelStatus.OFFLINE;
     }
 
+    /**
+     * 更新session过期时间, 目前仅在处理connect和disconnect消息时调用
+     *
+     * @param sessionExpiryInterval session过期时间
+     */
+    public void updateSessionExpiryInterval(int sessionExpiryInterval) {
+        this.sessionExpiryInterval = sessionExpiryInterval;
+    }
+
+    /**
+     * 判断session是否过期
+     *
+     * @return session是否过期
+     */
+    public boolean isSessionExpiry() {
+        return isOffline() && System.currentTimeMillis() >= connectTime + TimeUnit.SECONDS.toMillis(sessionExpiryInterval);
+    }
+
+    /**
+     * 取消session过期定时任务
+     */
+    private void cancelSessionExpiryTimeout() {
+        if (Objects.isNull(sessionExpiryTimeout)) {
+            return;
+        }
+
+        sessionExpiryTimeout.cancel();
+        sessionExpiryTimeout = null;
+    }
+
     //getter
     public MqttBrokerContext getBrokerContext() {
         return brokerContext;
@@ -428,8 +537,8 @@ public class MqttChannel {
         return connectTime;
     }
 
-    public boolean isPersistent() {
-        return persistent;
+    public boolean isCleanSession() {
+        return cleanSession;
     }
 
     public String getUserName() {
@@ -439,11 +548,18 @@ public class MqttChannel {
     @Override
     public String toString() {
         return "MqttChannel{" +
-                "clientId='" + clientId + '\'' +
+                "connection=" + connection +
+                ", channelHashCode=" + channelHashCode +
+                ", host='" + host + '\'' +
+                ", clientId='" + clientId + '\'' +
                 ", connectTime=" + connectTime +
-                ", persistent=" + persistent +
+                ", cleanSession=" + cleanSession +
+                ", sessionExpiryInterval=" + sessionExpiryInterval +
                 ", userName='" + userName + '\'' +
                 ", status=" + status +
+                ", will=" + will +
+                ", subscriptions=" + subscriptions.stream().map(ts -> ts.getTopic() + ":" + ts.getQoS()).collect(Collectors.toList()) +
+                ", messageIdGenerator=" + messageIdGenerator +
                 '}';
     }
 }

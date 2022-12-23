@@ -1,5 +1,6 @@
 package org.kin.mqtt.broker.core;
 
+import io.netty.util.HashedWheelTimer;
 import org.kin.framework.Closeable;
 import org.kin.framework.reactor.event.DefaultReactorEventBus;
 import org.kin.framework.reactor.event.ReactorEventBus;
@@ -19,6 +20,7 @@ import reactor.core.scheduler.Scheduler;
 import reactor.core.scheduler.Schedulers;
 
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 /**
  * 包含一些mqtt broker共享资源, 全局唯一
@@ -55,6 +57,8 @@ public class MqttBrokerContext implements Closeable {
     private final AclService aclService;
     /** 事件总线 */
     private final ReactorEventBus eventBus;
+    /** 业务相关定时器 */
+    private final HashedWheelTimer bsTimer = new HashedWheelTimer(60, TimeUnit.SECONDS);
 
     public MqttBrokerContext(int brokerId, int port, MqttMessageDispatcher dispatcher, AuthService authService,
                              BrokerManager brokerManager, MqttMessageStore messageStore,
@@ -162,5 +166,9 @@ public class MqttBrokerContext implements Closeable {
 
     public BridgeManager getBridgeManager() {
         return bridgeManager;
+    }
+
+    public HashedWheelTimer getBsTimer() {
+        return bsTimer;
     }
 }

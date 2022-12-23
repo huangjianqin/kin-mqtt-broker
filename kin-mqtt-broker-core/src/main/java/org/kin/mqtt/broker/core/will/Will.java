@@ -83,4 +83,13 @@ public class Will {
     public void setMessage(byte[] message) {
         this.message = message;
     }
+
+    @Override
+    public String toString() {
+        return "Will{" +
+                "retain=" + retain +
+                ", topic='" + topic + '\'' +
+                ", qoS=" + qoS +
+                '}';
+    }
 }

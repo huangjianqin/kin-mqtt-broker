@@ -7,7 +7,6 @@ import org.kin.mqtt.broker.core.MqttChannel;
 import org.kin.mqtt.broker.core.MqttChannelManager;
 import org.kin.mqtt.broker.core.message.MqttMessageUtils;
 import org.kin.mqtt.broker.core.message.MqttMessageWrapper;
-import org.kin.mqtt.broker.core.topic.TopicSubscription;
 import org.kin.mqtt.broker.event.MqttClientConnEvent;
 import org.kin.mqtt.broker.store.MqttMessageStore;
 import org.slf4j.Logger;
@@ -17,7 +16,6 @@ import reactor.core.publisher.Mono;
 
 import javax.annotation.Nonnull;
 import java.util.Objects;
-import java.util.Set;
 
 /**
  * @author huangjianqin
@@ -71,26 +69,30 @@ public class ConnectHandler extends AbstractMqttMessageHandler<MqttConnectMessag
     private Mono<Void> handle1(MqttChannel oldMqttChannel, MqttChannel mqttChannel, MqttBrokerContext brokerContext,
                                MqttConnectVariableHeader variableHeader, MqttConnectPayload payload,
                                String clientId, byte mqttVersion) {
-        MqttChannelManager channelManager = brokerContext.getChannelManager();
-
-        //old channel处理
-        Set<TopicSubscription> relinkSubscriptions = null;
-        if (Objects.nonNull(oldMqttChannel)) {
-            //持久化session重新上线才会走进这里
-            //remove old channel
-            channelManager.remove(clientId);
-            relinkSubscriptions = oldMqttChannel.getSubscriptions();
+        if (variableHeader.isCleanSession()) {
+            //客户端和服务端必须丢弃任何已存在的会话, 并开始一个新的会话
+            if (Objects.nonNull(oldMqttChannel)) {
+                //持久化session重新上线才会走进这里
+                oldMqttChannel.cleanSession();
+            }
+            //mqtt channel设置
+            mqttChannel.onConnect(clientId, variableHeader, payload);
+        } else {
+            if (Objects.nonNull(oldMqttChannel) && !oldMqttChannel.isSessionExpiry()) {
+                //存在一个关联此客户端标识符的会话, 服务端必须基于此会话的状态恢复与客户端的通信. 如果不存在任何关联此客户端标识符的会话, 服务端必须创建一个新的会话
+                oldMqttChannel.onReconnect(mqttChannel, variableHeader, payload);
+                //替换
+                mqttChannel = oldMqttChannel;
+            } else {
+                //mqtt channel设置
+                mqttChannel.onConnect(clientId, variableHeader, payload);
+            }
         }
 
-        //连接成功后, mqtt channel设置
-        mqttChannel.onConnectSuccess(clientId, variableHeader, payload);
-        if (Objects.nonNull(relinkSubscriptions)) {
-            mqttChannel.relinkSubscriptions(relinkSubscriptions);
-        }
-
+        MqttChannel mqttChannelCopy = mqttChannel;
         return mqttChannel.sendMessage(MqttMessageUtils.createConnAck(MqttConnectReturnCode.CONNECTION_ACCEPTED, mqttVersion), false)
                 .then(sendOfflineMessage(brokerContext.getMessageStore(), mqttChannel))
-                .then(Mono.fromRunnable(() -> brokerContext.broadcastEvent(new MqttClientConnEvent(mqttChannel))));
+                .then(Mono.fromRunnable(() -> brokerContext.broadcastEvent(new MqttClientConnEvent(mqttChannelCopy))));
     }
 
 
