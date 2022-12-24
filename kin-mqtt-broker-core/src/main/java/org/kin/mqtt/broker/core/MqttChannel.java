@@ -385,9 +385,7 @@ public class MqttChannel {
         if (cleanSession) {
             // TODO: 2022/12/23 持久化session支持存库和集群共享, 是不是得全部释放, 然后加载进来时, 自动注册
             //非持久化session
-            //!!会清空this.subscriptions
-            brokerContext.getTopicManager().removeAllSubscriptions(this);
-            brokerContext.getChannelManager().remove(clientId);
+            cleanSession();
             brokerContext.broadcastEvent(new MqttClientUnregisterEvent(this));
         } else {
             if (sessionExpiryInterval > 0) {
@@ -423,6 +421,7 @@ public class MqttChannel {
         //取消channel注册
         brokerContext.getChannelManager().remove(clientId);
         //取消订阅
+        //!!会清空MqttChannel.subscriptions
         brokerContext.getTopicManager().removeAllSubscriptions(this);
     }
 
