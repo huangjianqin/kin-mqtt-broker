@@ -35,6 +35,7 @@ public abstract class BridgeAction<BAD extends BridgeActionDefinition> implement
             //找不到指定桥接实现, 则直接complete, 中断
             return Mono.error(new IllegalStateException(String.format("can not find bridge '%s' for type '%s'", bridgeType, bridgeName)));
         }
+        preStart(context);
         return bridge.transmit(context.getAttrs());
     }
 

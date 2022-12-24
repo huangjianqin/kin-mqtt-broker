@@ -4,6 +4,9 @@ import com.google.common.base.Preconditions;
 import org.kin.framework.utils.StringUtils;
 import org.kin.mqtt.broker.rule.action.ActionDefinition;
 
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.HashSet;
 import java.util.Set;
 
 /**
@@ -110,6 +113,7 @@ public class RuleDefinition {
                 '}';
     }
 
+    //-----------------------------------------------------------------------------------------------------------------
     public static Builder builder() {
         return new Builder();
     }
@@ -117,6 +121,7 @@ public class RuleDefinition {
     /** builder **/
     public static class Builder {
         private final RuleDefinition ruleDefinition = new RuleDefinition();
+        private final Set<ActionDefinition> actionDefs = new HashSet<>();
 
         public Builder name(String name) {
             ruleDefinition.name = name;
@@ -133,12 +138,17 @@ public class RuleDefinition {
             return this;
         }
 
-        public Builder actionDefs(Set<ActionDefinition> actionDefs) {
-            ruleDefinition.actionDefs = actionDefs;
+        public Builder actionDefs(Collection<ActionDefinition> actionDefs) {
+            this.actionDefs.addAll(actionDefs);
             return this;
         }
 
+        public Builder actionDefs(ActionDefinition... actionDefs) {
+            return actionDefs(Arrays.asList(actionDefs));
+        }
+
         public RuleDefinition build() {
+            ruleDefinition.actionDefs = new HashSet<>(actionDefs);
             return ruleDefinition;
         }
     }

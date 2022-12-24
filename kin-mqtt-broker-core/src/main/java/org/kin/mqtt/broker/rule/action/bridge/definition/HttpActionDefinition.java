@@ -24,7 +24,7 @@ public class HttpActionDefinition extends BridgeActionDefinition {
     }
 
     /** builder **/
-    public static class Builder extends BridgeActionDefinition.Builder<HttpActionDefinition> {
+    public static class Builder extends BridgeActionDefinition.Builder<HttpActionDefinition, Builder> {
         protected Builder() {
             super(new HttpActionDefinition());
         }

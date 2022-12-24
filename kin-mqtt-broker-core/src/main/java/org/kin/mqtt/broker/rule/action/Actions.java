@@ -24,30 +24,10 @@ public class Actions {
     private static Map<Class<? extends ActionDefinition>, ActionFactory<? extends ActionDefinition, ? extends Action>> ACTIONS = new NonBlockingHashMap<>();
 
     static {
-        registerActions(new ActionFactory<HttpActionDefinition, HttpBridgeAction>() {
-                            @Override
-                            public HttpBridgeAction create(HttpActionDefinition ad) {
-                                return new HttpBridgeAction(ad);
-                            }
-                        },
-                new ActionFactory<KafkaActionDefinition, KafkaBridgeAction>() {
-                    @Override
-                    public KafkaBridgeAction create(KafkaActionDefinition ad) {
-                        return new KafkaBridgeAction(ad);
-                    }
-                },
-                new ActionFactory<MqttTopicActionDefinition, MqttTopicAction>() {
-                    @Override
-                    public MqttTopicAction create(MqttTopicActionDefinition ad) {
-                        return new MqttTopicAction(ad);
-                    }
-                },
-                new ActionFactory<RabbitMQActionDefinition, RabbitMQBridgeAction>() {
-                    @Override
-                    public RabbitMQBridgeAction create(RabbitMQActionDefinition ad) {
-                        return new RabbitMQBridgeAction(ad);
-                    }
-                });
+        registerAction(HttpActionDefinition.class, (ActionFactory<HttpActionDefinition, HttpBridgeAction>) HttpBridgeAction::new);
+        registerAction(KafkaActionDefinition.class, (ActionFactory<KafkaActionDefinition, KafkaBridgeAction>) KafkaBridgeAction::new);
+        registerAction(MqttTopicActionDefinition.class, (ActionFactory<MqttTopicActionDefinition, MqttTopicAction>) MqttTopicAction::new);
+        registerAction(RabbitMQActionDefinition.class, (ActionFactory<RabbitMQActionDefinition, RabbitMQBridgeAction>) RabbitMQBridgeAction::new);
     }
 
     /**
@@ -68,26 +48,46 @@ public class Actions {
 
     /**
      * 注册{@link Action}实现
+     * 通过{@link  ActionFactory}实现类泛型获取{@link ActionDefinition}实现类信息, 注意, 此处{@link  ActionFactory}实现类不能是匿名内部类和lambda
      *
      * @param factories {@link Action}实现构造逻辑
      */
-    public static void registerActions(ActionFactory<? extends ActionDefinition, ? extends Action>... factories) {
-        registerActions(Arrays.asList(factories));
+    public static void registerActionsByGeneric(ActionFactory<? extends ActionDefinition, ? extends Action>... factories) {
+        registerActionsByGeneric(Arrays.asList(factories));
+    }
+
+    /**
+     * 注册{@link Action}实现
+     * 通过{@link  ActionFactory}实现类泛型获取{@link ActionDefinition}实现类信息, 注意, 此处{@link  ActionFactory}实现类不能是匿名内部类和lambda
+     *
+     * @param factories {@link Action}实现构造逻辑
+     */
+    @SuppressWarnings("unchecked")
+    public static void registerActionsByGeneric(Collection<ActionFactory<? extends ActionDefinition, ? extends Action>> factories) {
+        Map<Class<? extends ActionDefinition>, ActionFactory<? extends ActionDefinition, ? extends Action>> map = new HashMap<>();
+        for (ActionFactory<? extends ActionDefinition, ? extends Action> factory : factories) {
+            List<Class<?>> genericTypes = ClassUtils.getSuperInterfacesGenericRawTypes(ActionFactory.class, factory.getClass());
+            Class<? extends ActionDefinition> adClass = (Class<? extends ActionDefinition>) genericTypes.get(0);
+
+            if (ACTIONS.containsKey(adClass)) {
+                throw new IllegalStateException(String.format("action with '%s' definition has registered", adClass.getName()));
+            }
+            map.put(adClass, factory);
+        }
+
+        ACTIONS.putAll(map);
     }
 
     /**
      * 注册{@link Action}实现
      *
-     * @param factories {@link Action}实现构造逻辑
+     * @param adClass action定义class
+     * @param factory {@link Action}实现构造逻辑
      */
-    @SuppressWarnings("unchecked")
-    public static void registerActions(Collection<ActionFactory<? extends ActionDefinition, ? extends Action>> factories) {
-        Map<Class<? extends ActionDefinition>, ActionFactory<? extends ActionDefinition, ? extends Action>> map = new HashMap<>();
-        for (ActionFactory<? extends ActionDefinition, ? extends Action> factory : factories) {
-            List<Class<?>> genericTypes = ClassUtils.getSuperInterfacesGenericRawTypes(ActionFactory.class, factory.getClass());
-            map.put((Class<? extends ActionDefinition>) genericTypes.get(0), factory);
+    public static void registerAction(Class<? extends ActionDefinition> adClass, ActionFactory<? extends ActionDefinition, ? extends Action> factory) {
+        if (ACTIONS.containsKey(adClass)) {
+            throw new IllegalStateException(String.format("action with '%s' definition has registered", adClass.getName()));
         }
-
-        ACTIONS.putAll(map);
+        ACTIONS.put(adClass, factory);
     }
 }

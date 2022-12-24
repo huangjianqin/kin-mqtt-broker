@@ -1,12 +1,12 @@
 package org.kin.mqtt.broker.rule;
 
 /**
- * 规则链上下文内置属性名
+ * 规则上下文内置属性名
  *
  * @author huangjianqin
  * @date 2022/11/22
  */
-public interface RuleChainAttrNames {
+public interface RuleCtxAttrNames {
     /** mqtt client id */
     String MQTT_CLIENT_ID = "MQTT_CLIENT_ID";
     /** mqtt publish message topic */

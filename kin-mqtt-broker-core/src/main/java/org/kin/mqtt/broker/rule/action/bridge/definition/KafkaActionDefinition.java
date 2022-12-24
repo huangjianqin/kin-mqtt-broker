@@ -21,7 +21,7 @@ public class KafkaActionDefinition extends BridgeActionDefinition {
     }
 
     /** builder **/
-    public static class Builder extends BridgeActionDefinition.Builder<KafkaActionDefinition> {
+    public static class Builder extends BridgeActionDefinition.Builder<KafkaActionDefinition, Builder> {
         protected Builder() {
             super(new KafkaActionDefinition());
         }

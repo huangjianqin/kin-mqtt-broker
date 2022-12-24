@@ -9,7 +9,10 @@ import org.kin.mqtt.broker.core.MqttBrokerContext;
 import org.kin.mqtt.broker.rule.action.ActionDefinition;
 
 import javax.annotation.Nullable;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Map;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 /**
@@ -31,7 +34,18 @@ public class RuleManager {
      *
      * @param definitions 规则定义list
      */
-    public void addRules(List<RuleDefinition> definitions) {
+    public void addRules(Collection<RuleDefinition> definitions) {
+        for (RuleDefinition definition : definitions) {
+            addRule(definition);
+        }
+    }
+
+    /**
+     * 批量添加规则
+     *
+     * @param definitions 规则定义array
+     */
+    public void addRules(RuleDefinition... definitions) {
         for (RuleDefinition definition : definitions) {
             addRule(definition);
         }

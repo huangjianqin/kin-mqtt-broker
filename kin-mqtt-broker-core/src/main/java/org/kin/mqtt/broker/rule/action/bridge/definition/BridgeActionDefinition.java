@@ -1,5 +1,7 @@
 package org.kin.mqtt.broker.rule.action.bridge.definition;
 
+import com.google.common.base.Preconditions;
+import org.kin.framework.utils.StringUtils;
 import org.kin.mqtt.broker.rule.action.ActionDefinition;
 
 import java.util.Objects;
@@ -15,7 +17,7 @@ public abstract class BridgeActionDefinition implements ActionDefinition {
     private String bridgeName;
 
     /** builder **/
-    public static abstract class Builder<BRD extends BridgeActionDefinition> {
+    public static abstract class Builder<BRD extends BridgeActionDefinition, B extends Builder<BRD, B>> {
         protected BRD definition;
 
         protected Builder(BRD definition) {
@@ -23,12 +25,13 @@ public abstract class BridgeActionDefinition implements ActionDefinition {
         }
 
         @SuppressWarnings("unchecked")
-        public <B extends Builder<BRD>> B bridgeName(String bridgeName) {
+        public B bridgeName(String bridgeName) {
             definition.setBridgeName(bridgeName);
             return (B) this;
         }
 
-        public <B extends Builder<BRD>> BRD build() {
+        public BRD build() {
+            Preconditions.checkArgument(StringUtils.isNotBlank(definition.getBridgeName()), "bridge name must be not blank");
             return definition;
         }
     }

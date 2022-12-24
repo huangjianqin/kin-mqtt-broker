@@ -32,13 +32,21 @@ public class Rule implements Disposable {
         MqttMessageReplica message = ctx.getMessage();
 
         Map<String, Object> map = new HashMap<>(8);
-        map.put(RuleChainAttrNames.MQTT_CLIENT_ID, message.getClientId());
-        map.put(RuleChainAttrNames.MQTT_MSG_TOPIC, message.getTopic());
+        map.put(RuleCtxAttrNames.MQTT_CLIENT_ID, message.getClientId());
+        map.put(RuleCtxAttrNames.MQTT_MSG_TOPIC, message.getTopic());
 //        map.put(RuleChainAttrNames.MQTT_MSG_QOS, getQos());
 //        map.put(RuleChainAttrNames.MQTT_MSG_RETAIN, isRetain());
-        map.put(RuleChainAttrNames.MQTT_MSG_PAYLOAD, JSON.readMap(message.getPayload()));
-        map.put(RuleChainAttrNames.MQTT_MSG_TIMESTAMP, message.getTimestamp());
-        map.put(RuleChainAttrNames.MQTT_MSG_PROPERTIES, message.getProperties());
+        String str = new String(message.getPayload());
+        if (str.startsWith("{")) {
+            //json
+            map.put(RuleCtxAttrNames.MQTT_MSG_PAYLOAD, JSON.readMap(str));
+        } else {
+            //普通字符串
+            map.put(RuleCtxAttrNames.MQTT_MSG_PAYLOAD, str);
+        }
+
+        map.put(RuleCtxAttrNames.MQTT_MSG_TIMESTAMP, message.getTimestamp());
+        map.put(RuleCtxAttrNames.MQTT_MSG_PROPERTIES, message.getProperties());
         return map;
     };
 
@@ -84,7 +92,7 @@ public class Rule implements Disposable {
                     Map<String, Object> columns = result.all();
                     ruleContext.getAttrs().updateAttrs(columns);
                     return Flux.fromIterable(actions)
-                            .map(action -> {
+                            .flatMap(action -> {
                                 try {
                                     return action.start(ruleContext);
                                 } catch (Exception e) {
@@ -93,6 +101,8 @@ public class Rule implements Disposable {
                                 }
                             });
                 })
+                //遇到异常仅仅打印log
+                .onErrorContinue((t, o) -> log.error("", t))
                 .subscribe();
     }
 

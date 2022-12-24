@@ -9,7 +9,7 @@ import org.kin.mqtt.broker.bridge.BridgeAttrNames;
 import org.kin.mqtt.broker.bridge.BridgeType;
 import org.kin.mqtt.broker.bridge.NoErrorBridge;
 import org.kin.mqtt.broker.rule.ContextAttrs;
-import org.kin.mqtt.broker.rule.RuleChainAttrNames;
+import org.kin.mqtt.broker.rule.RuleCtxAttrNames;
 import reactor.core.publisher.Mono;
 import reactor.kafka.sender.KafkaSender;
 import reactor.kafka.sender.SenderOptions;
@@ -71,7 +71,7 @@ public class KafkaBridge extends NoErrorBridge {
                 .map(ca -> {
                     String kafkaTopic = ca.rmAttr(BridgeAttrNames.KAFKA_TOPIC);
                     //mqtt client id
-                    String clientId = ca.getAttr(RuleChainAttrNames.MQTT_CLIENT_ID);
+                    String clientId = ca.getAttr(RuleCtxAttrNames.MQTT_CLIENT_ID);
 
                     return SenderRecord.create(new ProducerRecord<>(kafkaTopic, clientId, JSON.write(attrs)), attrs.toString());
                 })

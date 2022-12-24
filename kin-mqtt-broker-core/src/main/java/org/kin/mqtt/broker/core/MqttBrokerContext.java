@@ -148,7 +148,7 @@ public class MqttBrokerContext implements Closeable {
         return brokerManager;
     }
 
-    public RuleManager getRuleChainManager() {
+    public RuleManager getRuleManager() {
         return ruleManager;
     }
 

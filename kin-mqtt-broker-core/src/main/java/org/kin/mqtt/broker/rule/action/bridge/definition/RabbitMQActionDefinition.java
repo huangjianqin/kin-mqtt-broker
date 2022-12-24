@@ -21,7 +21,7 @@ public class RabbitMQActionDefinition extends BridgeActionDefinition {
     }
 
     /** builder **/
-    public static class Builder extends BridgeActionDefinition.Builder<RabbitMQActionDefinition> {
+    public static class Builder extends BridgeActionDefinition.Builder<RabbitMQActionDefinition, Builder> {
         protected Builder() {
             super(new RabbitMQActionDefinition());
         }
