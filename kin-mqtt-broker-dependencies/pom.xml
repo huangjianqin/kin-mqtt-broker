@@ -14,7 +14,7 @@
         <kin-framework-java.version>0.1.0.0</kin-framework-java.version>
         <kin-framework-reactor.version>0.1.0.0</kin-framework-reactor.version>
         <kin-framework-dependencies.version>0.1.0.0</kin-framework-dependencies.version>
-        <springboot.version>2.6.13</springboot.version>
+        <springboot.version>2.5.13</springboot.version>
         <netty.version>4.1.75.Final</netty.version>
         <kin-transport-bom.version>0.2.0.0</kin-transport-bom.version>
         <paho.version>1.2.5</paho.version>

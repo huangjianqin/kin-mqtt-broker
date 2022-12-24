@@ -104,11 +104,16 @@
             <artifactId>eclipse-collections</artifactId>
         </dependency>
 
-        <!-- todo -->
-        <!--        <dependency>-->
-        <!--            <groupId>io.micrometer</groupId>-->
-        <!--            <artifactId>micrometer-registry-prometheus</artifactId>-->
-        <!--        </dependency>-->
+        <!-- metrics -->
+        <dependency>
+            <groupId>io.micrometer</groupId>
+            <artifactId>micrometer-core</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>io.micrometer</groupId>
+            <artifactId>micrometer-registry-prometheus</artifactId>
+        </dependency>
 
         <!-- 基于sql处理数据流 -->
         <dependency>

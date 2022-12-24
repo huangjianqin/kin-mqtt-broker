@@ -7,3 +7,24 @@ org:
             root:
               username: hjq
               password: 12345
+
+server:
+  port: 8000
+
+# management
+management:
+  server:
+    port: ${server.port}
+  endpoints:
+    web:
+      exposure:
+        include: "*"
+  metrics:
+    enable:
+      http: false
+    export:
+      prometheus:
+        enabled: true
+  trace:
+    http:
+      enabled: false
