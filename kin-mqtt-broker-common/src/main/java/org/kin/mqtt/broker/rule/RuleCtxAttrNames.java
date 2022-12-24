@@ -8,17 +8,17 @@ package org.kin.mqtt.broker.rule;
  */
 public interface RuleCtxAttrNames {
     /** mqtt client id */
-    String MQTT_CLIENT_ID = "MQTT_CLIENT_ID";
+    String MQTT_CLIENT_ID = "clientId";
     /** mqtt publish message topic */
-    String MQTT_MSG_TOPIC = "MQTT_MSG_TOPIC";
+    String MQTT_MSG_TOPIC = "topic";
     /** mqtt publish message qos */
-    String MQTT_MSG_QOS = "MQTT_MSG_QOS";
+    String MQTT_MSG_QOS = "qos";
     /** mqtt publish message retain */
-    String MQTT_MSG_RETAIN = "MQTT_MSG_RETAIN";
+    String MQTT_MSG_RETAIN = "retain";
     /** mqtt publish message payload */
-    String MQTT_MSG_PAYLOAD = "MQTT_MSG_PAYLOAD";
+    String MQTT_MSG_PAYLOAD = "payload";
     /** mqtt publish message timestamp */
-    String MQTT_MSG_TIMESTAMP = "MQTT_MSG_TIMESTAMP";
+    String MQTT_MSG_TIMESTAMP = "timestamp";
     /** mqtt publish message properties */
-    String MQTT_MSG_PROPERTIES = "MQTT_MSG_PROPERTIES";
+    String MQTT_MSG_PROPERTIES = "properties";
 }

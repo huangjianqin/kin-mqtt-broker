@@ -88,8 +88,11 @@ public class Rule implements Disposable {
                 .prepare()
                 .apply(sink.asFlux(), PAYLOAD_MAPPER)
                 .flatMap(result -> {
+                    //sql逻辑执行完毕
                     RuleContext ruleContext = result.getRaw();
+                    //执行结果
                     Map<String, Object> columns = result.all();
+                    //保存到context
                     ruleContext.getAttrs().updateAttrs(columns);
                     return Flux.fromIterable(actions)
                             .flatMap(action -> {

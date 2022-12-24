@@ -35,7 +35,7 @@ public abstract class BridgeAction<BAD extends BridgeActionDefinition> implement
             //找不到指定桥接实现, 则直接complete, 中断
             return Mono.error(new IllegalStateException(String.format("can not find bridge '%s' for type '%s'", bridgeType, bridgeName)));
         }
-        preStart(context);
+        preTransmit(context);
         return bridge.transmit(context.getAttrs());
     }
 
@@ -49,7 +49,7 @@ public abstract class BridgeAction<BAD extends BridgeActionDefinition> implement
      *
      * @param context context 规则链上下文
      */
-    protected void preStart(RuleContext context) {
+    protected void preTransmit(RuleContext context) {
         //default do nothing
     }
 

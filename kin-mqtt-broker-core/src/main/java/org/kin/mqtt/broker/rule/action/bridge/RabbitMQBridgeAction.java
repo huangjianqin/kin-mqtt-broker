@@ -18,7 +18,7 @@ public class RabbitMQBridgeAction extends BridgeAction<RabbitMQActionDefinition>
     }
 
     @Override
-    protected void preStart(RuleContext context) {
+    protected void preTransmit(RuleContext context) {
         context.getAttrs().updateAttr(BridgeAttrNames.RABBITMQ_QUEUE, definition.getQueue());
     }
 

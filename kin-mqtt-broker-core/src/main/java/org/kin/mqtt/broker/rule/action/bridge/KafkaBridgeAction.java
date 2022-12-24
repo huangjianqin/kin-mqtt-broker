@@ -18,7 +18,7 @@ public class KafkaBridgeAction extends BridgeAction<KafkaActionDefinition> {
     }
 
     @Override
-    protected void preStart(RuleContext context) {
+    protected void preTransmit(RuleContext context) {
         context.getAttrs().updateAttr(BridgeAttrNames.KAFKA_TOPIC, definition.getTopic());
     }
 

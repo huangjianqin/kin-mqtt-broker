@@ -18,7 +18,7 @@ public class HttpBridgeAction extends BridgeAction<HttpActionDefinition> {
     }
 
     @Override
-    protected void preStart(RuleContext context) {
+    protected void preTransmit(RuleContext context) {
         context.getAttrs().updateAttr(BridgeAttrNames.HTTP_URI, definition.getUri());
         context.getAttrs().updateAttr(BridgeAttrNames.HTTP_HEADERS, definition.getHeaders());
     }
