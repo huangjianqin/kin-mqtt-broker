@@ -73,7 +73,7 @@ public class ConnectHandler extends AbstractMqttMessageHandler<MqttConnectMessag
             //客户端和服务端必须丢弃任何已存在的会话, 并开始一个新的会话
             if (Objects.nonNull(oldMqttChannel)) {
                 //持久化session重新上线才会走进这里
-                oldMqttChannel.cleanSession();
+                oldMqttChannel.cleanSession(true);
             }
             //mqtt channel设置
             mqttChannel.onConnect(clientId, variableHeader, payload);

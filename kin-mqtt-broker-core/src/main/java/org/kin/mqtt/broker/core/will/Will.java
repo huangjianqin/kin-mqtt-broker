@@ -17,6 +17,8 @@ public class Will {
     private MqttQoS qoS;
     /** will message bytes */
     private byte[] message;
+    /** 延迟发布will消息, 单位是秒, 0表示无延迟 */
+    private int delay;
 
     public static Builder builder() {
         return new Builder();
@@ -43,6 +45,11 @@ public class Will {
 
         public Builder message(byte[] message) {
             will.message = message;
+            return this;
+        }
+
+        public Builder delay(int delay) {
+            will.delay = delay;
             return this;
         }
 
@@ -84,12 +91,21 @@ public class Will {
         this.message = message;
     }
 
+    public int getDelay() {
+        return delay;
+    }
+
+    public void setDelay(int delay) {
+        this.delay = delay;
+    }
+
     @Override
     public String toString() {
         return "Will{" +
                 "retain=" + retain +
                 ", topic='" + topic + '\'' +
                 ", qoS=" + qoS +
+                ", delay=" + delay +
                 '}';
     }
 }

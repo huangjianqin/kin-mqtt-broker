@@ -77,6 +77,8 @@ public class MqttChannel {
     private Map<Integer, MqttPublishMessage> qos2MessageCache;
     /** session过期定时任务 */
     private Timeout sessionExpiryTimeout;
+    /** 延迟处理will的Disposable实例, 可能为null, 即无延迟处理will */
+    private Disposable delayHandleWillDisposable;
 
     public MqttChannel(MqttBrokerContext brokerContext, Connection connection) {
         this.brokerContext = brokerContext;
@@ -300,11 +302,17 @@ public class MqttChannel {
 
         //will
         if (variableHeader.isWillFlag()) {
+            int willDelay = 0;
+            MqttProperties.MqttProperty<Integer> willDelayIntervalProp = properties.getProperty(MqttProperties.MqttPropertyType.WILL_DELAY_INTERVAL.value());
+            if (Objects.nonNull(willDelayIntervalProp)) {
+                willDelay = willDelayIntervalProp.value();
+            }
             will = Will.builder()
                     .setRetain(variableHeader.isWillRetain())
                     .topic(payload.willTopic())
                     .message(payload.willMessageInBytes())
                     .qoS(MqttQoS.valueOf(variableHeader.willQos()))
+                    .delay(willDelay)
                     .build();
             //注册dispose后will逻辑
             afterDispose(this::handleWillAfterClose);
@@ -333,6 +341,8 @@ public class MqttChannel {
 
         //取消session过期
         cancelSessionExpiryTimeout();
+        //取消will延迟处理
+        tryCancelDelayHandleWillDisposable();
 
         //初始化字段
         //替换connection
@@ -385,17 +395,17 @@ public class MqttChannel {
         if (cleanSession) {
             // TODO: 2022/12/23 持久化session支持存库和集群共享, 是不是得全部释放, 然后加载进来时, 自动注册
             //非持久化session
-            cleanSession();
+            cleanSession(false);
             brokerContext.broadcastEvent(new MqttClientUnregisterEvent(this));
         } else {
             if (sessionExpiryInterval > 0) {
                 long expiryTime = connectTime + TimeUnit.SECONDS.toMillis(sessionExpiryInterval) - System.currentTimeMillis();
                 if (expiryTime > 0) {
                     //调度session过期
-                    sessionExpiryTimeout = brokerContext.getBsTimer().newTimeout(t -> cleanSession(), expiryTime, TimeUnit.MILLISECONDS);
+                    sessionExpiryTimeout = brokerContext.getBsTimer().newTimeout(t -> cleanSession(false), expiryTime, TimeUnit.MILLISECONDS);
                 } else {
                     //已过期
-                    cleanSession();
+                    cleanSession(false);
                 }
             }
         }
@@ -416,8 +426,15 @@ public class MqttChannel {
 
     /**
      * 清空会话状态
+     *
+     * @param replaceOldChannelFlag 持久化session断开连接后, 重连成功并且不设置持久化才设置该标识,
+     *                              表示新mqtt channel直接替代旧mqtt channel, 而不是恢复其状态
      */
-    public void cleanSession() {
+    public void cleanSession(boolean replaceOldChannelFlag) {
+        if (replaceOldChannelFlag) {
+            //也算是重连, 取消will延迟处理
+            tryCancelDelayHandleWillDisposable();
+        }
         //取消channel注册
         brokerContext.getChannelManager().remove(clientId);
         //取消订阅
@@ -453,9 +470,25 @@ public class MqttChannel {
     }
 
     /**
-     * mqtt client close之后的遗愿处理
+     * mqtt client close之后的will处理
      */
     private void handleWillAfterClose() {
+        int delay = will.getDelay();
+        if (delay > 0) {
+            //will延迟
+            delayHandleWillDisposable = Mono.delay(Duration.ofSeconds(delay))
+                    .then(Mono.fromRunnable(this::handleWill))
+                    .subscribe();
+        } else {
+            //无延迟
+            handleWill();
+        }
+    }
+
+    /**
+     * will处理
+     */
+    private void handleWill() {
         TopicManager topicManager = brokerContext.getTopicManager();
         topicManager.getSubscriptions(will.getTopic(), will.getQoS())
                 .forEach(subscription -> {
@@ -472,6 +505,15 @@ public class MqttChannel {
                             subscription.getQoS().value() > 0)
                             .subscribe();
                 });
+    }
+
+    /**
+     * 会话重连, 则取消will延迟处理
+     */
+    private void tryCancelDelayHandleWillDisposable() {
+        if (Objects.nonNull(delayHandleWillDisposable)) {
+            delayHandleWillDisposable.dispose();
+        }
     }
 
     /**
