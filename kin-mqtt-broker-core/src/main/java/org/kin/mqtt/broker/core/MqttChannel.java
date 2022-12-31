@@ -20,6 +20,7 @@ import reactor.core.publisher.Mono;
 import reactor.netty.Connection;
 import reactor.netty.ReactorNetty;
 
+import javax.annotation.Nullable;
 import java.time.Duration;
 import java.util.Map;
 import java.util.Objects;
@@ -79,6 +80,8 @@ public class MqttChannel {
     private Timeout sessionExpiryTimeout;
     /** 延迟处理will的Disposable实例, 可能为null, 即无延迟处理will */
     private Disposable delayHandleWillDisposable;
+    /** key -> topic别名alias, value -> 真实topic */
+    private NonBlockingHashMap<Integer, String> alias2TopicName;
 
     public MqttChannel(MqttBrokerContext brokerContext, Connection connection) {
         this.brokerContext = brokerContext;
@@ -277,7 +280,8 @@ public class MqttChannel {
             deferCloseWithoutConnMsgDisposable = null;
         }
 
-        //初始化字段
+        //初始化字段, 因为离线后, 新连接会创建mqtt channel, 选择不在定义时初始化字段,
+        //则是在session持久化场景下可以减少新对象分配(新mqtt channel对象仅用于恢复旧mqtt channel, 然后会被抛弃)
         //此时不为null
         this.host = connection.address().toString().split(":")[0];
         this.channelHashCode = connection.channel().hashCode();
@@ -294,6 +298,7 @@ public class MqttChannel {
         subscriptions = new NonBlockingHashSet<>();
         messageIdGenerator = new AtomicInteger();
         qos2MessageCache = new NonBlockingHashMap<>();
+        alias2TopicName = new NonBlockingHashMap<>();
 
         //keepalive
         //mqtt client 空闲, broker关闭mqtt client连接
@@ -551,6 +556,26 @@ public class MqttChannel {
 
         sessionExpiryTimeout.cancel();
         sessionExpiryTimeout = null;
+    }
+
+    /**
+     * 注册topic别名
+     *
+     * @param alias     topic别名
+     * @param topicName 真实topic
+     */
+    public void registerTopicAlias(int alias, String topicName) {
+        alias2TopicName.put(alias, topicName);
+    }
+
+    /**
+     * 根据topic别名获取真实topic
+     *
+     * @param alias topic别名
+     */
+    @Nullable
+    public String getTopicByAlias(int alias) {
+        return alias2TopicName.get(alias);
     }
 
     //getter

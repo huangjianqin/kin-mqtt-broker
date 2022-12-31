@@ -11,7 +11,7 @@ import io.netty.handler.codec.mqtt.MqttPublishMessage;
  */
 public class MqttMessageWrapper<T extends MqttMessage> {
     /** 真正mqtt消息 */
-    private final T message;
+    private T message;
     /** 接受或创建mqtt消息的时间戳ms */
     private final long timestamp = System.currentTimeMillis();
     /** 是否来自于集群 */
@@ -28,6 +28,18 @@ public class MqttMessageWrapper<T extends MqttMessage> {
 
     public static MqttMessageWrapper<MqttPublishMessage> fromCluster(MqttMessageReplica replica) {
         return new MqttMessageWrapper<>(MqttMessageUtils.createPublish(replica), true);
+    }
+
+    /**
+     * 替换绑定mqtt消息
+     *
+     * @param message mqtt消息
+     * @return this
+     */
+    @SuppressWarnings("unchecked")
+    public MqttMessageWrapper<T> replaceMessage(MqttMessage message) {
+        this.message = (T) message;
+        return this;
     }
 
     //getter

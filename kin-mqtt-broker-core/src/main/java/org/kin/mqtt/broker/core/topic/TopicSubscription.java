@@ -22,7 +22,7 @@ public class TopicSubscription {
     private MqttChannel mqttChannel;
     /** 订阅qos */
     private final MqttQoS qoS;
-    /** 共享主题用到, 用于共享主题区分组, 默认null */
+    /** 共享topic用到, 用于共享topic区分组, 默认null */
     private String group;
 
     public TopicSubscription(String topic, MqttChannel mqttChannel) {
@@ -33,13 +33,13 @@ public class TopicSubscription {
         this.rawTopic = topic;
         this.qoS = qoS;
         this.mqttChannel = mqttChannel;
-        if (rawTopic.indexOf(TopicNames.SHARE_TOPIC) == 0) {
-            //共享主题
+        if (TopicNames.isShareTopic(rawTopic)) {
+            //共享topic
             String[] splits = topic.split(TopicFilter.SEPARATOR, 3);
             this.group = splits[1];
             this.topic = splits[2];
         } else {
-            //普通主题
+            //普通topic
             this.topic = this.rawTopic;
         }
     }

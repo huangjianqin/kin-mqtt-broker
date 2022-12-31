@@ -31,6 +31,9 @@ public class MqttMessageReplica implements Serializable {
     /** mqtt消息可变头属性 */
     private Map<String, String> properties;
 
+    private MqttMessageReplica() {
+    }
+
     public static Builder builder() {
         return new Builder();
     }

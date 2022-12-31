@@ -28,7 +28,7 @@ public class DefaultTopicManager implements TopicManager {
 
     @Override
     public Set<TopicSubscription> getSubscriptions(String topic, MqttQoS qos) {
-        //普通主题订阅+all(共享主题订阅组内根据策略选一个)
+        //普通topic订阅+all(共享topic订阅组内根据策略选一个)
         Set<TopicSubscription> finalSubscriptions = new HashSet<>();
 
         //寻找匹配topic的所有订阅信息
@@ -39,7 +39,7 @@ public class DefaultTopicManager implements TopicManager {
         Map<String, List<TopicSubscription>> topic2Subscription = new HashMap<>();
         for (TopicSubscription ts : subscriptions) {
             if (ts.isShare()) {
-                //共享主题
+                //共享topic
                 String group = ts.getGroup();
                 List<TopicSubscription> groupedSubscriptions = topic2Subscription.get(group);
                 if (Objects.isNull(groupedSubscriptions)) {
@@ -48,12 +48,12 @@ public class DefaultTopicManager implements TopicManager {
                 }
                 groupedSubscriptions.add(ts);
             } else {
-                //普通主题
+                //普通topic
                 finalSubscriptions.add(ts);
             }
         }
 
-        //共享主题订阅组内根据策略选一个
+        //共享topic订阅组内根据策略选一个
         for (Map.Entry<String, List<TopicSubscription>> entry : topic2Subscription.entrySet()) {
             List<TopicSubscription> groupedSubscriptions = entry.getValue();
 

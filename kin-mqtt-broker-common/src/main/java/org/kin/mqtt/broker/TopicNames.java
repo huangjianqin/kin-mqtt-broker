@@ -5,10 +5,10 @@ package org.kin.mqtt.broker;
  * @date 2022/11/25
  */
 public interface TopicNames {
-    /** 主题树root节点的topic name, 用于表示是root节点 */
+    /** topic树root节点的topic name, 用于表示是root节点 */
     String TREE_ROOT_TOPIC = "$ROOT$";
 
-    /** 共享主题前缀 */
+    /** 共享topic前缀 */
     String SHARE_TOPIC = "$share";
 
     //----------------------------------------------------系统topic------------------------------------------------------------------------------
@@ -18,7 +18,7 @@ public interface TopicNames {
     String SYS_TOPIC_CLIENTS_TOTAL = SYS_TOPIC + "/broker/clients/total";
 
     /**
-     * @return 指定主题是否是系统内置主题
+     * 判断指定topic是否是系统内置topic
      */
     static boolean isSysTopic(String topicName) {
         if (topicName == null || topicName.length() == 0) {
@@ -27,6 +27,16 @@ public interface TopicNames {
         String rootPath = topicName.split("/")[0];
         return TREE_ROOT_TOPIC.equals(rootPath) ||
                 SYS_TOPIC.equals(rootPath);
+    }
+
+    /**
+     * 判断指定topic是否是共享订阅topic
+     */
+    static boolean isShareTopic(String topicName) {
+        if (topicName == null || topicName.length() == 0) {
+            return false;
+        }
+        return topicName.indexOf(TopicNames.SHARE_TOPIC) == 0;
     }
 
 }

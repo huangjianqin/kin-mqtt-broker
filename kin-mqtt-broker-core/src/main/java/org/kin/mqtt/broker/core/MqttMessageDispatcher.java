@@ -1,10 +1,8 @@
 package org.kin.mqtt.broker.core;
 
-import io.netty.handler.codec.mqtt.MqttFixedHeader;
-import io.netty.handler.codec.mqtt.MqttMessage;
-import io.netty.handler.codec.mqtt.MqttMessageType;
-import io.netty.handler.codec.mqtt.MqttPublishMessage;
+import io.netty.handler.codec.mqtt.*;
 import org.eclipse.collections.impl.map.mutable.UnifiedMap;
+import org.kin.framework.utils.StringUtils;
 import org.kin.mqtt.broker.cluster.BrokerManager;
 import org.kin.mqtt.broker.core.message.MqttMessageHandler;
 import org.kin.mqtt.broker.core.message.MqttMessageReplica;
@@ -87,20 +85,30 @@ public class MqttMessageDispatcher {
         if (mqttMessage instanceof MqttPublishMessage) {
             //先转换成可持久化的消息
             MqttPublishMessage publishMessage = (MqttPublishMessage) mqttMessage;
-            messageReplica = MqttMessageUtils.toReplica(mqttChannel.getClientId(), publishMessage, wrapper.getTimestamp());
+
+            if (wrapper.isFromCluster()) {
+                //非集群广播消息
+                publishMessage = tryReplaceRealTopic(mqttChannel, publishMessage);
+                //replace
+                mqttMessage = publishMessage;
+                wrapper.replaceMessage(mqttMessage);
+            }
+
+            messageReplica = MqttMessageUtils.toReplica(mqttChannel.clientId, publishMessage, wrapper.getTimestamp());
         }
 
         MqttMessageType mqttMessageType = fixedHeader.messageType();
         log.debug("prepare to handle {} message from channel {}", mqttMessageType, mqttChannel);
         MqttMessageHandler<MqttMessage> messageHandler = type2handler.get(mqttMessageType);
         if (Objects.nonNull(messageHandler)) {
+            MqttMessage internalMqttMessage = mqttMessage;
             messageHandler.handle((MqttMessageWrapper<MqttMessage>) wrapper, mqttChannel, brokerContext)
                     .contextWrite(context -> context.putNonNull(MqttBrokerContext.class, brokerContext))
                     .subscribe(v -> {
                             },
                             error -> log.error("handle {} message from channel {} error", mqttMessageType, mqttChannel, error),
                             //释放onMqttClientConnected里面的retain(), 还有initBrokerManager的MqttMessageReplica.fromCluster(....)
-                            () -> ReactorNetty.safeRelease(mqttMessage.payload()));
+                            () -> ReactorNetty.safeRelease(internalMqttMessage.payload()));
         } else {
             throw new IllegalArgumentException(String.format("does not find handler to handle %s message", mqttMessageType));
         }
@@ -120,5 +128,49 @@ public class MqttMessageDispatcher {
 
             brokerContext.broadcastEvent(new MqttPublishEvent(mqttChannel, messageReplica));
         }
+    }
+
+    /**
+     * 尝试替换{@link MqttPublishMessage}的topic, 针对使用了topic alias场景
+     *
+     * @return 替换后的MqttPublishMessage实例
+     */
+    @SuppressWarnings("unchecked")
+    private MqttPublishMessage tryReplaceRealTopic(MqttChannel mqttChannel, MqttPublishMessage publishMessage) {
+        //因为topic alias仅在对应连接生效和维护, 所以集群广播消息需要带真实topic
+        MqttFixedHeader fixedHeader = publishMessage.fixedHeader();
+        MqttPublishVariableHeader publishVariableHeader = publishMessage.variableHeader();
+        String topic = publishVariableHeader.topicName();
+        MqttProperties properties = publishVariableHeader.properties();
+        //是否需要替换mqtt消息
+        boolean needReplaceMqttMessage = false;
+        if (StringUtils.isBlank(topic)) {
+            //topic为空, 可能使用了topic别名
+            MqttProperties.MqttProperty<Integer> topicAliasProp = properties.getProperty(MqttProperties.MqttPropertyType.TOPIC_ALIAS.value());
+            if (Objects.nonNull(topicAliasProp)) {
+                //带了topic别名, 则尝试获取真实topic
+                topic = mqttChannel.getTopicByAlias(topicAliasProp.value());
+                needReplaceMqttMessage = true;
+            }
+            if (StringUtils.isBlank(topic)) {
+                //再次检查
+                throw new IllegalStateException("publish message topic is blank, " + publishMessage);
+            }
+        } else {
+            //topic不为空, 尝试注册topic别名
+            MqttProperties.MqttProperty<Integer> topicAliasProp = properties.getProperty(MqttProperties.MqttPropertyType.TOPIC_ALIAS.value());
+            if (Objects.nonNull(topicAliasProp)) {
+                //带了topic别名, 则注册
+                mqttChannel.getTopicByAlias(topicAliasProp.value());
+            }
+        }
+
+        if (needReplaceMqttMessage) {
+            //new publish message
+            publishVariableHeader = new MqttPublishVariableHeader(topic, publishVariableHeader.packetId(), properties);
+            return new MqttPublishMessage(fixedHeader, publishVariableHeader, publishMessage.payload());
+        }
+
+        return publishMessage;
     }
 }
