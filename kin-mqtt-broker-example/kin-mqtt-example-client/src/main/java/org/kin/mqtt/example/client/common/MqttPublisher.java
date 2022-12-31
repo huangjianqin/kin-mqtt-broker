@@ -1,4 +1,4 @@
-package org.kin.mqtt.example.client;
+package org.kin.mqtt.example.client.common;
 
 import org.eclipse.paho.client.mqttv3.MqttClient;
 import org.eclipse.paho.client.mqttv3.MqttConnectOptions;
