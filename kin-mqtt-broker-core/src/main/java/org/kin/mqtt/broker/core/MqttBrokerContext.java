@@ -29,8 +29,7 @@ import java.util.concurrent.TimeUnit;
  * @date 2022/11/14
  */
 public class MqttBrokerContext implements Closeable {
-    /** broker唯一id */
-    private final int brokerId;
+    private final MqttBrokerConfig brokerConfig;
     /** mqtt消息处理的{@link Scheduler} todo 如果datastore datasource auth能支持全异步的形式, 则不需要额外的scheduler也ok */
     private final Scheduler mqttBsScheduler;
     /** retry task管理 */
@@ -60,12 +59,12 @@ public class MqttBrokerContext implements Closeable {
     /** 业务相关定时器 */
     private final HashedWheelTimer bsTimer = new HashedWheelTimer(60, TimeUnit.SECONDS);
 
-    public MqttBrokerContext(int brokerId, int port, MqttMessageDispatcher dispatcher, AuthService authService,
+    public MqttBrokerContext(MqttBrokerConfig brokerConfig, MqttMessageDispatcher dispatcher, AuthService authService,
                              BrokerManager brokerManager, MqttMessageStore messageStore,
                              List<RuleDefinition> ruleDefinitions,
                              AclService aclService) {
-        this.brokerId = brokerId;
-        mqttBsScheduler = Schedulers.newBoundedElastic(SysUtils.CPU_NUM * 10, Integer.MAX_VALUE, "kin-mqtt-broker-bs-" + port, 60);
+        this.brokerConfig = brokerConfig;
+        this.mqttBsScheduler = Schedulers.newBoundedElastic(SysUtils.CPU_NUM * 10, Integer.MAX_VALUE, "kin-mqtt-broker-bs-" + brokerConfig.getPort(), 60);
         this.dispatcher = dispatcher;
         this.authService = authService;
         this.brokerManager = brokerManager;
@@ -108,14 +107,10 @@ public class MqttBrokerContext implements Closeable {
      * @return mqtt broker主动往client发送mqtt消息, 消息头所设置的clientId
      */
     public String getBrokerClientId() {
-        return "MQTTBroker-" + brokerId;
+        return "MQTTBroker-" + brokerConfig.getBrokerId();
     }
 
     //getter
-    public int getBrokerId() {
-        return brokerId;
-    }
-
     public Scheduler getMqttBsScheduler() {
         return mqttBsScheduler;
     }

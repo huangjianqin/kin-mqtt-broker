@@ -30,6 +30,8 @@ public class MqttBrokerConfig {
     private boolean enableSysTopic;
     /** 系统topic推送间隔(秒), 只针对部分系统topic有效, 默认1分钟 */
     private int sysTopicInterval = 60;
+    /** 单个接收端愿意同时处理的QoS为1和2的PUBLISH消息最大数量, 默认2048 */
+    private int receiveMaximum = 64;
 
     public static MqttBrokerConfig create() {
         return new MqttBrokerConfig();
@@ -52,6 +54,7 @@ public class MqttBrokerConfig {
             Preconditions.checkArgument(StringUtils.isNotBlank(caFile), "caFile must be not blank if open ssl");
         }
         Preconditions.checkArgument(sysTopicInterval > 0, "sysTopicInterval must be greater than 0");
+        Preconditions.checkArgument(receiveMaximum > 0, "receiveMaximum must be greater than 0");
     }
 
     /**
@@ -110,6 +113,14 @@ public class MqttBrokerConfig {
      */
     public MqttBrokerConfig sysTopicInterval(int sysTopicInterval) {
         this.sysTopicInterval = sysTopicInterval;
+        return this;
+    }
+
+    /**
+     * 接收端愿意同时处理的QoS为1和2的PUBLISH消息最大数量, 默认2048
+     */
+    public MqttBrokerConfig receiveMaximum(int receiveMaximum) {
+        this.receiveMaximum = receiveMaximum;
         return this;
     }
 
@@ -200,5 +211,9 @@ public class MqttBrokerConfig {
 
     public void setSysTopicInterval(int sysTopicInterval) {
         this.sysTopicInterval = sysTopicInterval;
+    }
+
+    public int getReceiveMaximum() {
+        return receiveMaximum;
     }
 }

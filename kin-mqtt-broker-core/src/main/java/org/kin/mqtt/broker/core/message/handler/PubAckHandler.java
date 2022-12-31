@@ -23,6 +23,8 @@ public class PubAckHandler extends AbstractMqttMessageHandler<MqttPubAckMessage>
     @Override
     public Mono<Void> handle(MqttMessageWrapper<MqttPubAckMessage> wrapper, MqttChannel mqttChannel, MqttBrokerContext brokerContext) {
         return Mono.fromRunnable(() -> {
+            mqttChannel.onRecPubRespMessage();
+
             MqttMessage message = wrapper.getMessage();
             MqttMessageIdVariableHeader variableHeader = (MqttMessageIdVariableHeader) message.variableHeader();
             int messageId = variableHeader.messageId();

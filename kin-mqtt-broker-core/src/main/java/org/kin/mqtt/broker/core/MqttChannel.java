@@ -62,6 +62,11 @@ public class MqttChannel {
     private String userName;
     /** mqtt channel status */
     private volatile ChannelStatus status = ChannelStatus.INIT;
+    /** 接收端愿意同时处理的QoS为1和2的PUBLISH消息最大数量 */
+    private int receiveMaximum;
+    /** 当前已接收但未处理的PUBLISH消息数量 */
+    private AtomicInteger receiveNum;
+
     /** 遗愿 */
     private Will will;
     /** 用于控制建立connection后, client还不发送connect消息, 则broker主动关闭connection */
@@ -98,6 +103,9 @@ public class MqttChannel {
     public Mono<Void> sendMessage(MqttMessage mqttMessage, boolean retry) {
         log.debug("channel {} send {} message", getConnection(), mqttMessage.fixedHeader().messageType());
         if (retry) {
+            //发送qos > 0的publish消息
+            onSendQos1Message();
+
             //Increase the reference count of bytebuf, and the reference count of retrybytebuf is 2
             //mqttChannel.write() method releases a reference count.
             MqttMessageType mqttMessageType = mqttMessage.fixedHeader().messageType();
@@ -115,6 +123,23 @@ public class MqttChannel {
             return write(Mono.just(mqttMessage)).then();
         } else {
             return write(Mono.just(mqttMessage));
+        }
+    }
+
+    /**
+     * 发送publish消息时触发, 记录对端已收到但未发送响应的QoS大于0的PUBLISH消息数量
+     */
+    private void onSendQos1Message() {
+        if (receiveMaximum <= 0) {
+            return;
+        }
+
+        if (receiveNum.incrementAndGet() >= receiveMaximum) {
+            //已接收到但未处理publish消息
+            //broker直接断开连接
+            close().subscribe();
+            //然后抛异常
+            throw new IllegalStateException(String.format("mqtt channel '%s' rate limited!", clientId));
         }
     }
 
@@ -295,6 +320,11 @@ public class MqttChannel {
         if (Objects.nonNull(sessionExpiryIntervalProp)) {
             updateSessionExpiryInterval(sessionExpiryIntervalProp.value());
         }
+        MqttProperties.MqttProperty<Integer> receiveMaximumProp = properties.getProperty(MqttProperties.MqttPropertyType.RECEIVE_MAXIMUM.value());
+        if (Objects.nonNull(receiveMaximumProp)) {
+            this.receiveMaximum = receiveMaximumProp.value();
+            this.receiveNum = new AtomicInteger();
+        }
         subscriptions = new NonBlockingHashSet<>();
         messageIdGenerator = new AtomicInteger();
         qos2MessageCache = new NonBlockingHashMap<>();
@@ -363,7 +393,11 @@ public class MqttChannel {
         if (Objects.nonNull(sessionExpiryIntervalProp)) {
             updateSessionExpiryInterval(sessionExpiryIntervalProp.value());
         }
-
+        MqttProperties.MqttProperty<Integer> receiveMaximumProp = properties.getProperty(MqttProperties.MqttPropertyType.RECEIVE_MAXIMUM.value());
+        if (Objects.nonNull(receiveMaximumProp)) {
+            this.receiveMaximum = receiveMaximumProp.value();
+            this.receiveNum = new AtomicInteger();
+        }
         //keepalive
         //mqtt client 空闲, broker关闭mqtt client连接
         //此时不为null
@@ -427,6 +461,7 @@ public class MqttChannel {
         userName = null;
         will = null;
         deferCloseWithoutConnMsgDisposable = null;
+        receiveNum = null;
     }
 
     /**
@@ -576,6 +611,19 @@ public class MqttChannel {
     @Nullable
     public String getTopicByAlias(int alias) {
         return alias2TopicName.get(alias);
+    }
+
+    /**
+     * 接收到publish的响应消息, 即PUBACK, PUBCOMP或PUBREC
+     */
+    public void onRecPubRespMessage() {
+        if (receiveMaximum <= 0) {
+            return;
+        }
+
+        if (receiveNum.decrementAndGet() < 0) {
+            log.error("mqtt channel '%s' receiveNum decrease to negative");
+        }
     }
 
     //getter

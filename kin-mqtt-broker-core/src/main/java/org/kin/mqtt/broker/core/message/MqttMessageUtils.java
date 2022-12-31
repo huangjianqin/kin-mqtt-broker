@@ -4,8 +4,10 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.PooledByteBufAllocator;
 import io.netty.handler.codec.mqtt.*;
 import org.kin.framework.utils.CollectionUtils;
+import org.kin.mqtt.broker.core.MqttBrokerConfig;
 import org.kin.mqtt.broker.core.MqttChannel;
 
+import javax.annotation.Nullable;
 import java.util.*;
 
 import static io.netty.handler.codec.mqtt.MqttConnectReturnCode.*;
@@ -250,11 +252,21 @@ public class MqttMessageUtils {
     }
 
     /**
+     * 构建conn ack消息, 用于拒绝connect的mqtt消息
+     *
+     * @return conn ack消息
+     */
+    public static MqttConnAckMessage createConnAck(MqttConnectReturnCode returnCode, byte version) {
+        return createConnAck(returnCode, version, null);
+    }
+
+    /**
      * 构建conn ack消息
      *
      * @return conn ack消息
      */
-    public static MqttConnAckMessage createConnAck(MqttConnectReturnCode connectReturnCode, byte version) {
+    public static MqttConnAckMessage createConnAck(MqttConnectReturnCode returnCode, byte version, @Nullable MqttBrokerConfig brokerConfig) {
+
         MqttProperties properties = MqttProperties.NO_PROPERTIES;
         if (MqttVersion.MQTT_5.protocolLevel() == version) {
             properties = new MqttProperties();
@@ -263,29 +275,37 @@ public class MqttMessageUtils {
             // don't support shared subscription
             properties.add(new MqttProperties.IntegerProperty(MqttProperties.MqttPropertyType.SHARED_SUBSCRIPTION_AVAILABLE.value(), 0));
             // mqtt3.0 error code transform
-            switch (connectReturnCode) {
+            switch (returnCode) {
                 case CONNECTION_REFUSED_IDENTIFIER_REJECTED:
-                    connectReturnCode = CONNECTION_REFUSED_CLIENT_IDENTIFIER_NOT_VALID;
+                    returnCode = CONNECTION_REFUSED_CLIENT_IDENTIFIER_NOT_VALID;
                     break;
                 case CONNECTION_REFUSED_UNACCEPTABLE_PROTOCOL_VERSION:
-                    connectReturnCode = CONNECTION_REFUSED_UNSUPPORTED_PROTOCOL_VERSION;
+                    returnCode = CONNECTION_REFUSED_UNSUPPORTED_PROTOCOL_VERSION;
                     break;
                 case CONNECTION_REFUSED_SERVER_UNAVAILABLE:
-                    connectReturnCode = CONNECTION_REFUSED_SERVER_UNAVAILABLE_5;
+                    returnCode = CONNECTION_REFUSED_SERVER_UNAVAILABLE_5;
                     break;
                 case CONNECTION_REFUSED_BAD_USER_NAME_OR_PASSWORD:
-                    connectReturnCode = CONNECTION_REFUSED_BAD_USERNAME_OR_PASSWORD;
+                    returnCode = CONNECTION_REFUSED_BAD_USERNAME_OR_PASSWORD;
                     break;
                 case CONNECTION_REFUSED_NOT_AUTHORIZED:
-                    connectReturnCode = CONNECTION_REFUSED_NOT_AUTHORIZED_5;
+                    returnCode = CONNECTION_REFUSED_NOT_AUTHORIZED_5;
                     break;
                 default:
                     //do nothing
             }
+
+            if (Objects.nonNull(brokerConfig)) {
+                //receive maximum
+                properties.add(new MqttProperties.IntegerProperty(MqttProperties.MqttPropertyType.RECEIVE_MAXIMUM.value(), brokerConfig.getReceiveMaximum()));
+            }
         }
 
         //1. 不限制topic alias长度, 则允许2字节, 最大65536
-        MqttConnAckVariableHeader mqttConnAckVariableHeader = new MqttConnAckVariableHeader(connectReturnCode, false, properties);
+        //...
+
+
+        MqttConnAckVariableHeader mqttConnAckVariableHeader = new MqttConnAckVariableHeader(returnCode, false, properties);
         MqttFixedHeader mqttFixedHeader = new MqttFixedHeader(MqttMessageType.CONNACK, false, MqttQoS.AT_MOST_ONCE, false, 0X02);
         return new MqttConnAckMessage(mqttFixedHeader, mqttConnAckVariableHeader);
     }

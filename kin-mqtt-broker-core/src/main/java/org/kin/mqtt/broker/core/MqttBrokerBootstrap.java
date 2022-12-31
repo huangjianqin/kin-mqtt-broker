@@ -208,11 +208,10 @@ public class MqttBrokerBootstrap extends ServerTransport {
         }
 
         int port = config.getPort();
-        MqttBrokerContext brokerContext = new MqttBrokerContext(config.getBrokerId(), port, new MqttMessageDispatcher(interceptors),
+        MqttBrokerContext brokerContext = new MqttBrokerContext(config, new MqttMessageDispatcher(interceptors),
                 authService, brokerManager, messageStore,
                 ruleDefinitions,
                 aclService);
-        BrokerManager brokerManager;
 
         //启动mqtt broker
         LoopResources loopResources = LoopResources.create("kin-mqtt-server-" + port, 2, SysUtils.DOUBLE_CPU, false);

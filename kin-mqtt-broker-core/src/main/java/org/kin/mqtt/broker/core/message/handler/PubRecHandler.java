@@ -22,6 +22,8 @@ import java.util.Optional;
 public class PubRecHandler extends AbstractMqttMessageHandler<MqttMessage> {
     @Override
     public Mono<Void> handle(MqttMessageWrapper<MqttMessage> wrapper, MqttChannel mqttChannel, MqttBrokerContext brokerContext) {
+        mqttChannel.onRecPubRespMessage();
+
         MqttMessage message = wrapper.getMessage();
         MqttMessageIdVariableHeader variableHeader = (MqttMessageIdVariableHeader) message.variableHeader();
         //publish消息id
