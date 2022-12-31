@@ -30,7 +30,7 @@ public class MqttBrokerConfig {
     private boolean enableSysTopic;
     /** 系统topic推送间隔(秒), 只针对部分系统topic有效, 默认1分钟 */
     private int sysTopicInterval = 60;
-    /** 单个接收端愿意同时处理的QoS为1和2的PUBLISH消息最大数量, 默认2048 */
+    /** 单个接收端愿意同时处理的QoS为1和2的PUBLISH消息最大数量, 默认64 */
     private int receiveMaximum = 64;
 
     public static MqttBrokerConfig create() {
@@ -117,7 +117,7 @@ public class MqttBrokerConfig {
     }
 
     /**
-     * 接收端愿意同时处理的QoS为1和2的PUBLISH消息最大数量, 默认2048
+     * 接收端愿意同时处理的QoS为1和2的PUBLISH消息最大数量, 默认64
      */
     public MqttBrokerConfig receiveMaximum(int receiveMaximum) {
         this.receiveMaximum = receiveMaximum;
