@@ -1,10 +1,11 @@
 package org.kin.mqtt.example.client.common;
 
-import org.eclipse.paho.client.mqttv3.MqttClient;
-import org.eclipse.paho.client.mqttv3.MqttConnectOptions;
-import org.eclipse.paho.client.mqttv3.MqttException;
-import org.eclipse.paho.client.mqttv3.MqttMessage;
-import org.eclipse.paho.client.mqttv3.persist.MemoryPersistence;
+
+import org.eclipse.paho.mqttv5.client.MqttClient;
+import org.eclipse.paho.mqttv5.client.MqttConnectionOptions;
+import org.eclipse.paho.mqttv5.client.persist.MemoryPersistence;
+import org.eclipse.paho.mqttv5.common.MqttException;
+import org.eclipse.paho.mqttv5.common.MqttMessage;
 
 import java.nio.charset.StandardCharsets;
 import java.util.Objects;
@@ -14,29 +15,29 @@ import java.util.Objects;
  * @date 2022/12/22
  */
 public class MqttPublisher {
-    public static void main(String[] args) {
-        String broker = "tcp://127.0.0.1:1883";
-        String topic = "MQTT Examples";
+    private final String clientId;
+    private final MemoryPersistence persistence = new MemoryPersistence();
 
-        String content = "Sample Message";
-        //0 at most
-        //1 at least
-        //2 exactly
-        int qos = 2;
-        String clientId = "JavaPublisher";
-        MemoryPersistence persistence = new MemoryPersistence();
+    public MqttPublisher(String clientId) {
+        this.clientId = clientId;
+    }
 
+    /**
+     * mqtt client publish
+     */
+    public void publish(String broker, String topic, String content, int qos) {
+        System.out.println("clientId: " + clientId);
         MqttClient sampleClient = null;
         try {
             sampleClient = new MqttClient(broker, clientId, persistence);
-            MqttConnectOptions connOpts = new MqttConnectOptions();
-            connOpts.setCleanSession(true);
+            MqttConnectionOptions connOpts = new MqttConnectionOptions();
+            connOpts.setCleanStart(true);
             connOpts.setUserName("java");
-            connOpts.setPassword("12345".toCharArray());
+            connOpts.setPassword("12345".getBytes(StandardCharsets.UTF_8));
             System.out.println("connecting to broker: " + broker);
             sampleClient.connect(connOpts);
             System.out.println("connected");
-            System.out.println("publishing message: " + content);
+            System.out.printf("publishing message topic '%s': %s\r\n", topic, content);
 
             for (int i = 0; i < 1000; i++) {
                 MqttMessage message = new MqttMessage((content + i).getBytes(StandardCharsets.UTF_8));
@@ -66,5 +67,14 @@ public class MqttPublisher {
                 }
             }
         }
+    }
+
+    public static void main(String[] args) {
+        MqttPublisher publisher = new MqttPublisher("Publisher");
+        //0 at most
+        //1 at least
+        //2 exactly
+        publisher.publish("tcp://127.0.0.1:1883", "example", "Sample Message", 2);
+
     }
 }

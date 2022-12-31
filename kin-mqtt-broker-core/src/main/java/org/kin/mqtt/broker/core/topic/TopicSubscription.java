@@ -1,6 +1,8 @@
 package org.kin.mqtt.broker.core.topic;
 
 import io.netty.handler.codec.mqtt.MqttQoS;
+import org.kin.framework.utils.StringUtils;
+import org.kin.mqtt.broker.TopicNames;
 import org.kin.mqtt.broker.core.MqttChannel;
 
 import java.util.Objects;
@@ -12,21 +14,42 @@ import java.util.Objects;
  * @date 2022/11/13
  */
 public class TopicSubscription {
+    /** 原始订阅的topic name, 即mqtt client发过的订阅topic name */
+    private final String rawTopic;
     /** 订阅的topic name */
     private final String topic;
     /** 发起订阅的mqtt连接 */
     private MqttChannel mqttChannel;
     /** 订阅qos */
     private final MqttQoS qoS;
+    /** 共享主题用到, 用于共享主题区分组, 默认null */
+    private String group;
 
-    public static TopicSubscription forRemove(String topic, MqttChannel mqttChannel) {
-        return new TopicSubscription(topic, null, mqttChannel);
+    public TopicSubscription(String topic, MqttChannel mqttChannel) {
+        this(topic, null, mqttChannel);
     }
 
     public TopicSubscription(String topic, MqttQoS qoS, MqttChannel mqttChannel) {
-        this.topic = topic;
+        this.rawTopic = topic;
         this.qoS = qoS;
         this.mqttChannel = mqttChannel;
+        if (rawTopic.indexOf(TopicNames.SHARE_TOPIC) == 0) {
+            //共享主题
+            String[] splits = topic.split(TopicFilter.SEPARATOR, 3);
+            this.group = splits[1];
+            this.topic = splits[2];
+        } else {
+            //普通主题
+            this.topic = this.rawTopic;
+        }
+    }
+
+    private TopicSubscription(String rawTopic, String topic, MqttChannel mqttChannel, MqttQoS qoS, String group) {
+        this.rawTopic = rawTopic;
+        this.topic = topic;
+        this.mqttChannel = mqttChannel;
+        this.qoS = qoS;
+        this.group = group;
     }
 
     /**
@@ -37,8 +60,8 @@ public class TopicSubscription {
      * @return 结合publish消息后, 真实订阅信息
      */
     public TopicSubscription convert(MqttQoS mqttQoS) {
-        MqttQoS minQos = MqttQoS.valueOf(Math.min(mqttQoS.value(), qoS.value()));
-        return new TopicSubscription(topic, minQos, mqttChannel);
+        return new TopicSubscription(rawTopic, topic, mqttChannel,
+                MqttQoS.valueOf(Math.min(mqttQoS.value(), qoS.value())), group);
     }
 
     /**
@@ -56,13 +79,17 @@ public class TopicSubscription {
     }
 
     /**
-     * 重新绑定mqtt channel
+     * 判断是否是共享订阅
      */
-    public void onRelink(MqttChannel mqttChannel) {
-        this.mqttChannel = mqttChannel;
+    public boolean isShare() {
+        return StringUtils.isNotBlank(group);
     }
 
     //getter
+    public String getRawTopic() {
+        return rawTopic;
+    }
+
     public String getTopic() {
         return topic;
     }
@@ -73,6 +100,10 @@ public class TopicSubscription {
 
     public MqttChannel getMqttChannel() {
         return mqttChannel;
+    }
+
+    public String getGroup() {
+        return group;
     }
 
     @Override
@@ -95,9 +126,11 @@ public class TopicSubscription {
     @Override
     public String toString() {
         return "TopicSubscription{" +
-                "topic='" + topic + '\'' +
-                ", qoS=" + qoS +
+                "rawTopic='" + rawTopic + '\'' +
+                ", topic='" + topic + '\'' +
                 ", mqttChannel=" + mqttChannel +
+                ", qoS=" + qoS +
+                ", group='" + group + '\'' +
                 '}';
     }
 }

@@ -124,7 +124,7 @@
         <!-- mqtt client, 用于测试 -->
         <dependency>
             <groupId>org.eclipse.paho</groupId>
-            <artifactId>org.eclipse.paho.client.mqttv3</artifactId>
+            <artifactId>org.eclipse.paho.mqttv5.client</artifactId>
             <scope>test</scope>
         </dependency>
     </dependencies>

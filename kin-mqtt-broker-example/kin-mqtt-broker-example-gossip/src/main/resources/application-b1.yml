@@ -10,10 +10,7 @@ org:
         port: 1883
         auth:
           users:
-            JavaSubscriber:
-              username: java
-              password: 12345
-            JavaPublisher:
+            root:
               username: java
               password: 12345
 server:

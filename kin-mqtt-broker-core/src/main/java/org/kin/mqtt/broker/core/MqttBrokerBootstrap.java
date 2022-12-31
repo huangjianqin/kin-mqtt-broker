@@ -20,6 +20,8 @@ import org.kin.mqtt.broker.bridge.Bridge;
 import org.kin.mqtt.broker.cluster.BrokerManager;
 import org.kin.mqtt.broker.cluster.StandaloneBrokerManager;
 import org.kin.mqtt.broker.core.message.MqttMessageWrapper;
+import org.kin.mqtt.broker.core.topic.share.RandomShareSubLoadBalance;
+import org.kin.mqtt.broker.core.topic.share.ShareSubLoadBalance;
 import org.kin.mqtt.broker.core.websocket.ByteBuf2WsFrameEncoder;
 import org.kin.mqtt.broker.core.websocket.WsFrame2ByteBufDecoder;
 import org.kin.mqtt.broker.rule.RuleDefinition;
@@ -65,6 +67,8 @@ public class MqttBrokerBootstrap extends ServerTransport {
     private AclService aclService = NoneAclService.INSTANCE;
     /** 事件consumer */
     private final List<Object> eventConsumers = new LinkedList<>();
+    /** 共享订阅负载均衡实现 */
+    private ShareSubLoadBalance shareSubLoadBalance = RandomShareSubLoadBalance.INSTANCE;
 
     public static MqttBrokerBootstrap create() {
         return new MqttBrokerBootstrap(MqttBrokerConfig.create());
@@ -179,6 +183,16 @@ public class MqttBrokerBootstrap extends ServerTransport {
             }
         }
         this.eventConsumers.addAll(Arrays.asList(consumers));
+        return this;
+    }
+
+    /**
+     * 配置共享订阅负载均衡实现, 默认随机
+     *
+     * @param shareSubLoadBalance 共享订阅负载均衡实现
+     */
+    public MqttBrokerBootstrap shareSubLoadBalance(ShareSubLoadBalance shareSubLoadBalance) {
+        this.shareSubLoadBalance = shareSubLoadBalance;
         return this;
     }
 
