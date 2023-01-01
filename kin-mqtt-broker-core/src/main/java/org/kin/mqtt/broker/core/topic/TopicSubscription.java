@@ -28,6 +28,8 @@ public class TopicSubscription {
     private String group;
     /** 如果mqtt client订阅了自己的publish的topic, 将noLocal设置为true, 则mqtt client不会收到该topic自己publish的消息 */
     private boolean noLocal;
+    /** true, 则转发publish消息时必须保留retain flag */
+    private boolean retainAsPublished;
 
     /**
      * 用于移除订阅
@@ -51,6 +53,7 @@ public class TopicSubscription {
         }
         MqttSubscriptionOption option = rawSubscription.option();
         this.noLocal = option.isNoLocal();
+        this.retainAsPublished = option.isRetainAsPublished();
     }
 
     /**
@@ -138,6 +141,10 @@ public class TopicSubscription {
         return noLocal;
     }
 
+    public boolean isRetainAsPublished() {
+        return retainAsPublished;
+    }
+
     @Override
     public boolean equals(Object o) {
         if (this == o) {
@@ -164,6 +171,7 @@ public class TopicSubscription {
                 ", qoS=" + qoS +
                 ", group='" + group + '\'' +
                 ", noLocal='" + noLocal + '\'' +
+                ", retainAsPublished='" + retainAsPublished + '\'' +
                 '}';
     }
 }

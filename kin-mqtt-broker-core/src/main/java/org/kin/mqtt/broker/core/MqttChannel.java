@@ -536,9 +536,11 @@ public class MqttChannel {
                     byteBuf.writeBytes(will.getMessage());
                     sendMessage(MqttMessageUtils.createPublish(false,
                                     subscription.getQoS(),
+                                    will.isRetain(),
                                     subscription.getQoS() == MqttQoS.AT_MOST_ONCE ? 0 : channel.nextMessageId(),
                                     will.getTopic(),
-                                    byteBuf),
+                                    byteBuf,
+                                    subscription.isRetainAsPublished()),
                             subscription.getQoS().value() > 0)
                             .subscribe();
                 });

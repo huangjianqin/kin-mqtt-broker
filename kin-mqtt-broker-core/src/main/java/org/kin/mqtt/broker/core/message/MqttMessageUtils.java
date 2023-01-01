@@ -6,6 +6,7 @@ import io.netty.handler.codec.mqtt.*;
 import org.kin.framework.utils.CollectionUtils;
 import org.kin.mqtt.broker.core.MqttBrokerConfig;
 import org.kin.mqtt.broker.core.MqttChannel;
+import org.kin.mqtt.broker.core.topic.TopicSubscription;
 
 import javax.annotation.Nullable;
 import java.util.*;
@@ -109,8 +110,28 @@ public class MqttMessageUtils {
      *
      * @return publish消息
      */
+    public static MqttPublishMessage createPublish(boolean isDup, MqttQoS qoS, boolean isRetain, int messageId, String topic, ByteBuf message, boolean keepRetainFlag) {
+        return createPublish(isDup, qoS, isRetain, messageId, topic, message, MqttProperties.NO_PROPERTIES, keepRetainFlag);
+    }
+
+    /**
+     * 构建publish消息
+     *
+     * @return publish消息
+     */
     public static MqttPublishMessage createPublish(boolean isDup, MqttQoS qoS, boolean isRetain, int messageId, String topic, ByteBuf message, MqttProperties properties) {
         MqttFixedHeader mqttFixedHeader = new MqttFixedHeader(MqttMessageType.PUBLISH, isDup, qoS, isRetain, 0);
+        MqttPublishVariableHeader mqttPublishVariableHeader = new MqttPublishVariableHeader(topic, messageId, properties);
+        return new MqttPublishMessage(mqttFixedHeader, mqttPublishVariableHeader, message);
+    }
+
+    /**
+     * 构建publish消息
+     *
+     * @return publish消息
+     */
+    public static MqttPublishMessage createPublish(boolean isDup, MqttQoS qoS, boolean isRetain, int messageId, String topic, ByteBuf message, MqttProperties properties, boolean keepRetainFlag) {
+        MqttFixedHeader mqttFixedHeader = new MqttFixedHeader(MqttMessageType.PUBLISH, isDup, qoS, keepRetainFlag && isRetain, 0);
         MqttPublishVariableHeader mqttPublishVariableHeader = new MqttPublishVariableHeader(topic, messageId, properties);
         return new MqttPublishMessage(mqttFixedHeader, mqttPublishVariableHeader, message);
     }
@@ -145,6 +166,27 @@ public class MqttMessageUtils {
 
         //new message header
         MqttFixedHeader newFixedHeader = new MqttFixedHeader(fixedHeader.messageType(), false, mqttQoS, false, fixedHeader.remainingLength());
+        MqttPublishVariableHeader newVariableHeader = new MqttPublishVariableHeader(variableHeader.topicName(), messageId, variableHeader.properties());
+        // TODO: 2022/11/14 copy
+        return new MqttPublishMessage(newFixedHeader, newVariableHeader, message.payload().copy());
+    }
+
+    /**
+     * 包装publish消息
+     *
+     * @param messageId    消息id
+     * @param message      {@link MqttPublishMessage}
+     * @param subscription 订阅信息
+     * @return {@link MqttPublishMessage}
+     */
+    public static MqttPublishMessage wrapPublish(MqttPublishMessage message, TopicSubscription subscription, int messageId) {
+        //原message header
+        MqttPublishVariableHeader variableHeader = message.variableHeader();
+        MqttFixedHeader fixedHeader = message.fixedHeader();
+
+        //new message header
+        MqttFixedHeader newFixedHeader = new MqttFixedHeader(fixedHeader.messageType(), false, subscription.getQoS(),
+                subscription.isRetainAsPublished() && fixedHeader.isRetain(), fixedHeader.remainingLength());
         MqttPublishVariableHeader newVariableHeader = new MqttPublishVariableHeader(variableHeader.topicName(), messageId, variableHeader.properties());
         // TODO: 2022/11/14 copy
         return new MqttPublishMessage(newFixedHeader, newVariableHeader, message.payload().copy());

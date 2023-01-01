@@ -128,9 +128,8 @@ public class PublishHandler extends AbstractMqttMessageHandler<MqttPublishMessag
                 subscriptions.stream()
                         .filter(subscription -> filterOfflineSession(subscription.getMqttChannel(), brokerContext.getMessageStore(), () -> message, timestamp))
                         .map(subscription -> {
-                            MqttQoS qoS = subscription.getQoS();
                             MqttChannel mqttChannel = subscription.getMqttChannel();
-                            return mqttChannel.sendMessage(MqttMessageUtils.wrapPublish(message, qoS, mqttChannel.nextMessageId()), qoS.value() > 0);
+                            return mqttChannel.sendMessage(MqttMessageUtils.wrapPublish(message, subscription, mqttChannel.nextMessageId()), subscription.getQoS().value() > 0);
                         })
                         .collect(Collectors.toList()));
 

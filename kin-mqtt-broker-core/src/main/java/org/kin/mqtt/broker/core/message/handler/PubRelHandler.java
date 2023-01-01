@@ -46,13 +46,12 @@ public class PubRelHandler extends AbstractMqttMessageHandler<MqttMessage> {
                                     .filter(subscription -> {
                                         MqttChannel mqttChannel1 = subscription.getMqttChannel();
                                         return filterOfflineSession(mqttChannel1, messageStore,
-                                                () -> MqttMessageUtils.wrapPublish(qos2Message, subscription.getQoS(), mqttChannel1.nextMessageId()), wrapper.getTimestamp());
+                                                () -> MqttMessageUtils.wrapPublish(qos2Message, subscription, mqttChannel1.nextMessageId()), wrapper.getTimestamp());
                                     })
                                     //将消息广播给已订阅的mqtt client
                                     .map(subscription -> {
                                         MqttChannel mqttChannel1 = subscription.getMqttChannel();
-                                        MqttQoS qoS = subscription.getQoS();
-                                        return mqttChannel1.sendMessage(MqttMessageUtils.wrapPublish(qos2Message, qoS, mqttChannel1.nextMessageId()), qoS.value() > 0);
+                                        return mqttChannel1.sendMessage(MqttMessageUtils.wrapPublish(qos2Message, subscription, mqttChannel1.nextMessageId()), subscription.getQoS().value() > 0);
                                     })
                                     .collect(Collectors.toList()))
                             //移除retry task
