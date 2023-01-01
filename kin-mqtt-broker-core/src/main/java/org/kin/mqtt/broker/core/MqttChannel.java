@@ -2,11 +2,14 @@ package org.kin.mqtt.broker.core;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.handler.codec.mqtt.*;
+import io.netty.util.HashedWheelTimer;
 import io.netty.util.Timeout;
 import org.jctools.maps.NonBlockingHashMap;
 import org.jctools.maps.NonBlockingHashSet;
 import org.kin.mqtt.broker.cluster.event.SubscriptionsRemoveEvent;
 import org.kin.mqtt.broker.core.message.MqttMessageUtils;
+import org.kin.mqtt.broker.core.message.MqttMessageWrapper;
+import org.kin.mqtt.broker.core.message.MqttQos2PubMessage;
 import org.kin.mqtt.broker.core.topic.TopicManager;
 import org.kin.mqtt.broker.core.topic.TopicSubscription;
 import org.kin.mqtt.broker.core.will.Will;
@@ -22,7 +25,10 @@ import reactor.netty.ReactorNetty;
 
 import javax.annotation.Nullable;
 import java.time.Duration;
-import java.util.*;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
@@ -73,11 +79,11 @@ public class MqttChannel {
     /** mqtt response 消息id */
     private AtomicInteger messageIdGenerator;
     /**
-     * at least once消息缓存
+     * exactly once消息缓存
      *
-     * @see io.netty.handler.codec.mqtt.MqttQoS#AT_LEAST_ONCE
+     * @see io.netty.handler.codec.mqtt.MqttQoS#EXACTLY_ONCE
      */
-    private Map<Integer, MqttPublishMessage> qos2MessageCache;
+    private Map<Integer, MqttQos2PubMessage> qos2MessageCache;
     /** session过期定时任务 */
     private Timeout sessionExpiryTimeout;
     /** 延迟处理will的Disposable实例, 可能为null, 即无延迟处理will */
@@ -224,12 +230,20 @@ public class MqttChannel {
     /**
      * 缓存qos2消息
      *
-     * @param messageId      消息id
-     * @param publishMessage mqtt publish消息
+     * @param messageId 消息id
+     * @param wrapper   mqtt publish message wrapper
      * @return complete signal
      */
-    public Mono<Void> cacheQos2Message(int messageId, MqttPublishMessage publishMessage) {
-        return Mono.fromRunnable(() -> qos2MessageCache.put(messageId, publishMessage));
+    public Mono<Void> cacheQos2Message(int messageId, MqttMessageWrapper<MqttPublishMessage> wrapper) {
+        return Mono.fromRunnable(() -> {
+            long expireTimeMs = wrapper.getExpireTimeMs();
+            Timeout expireTimeout = null;
+            if (expireTimeMs > 0) {
+                HashedWheelTimer bsTimer = brokerContext.getBsTimer();
+                expireTimeout = bsTimer.newTimeout(t -> removeQos2Message(messageId), expireTimeMs, TimeUnit.MILLISECONDS);
+            }
+            qos2MessageCache.put(messageId, new MqttQos2PubMessage(wrapper, expireTimeout));
+        });
     }
 
     /**
@@ -248,8 +262,14 @@ public class MqttChannel {
      * @param messageId 消息id
      * @return 缓存的qos2消息
      */
-    public Optional<MqttPublishMessage> removeQos2Message(int messageId) {
-        return Optional.ofNullable(qos2MessageCache.remove(messageId));
+    @Nullable
+    public MqttMessageWrapper<MqttPublishMessage> removeQos2Message(int messageId) {
+        MqttQos2PubMessage qos2PubMessage = qos2MessageCache.remove(messageId);
+        if (Objects.nonNull(qos2PubMessage)) {
+            qos2PubMessage.cancelExpireTimeout();
+            return qos2PubMessage.getWrapper();
+        }
+        return null;
     }
 
     /**

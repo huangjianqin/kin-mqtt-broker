@@ -25,7 +25,7 @@ public class VirtualMqttChannel extends MqttChannel {
     }
 
     @Override
-    public Mono<Void> cacheQos2Message(int messageId, MqttPublishMessage publishMessage) {
+    public Mono<Void> cacheQos2Message(int messageId, MqttMessageWrapper<MqttPublishMessage> publishMessage) {
         //do nothing
         return Mono.empty();
     }

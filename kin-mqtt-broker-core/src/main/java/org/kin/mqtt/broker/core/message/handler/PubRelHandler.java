@@ -1,9 +1,6 @@
 package org.kin.mqtt.broker.core.message.handler;
 
-import io.netty.handler.codec.mqtt.MqttMessage;
-import io.netty.handler.codec.mqtt.MqttMessageIdVariableHeader;
-import io.netty.handler.codec.mqtt.MqttMessageType;
-import io.netty.handler.codec.mqtt.MqttQoS;
+import io.netty.handler.codec.mqtt.*;
 import org.kin.mqtt.broker.core.MqttBrokerContext;
 import org.kin.mqtt.broker.core.MqttChannel;
 import org.kin.mqtt.broker.core.Retry;
@@ -16,6 +13,7 @@ import org.kin.mqtt.broker.store.MqttMessageStore;
 import reactor.core.publisher.Mono;
 
 import javax.annotation.Nonnull;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -32,35 +30,42 @@ public class PubRelHandler extends AbstractMqttMessageHandler<MqttMessage> {
         MqttMessage message = wrapper.getMessage();
         MqttMessageIdVariableHeader variableHeader = (MqttMessageIdVariableHeader) message.variableHeader();
         int messageId = variableHeader.messageId();
-        return mqttChannel.removeQos2Message(messageId)
-                .map(qos2Message -> {
-                    TopicManager topicManager = brokerContext.getTopicManager();
-                    MqttMessageStore messageStore = brokerContext.getMessageStore();
-                    RetryService retryService = brokerContext.getRetryService();
+        MqttMessageWrapper<MqttPublishMessage> pubWrapper = mqttChannel.removeQos2Message(messageId);
+        if (Objects.nonNull(pubWrapper)) {
+            if (pubWrapper.isExpire()) {
+                //过期, 回复pub comp
+                return mqttChannel.sendMessage(MqttMessageUtils.createPubComp(messageId), false);
+            } else {
+                MqttPublishMessage qos2Message = pubWrapper.getMessage();
 
-                    String topicName = qos2Message.variableHeader().topicName();
-                    MqttQoS qos = qos2Message.fixedHeader().qosLevel();
-                    Set<TopicSubscription> subscriptions = topicManager.getSubscriptions(topicName, qos, mqttChannel);
-                    return Mono.when(subscriptions.stream()
-                                    //过滤离线会话消息
-                                    .filter(subscription -> {
-                                        MqttChannel mqttChannel1 = subscription.getMqttChannel();
-                                        return filterOfflineSession(mqttChannel1, messageStore,
-                                                () -> MqttMessageUtils.wrapPublish(qos2Message, subscription, mqttChannel1.nextMessageId()), wrapper.getTimestamp());
-                                    })
-                                    //将消息广播给已订阅的mqtt client
-                                    .map(subscription -> {
-                                        MqttChannel mqttChannel1 = subscription.getMqttChannel();
-                                        return mqttChannel1.sendMessage(MqttMessageUtils.wrapPublish(qos2Message, subscription, mqttChannel1.nextMessageId()), subscription.getQoS().value() > 0);
-                                    })
-                                    .collect(Collectors.toList()))
-                            //移除retry task
-                            .then(Mono.fromRunnable(() -> Optional.ofNullable(retryService.getRetry(mqttChannel.generateUuid(MqttMessageType.PUBREC, messageId))).ifPresent(Retry::cancel)))
-                            //最后回复pub comp
-                            .then(mqttChannel.sendMessage(MqttMessageUtils.createPubComp(messageId), false));
-                })
-                //没有缓存qos2消息, 则直接回复pub comp
-                .orElseGet(() -> mqttChannel.sendMessage(MqttMessageUtils.createPubComp(messageId), false));
+                TopicManager topicManager = brokerContext.getTopicManager();
+                MqttMessageStore messageStore = brokerContext.getMessageStore();
+                RetryService retryService = brokerContext.getRetryService();
+
+                String topicName = qos2Message.variableHeader().topicName();
+                MqttQoS qos = qos2Message.fixedHeader().qosLevel();
+                Set<TopicSubscription> subscriptions = topicManager.getSubscriptions(topicName, qos, mqttChannel);
+                return Mono.when(subscriptions.stream()
+                                //过滤离线会话消息
+                                .filter(subscription -> {
+                                    MqttChannel mqttChannel1 = subscription.getMqttChannel();
+                                    return filterOfflineSession(mqttChannel1, messageStore,
+                                            () -> MqttMessageUtils.wrapPublish(qos2Message, subscription, mqttChannel1.nextMessageId()), wrapper.getTimestamp());
+                                })
+                                //将消息广播给已订阅的mqtt client
+                                .map(subscription -> {
+                                    MqttChannel mqttChannel1 = subscription.getMqttChannel();
+                                    return mqttChannel1.sendMessage(MqttMessageUtils.wrapPublish(qos2Message, subscription, mqttChannel1.nextMessageId()), subscription.getQoS().value() > 0);
+                                })
+                                .collect(Collectors.toList()))
+                        //移除retry task
+                        .then(Mono.fromRunnable(() -> Optional.ofNullable(retryService.getRetry(mqttChannel.generateUuid(MqttMessageType.PUBREC, messageId))).ifPresent(Retry::cancel)))
+                        //最后回复pub comp
+                        .then(mqttChannel.sendMessage(MqttMessageUtils.createPubComp(messageId), false));
+            }
+        } else {
+            return mqttChannel.sendMessage(MqttMessageUtils.createPubComp(messageId), false);
+        }
     }
 
     @Nonnull

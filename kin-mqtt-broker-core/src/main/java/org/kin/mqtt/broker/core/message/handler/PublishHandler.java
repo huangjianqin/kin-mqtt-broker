@@ -70,14 +70,14 @@ public class PublishHandler extends AbstractMqttMessageHandler<MqttPublishMessag
         Set<TopicSubscription> subscriptions = topicManager.getSubscriptions(variableHeader.topicName(), qos, mqttChannel);
         if (mqttChannel.isVirtualChannel()) {
             //其他集群广播 | 消息重发(rule) 接收到的publish消息
-            return broadcastPublish(brokerContext, subscriptions, message, clientId, timestamp);
+            return broadcastPublish(brokerContext, subscriptions, wrapper, clientId);
         }
 
         switch (qos) {
             case AT_MOST_ONCE:
-                return broadcastPublish(brokerContext, subscriptions, message, clientId, timestamp);
+                return broadcastPublish(brokerContext, subscriptions, wrapper, clientId);
             case AT_LEAST_ONCE:
-                return broadcastPublish(brokerContext, subscriptions, message, timestamp)
+                return broadcastPublish(brokerContext, subscriptions, wrapper)
                         .then(mqttChannel.sendMessage(MqttMessageUtils.createPubAck(packetId), false))
                         .then(trySaveRetainMessage(messageStore, clientId, message, timestamp));
             case EXACTLY_ONCE:
@@ -89,7 +89,7 @@ public class PublishHandler extends AbstractMqttMessageHandler<MqttPublishMessag
                     //...
                     //Mqtt client <- broker: pub comp
                     return mqttChannel
-                            .cacheQos2Message(packetId, MqttMessageUtils.wrapPublish(message, qos, 0))
+                            .cacheQos2Message(packetId, new MqttMessageWrapper<>(wrapper, MqttMessageUtils.wrapPublish(message, qos, 0)))
                             .then(mqttChannel.sendMessage(MqttMessageUtils.createPubRec(packetId), true));
                 }
             default:
@@ -102,15 +102,14 @@ public class PublishHandler extends AbstractMqttMessageHandler<MqttPublishMessag
      *
      * @param brokerContext broker context
      * @param subscriptions 已注册的订阅
-     * @param message       接收到的publish消息
+     * @param wrapper       接收到的mqtt message wrapper
      * @param clientId      mqtt sender id
-     * @param timestamp     mqtt消息接收时间戳
      * @return complete signal
      */
     private Mono<Void> broadcastPublish(MqttBrokerContext brokerContext, Set<TopicSubscription> subscriptions,
-                                        MqttPublishMessage message, String clientId, long timestamp) {
-        return broadcastPublish(brokerContext, subscriptions, message, timestamp)
-                .then(trySaveRetainMessage(brokerContext.getMessageStore(), clientId, message, timestamp));
+                                        MqttMessageWrapper<MqttPublishMessage> wrapper, String clientId) {
+        return broadcastPublish(brokerContext, subscriptions, wrapper)
+                .then(trySaveRetainMessage(brokerContext.getMessageStore(), clientId, wrapper.getMessage(), wrapper.getTimestamp()));
     }
 
     /**
@@ -118,20 +117,20 @@ public class PublishHandler extends AbstractMqttMessageHandler<MqttPublishMessag
      *
      * @param brokerContext broker context
      * @param subscriptions 已注册的订阅
-     * @param message       接收到的publish消息
-     * @param timestamp     mqtt消息接收时间戳
+     * @param wrapper       接收到的mqtt message wrapper
      * @return complete signal
      */
     private Mono<Void> broadcastPublish(MqttBrokerContext brokerContext, Set<TopicSubscription> subscriptions,
-                                        MqttPublishMessage message, long timestamp) {
-        return Mono.when(
-                subscriptions.stream()
-                        .filter(subscription -> filterOfflineSession(subscription.getMqttChannel(), brokerContext.getMessageStore(), () -> message, timestamp))
-                        .map(subscription -> {
-                            MqttChannel mqttChannel = subscription.getMqttChannel();
-                            return mqttChannel.sendMessage(MqttMessageUtils.wrapPublish(message, subscription, mqttChannel.nextMessageId()), subscription.getQoS().value() > 0);
-                        })
-                        .collect(Collectors.toList()));
+                                        MqttMessageWrapper<MqttPublishMessage> wrapper) {
+        return Mono.when(subscriptions.stream()
+                .filter(subscription -> filterOfflineSession(subscription.getMqttChannel(), brokerContext.getMessageStore(),
+                        wrapper::getMessage, wrapper.getTimestamp()))
+                .filter(s -> !wrapper.isExpire())
+                .map(subscription -> {
+                    MqttChannel mqttChannel = subscription.getMqttChannel();
+                    return mqttChannel.sendMessage(MqttMessageUtils.wrapPublish(wrapper.getMessage(), subscription, mqttChannel.nextMessageId()), subscription.getQoS().value() > 0);
+                })
+                .collect(Collectors.toList()));
 
     }
 

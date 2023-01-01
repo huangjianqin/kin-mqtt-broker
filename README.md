@@ -15,7 +15,7 @@
 5. [✓]流量控制
 6. [✓]订阅标识符
 7. [✓]订阅选项, 包括noLocal, retainHandling和retainAsPublish
-8. [✘]消息过期间隔
+8. [✓]消息过期间隔
 9. [✘]客户标识符
 10. [✘]Server redirection
 11. [✘]增强认证
