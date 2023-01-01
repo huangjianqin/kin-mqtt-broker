@@ -25,7 +25,7 @@ public class UnsubscribeHandler extends AbstractMqttMessageHandler<MqttUnsubscri
             message.payload()
                     .topics()
                     .stream()
-                    .map(topic -> new TopicSubscription(topic, mqttChannel))
+                    .map(topic -> TopicSubscription.forRemove(topic, mqttChannel))
                     .forEach(topicManager::removeSubscription);
         }).then(mqttChannel.sendMessage(MqttMessageUtils.createUnsubAck(message.variableHeader().messageId()), false));
     }

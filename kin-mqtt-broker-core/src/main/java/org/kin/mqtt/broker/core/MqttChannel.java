@@ -527,7 +527,7 @@ public class MqttChannel {
      */
     private void handleWill() {
         TopicManager topicManager = brokerContext.getTopicManager();
-        topicManager.getSubscriptions(will.getTopic(), will.getQoS())
+        topicManager.getSubscriptions(will.getTopic(), will.getQoS(), this)
                 .forEach(subscription -> {
                     MqttChannel channel = subscription.getMqttChannel();
 
@@ -670,6 +670,19 @@ public class MqttChannel {
 
     public String getUserName() {
         return userName;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof MqttChannel)) return false;
+        MqttChannel that = (MqttChannel) o;
+        return Objects.equals(connection, that.connection) && Objects.equals(clientId, that.clientId);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(connection, clientId);
     }
 
     @Override

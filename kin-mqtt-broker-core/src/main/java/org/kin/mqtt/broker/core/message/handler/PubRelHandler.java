@@ -40,7 +40,7 @@ public class PubRelHandler extends AbstractMqttMessageHandler<MqttMessage> {
 
                     String topicName = qos2Message.variableHeader().topicName();
                     MqttQoS qos = qos2Message.fixedHeader().qosLevel();
-                    Set<TopicSubscription> subscriptions = topicManager.getSubscriptions(topicName, qos);
+                    Set<TopicSubscription> subscriptions = topicManager.getSubscriptions(topicName, qos, mqttChannel);
                     return Mono.when(subscriptions.stream()
                                     //过滤离线会话消息
                                     .filter(subscription -> {

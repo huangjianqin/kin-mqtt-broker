@@ -5,6 +5,7 @@ import org.kin.mqtt.broker.core.topic.*;
 import org.kin.mqtt.broker.core.topic.share.RandomShareSubLoadBalance;
 import org.kin.mqtt.broker.core.topic.share.ShareSubLoadBalance;
 
+import javax.annotation.Nullable;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -27,7 +28,7 @@ public class DefaultTopicManager implements TopicManager {
     }
 
     @Override
-    public Set<TopicSubscription> getSubscriptions(String topic, MqttQoS qos) {
+    public Set<TopicSubscription> getSubscriptions(String topic, MqttQoS qos, @Nullable MqttChannel sender) {
         //普通topic订阅+all(共享topic订阅组内根据策略选一个)
         Set<TopicSubscription> finalSubscriptions = new HashSet<>();
 
@@ -62,7 +63,10 @@ public class DefaultTopicManager implements TopicManager {
             finalSubscriptions.add(selected);
         }
 
-        return finalSubscriptions;
+        return finalSubscriptions.stream().filter(s -> {
+            //如果mqtt client订阅了自己的publish的topic, 将noLocal设置为true, 则mqtt client不会收到该topic自己publish的消息
+            return !s.isNoLocal() || !Objects.nonNull(sender) || !s.getMqttChannel().equals(sender);
+        }).collect(Collectors.toSet());
     }
 
     @Override

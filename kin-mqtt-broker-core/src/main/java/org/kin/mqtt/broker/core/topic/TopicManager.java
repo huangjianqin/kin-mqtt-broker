@@ -1,7 +1,9 @@
 package org.kin.mqtt.broker.core.topic;
 
+import io.netty.handler.codec.mqtt.MqttQoS;
 import org.kin.mqtt.broker.core.MqttChannel;
 
+import javax.annotation.Nullable;
 import java.util.Map;
 import java.util.Set;
 
@@ -12,6 +14,22 @@ import java.util.Set;
  * @date 2022/11/13
  */
 public interface TopicManager extends TopicFilter {
+    /**
+     * 根据topic匹配已注册的订阅信息
+     *
+     * @param topic  topic
+     * @param qos    publish消息的qos, 用于结合订阅信息并转换为真实订阅qos
+     * @param sender 发送publish的mqtt client
+     * @return {@link TopicSubscription}
+     */
+    Set<TopicSubscription> getSubscriptions(String topic, MqttQoS qos, @Nullable MqttChannel sender);
+
+    @Override
+    default Set<TopicSubscription> getSubscriptions(String topic, MqttQoS qos) {
+        return getSubscriptions(topic, qos, null);
+    }
+
+
     /**
      * 取消指定mqtt channel的所有订阅
      *

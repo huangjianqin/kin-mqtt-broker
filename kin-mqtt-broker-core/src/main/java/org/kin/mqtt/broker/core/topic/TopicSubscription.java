@@ -1,6 +1,8 @@
 package org.kin.mqtt.broker.core.topic;
 
 import io.netty.handler.codec.mqtt.MqttQoS;
+import io.netty.handler.codec.mqtt.MqttSubscriptionOption;
+import io.netty.handler.codec.mqtt.MqttTopicSubscription;
 import org.kin.framework.utils.StringUtils;
 import org.kin.mqtt.broker.TopicNames;
 import org.kin.mqtt.broker.core.MqttChannel;
@@ -24,26 +26,45 @@ public class TopicSubscription {
     private MqttQoS qoS;
     /** 共享topic用到, 用于共享topic区分组, 默认null */
     private String group;
+    /** 如果mqtt client订阅了自己的publish的topic, 将noLocal设置为true, 则mqtt client不会收到该topic自己publish的消息 */
+    private boolean noLocal;
 
-    public TopicSubscription(String topic, MqttChannel mqttChannel) {
-        this(topic, null, mqttChannel);
+    /**
+     * 用于移除订阅
+     */
+    public static TopicSubscription forRemove(String topic, MqttChannel mqttChannel) {
+        return new TopicSubscription(topic, mqttChannel);
     }
 
-    public TopicSubscription(String topic, MqttQoS qoS, MqttChannel mqttChannel) {
-        this.rawTopic = topic;
-        this.qoS = qoS;
+    public TopicSubscription(MqttTopicSubscription rawSubscription, MqttChannel mqttChannel) {
+        this.rawTopic = rawSubscription.topicName();
+        this.qoS = rawSubscription.qualityOfService();
         this.mqttChannel = mqttChannel;
         if (TopicNames.isShareTopic(rawTopic)) {
             //共享topic
-            String[] splits = topic.split(TopicFilter.SEPARATOR, 3);
+            String[] splits = rawTopic.split(TopicFilter.SEPARATOR, 3);
             this.group = splits[1];
             this.topic = splits[2];
         } else {
             //普通topic
             this.topic = this.rawTopic;
         }
+        MqttSubscriptionOption option = rawSubscription.option();
+        this.noLocal = option.isNoLocal();
     }
 
+    /**
+     * 用于移除订阅
+     */
+    private TopicSubscription(String topic, MqttChannel mqttChannel) {
+        this.rawTopic = topic;
+        this.topic = topic;
+        this.mqttChannel = mqttChannel;
+    }
+
+    /**
+     * 用于内部topic subscription复制
+     */
     private TopicSubscription(String rawTopic, String topic, MqttChannel mqttChannel, MqttQoS qoS, String group) {
         this.rawTopic = rawTopic;
         this.topic = topic;
@@ -113,6 +134,10 @@ public class TopicSubscription {
         return group;
     }
 
+    public boolean isNoLocal() {
+        return noLocal;
+    }
+
     @Override
     public boolean equals(Object o) {
         if (this == o) {
@@ -138,6 +163,7 @@ public class TopicSubscription {
                 ", mqttChannel=" + mqttChannel +
                 ", qoS=" + qoS +
                 ", group='" + group + '\'' +
+                ", noLocal='" + noLocal + '\'' +
                 '}';
     }
 }

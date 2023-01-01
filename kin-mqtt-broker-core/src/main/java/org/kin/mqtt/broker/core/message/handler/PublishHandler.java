@@ -67,7 +67,7 @@ public class PublishHandler extends AbstractMqttMessageHandler<MqttPublishMessag
         MqttQoS qos = message.fixedHeader().qosLevel();
 
         //已注册的订阅
-        Set<TopicSubscription> subscriptions = topicManager.getSubscriptions(variableHeader.topicName(), qos);
+        Set<TopicSubscription> subscriptions = topicManager.getSubscriptions(variableHeader.topicName(), qos, mqttChannel);
         if (mqttChannel.isVirtualChannel()) {
             //其他集群广播 | 消息重发(rule) 接收到的publish消息
             return broadcastPublish(brokerContext, subscriptions, message, clientId, timestamp);

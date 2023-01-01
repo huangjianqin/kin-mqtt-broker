@@ -47,7 +47,7 @@ public class SubscribeHandler extends AbstractMqttMessageHandler<MqttSubscribeMe
                     Set<TopicSubscription> subscriptions = new HashSet<>(rawSubscriptions.size());
                     Map<String, MqttTopicSubscription> topic2RawTs = new HashMap<>(4);
                     for (MqttTopicSubscription rawSubscription : rawSubscriptions) {
-                        TopicSubscription subscription = new TopicSubscription(rawSubscription.topicName(), rawSubscription.qualityOfService(), mqttChannel);
+                        TopicSubscription subscription = new TopicSubscription(rawSubscription, mqttChannel);
                         subscriptions.add(subscription);
                         topic2RawTs.put(subscription.getTopic(), rawSubscription);
                     }
