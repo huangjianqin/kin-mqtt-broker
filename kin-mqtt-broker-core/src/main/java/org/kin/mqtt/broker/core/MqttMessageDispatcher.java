@@ -161,7 +161,7 @@ public class MqttMessageDispatcher {
             MqttProperties.MqttProperty<Integer> topicAliasProp = properties.getProperty(MqttProperties.MqttPropertyType.TOPIC_ALIAS.value());
             if (Objects.nonNull(topicAliasProp)) {
                 //带了topic别名, 则注册
-                mqttChannel.getTopicByAlias(topicAliasProp.value());
+                mqttChannel.registerTopicAlias(topicAliasProp.value(), topic);
             }
         }
 
