@@ -21,7 +21,7 @@ public class TopicSubscription {
     /** 发起订阅的mqtt连接 */
     private MqttChannel mqttChannel;
     /** 订阅qos */
-    private final MqttQoS qoS;
+    private MqttQoS qoS;
     /** 共享topic用到, 用于共享topic区分组, 默认null */
     private String group;
 
@@ -83,6 +83,13 @@ public class TopicSubscription {
      */
     public boolean isShare() {
         return StringUtils.isNotBlank(group);
+    }
+
+    /**
+     * 更新qos
+     */
+    public void setQoS(MqttQoS qoS) {
+        this.qoS = qoS;
     }
 
     //getter

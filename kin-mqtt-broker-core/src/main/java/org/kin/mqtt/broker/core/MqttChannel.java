@@ -22,10 +22,7 @@ import reactor.netty.ReactorNetty;
 
 import javax.annotation.Nullable;
 import java.time.Duration;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Optional;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
@@ -625,6 +622,22 @@ public class MqttChannel {
             log.error("mqtt channel '%s' receiveNum decrease to negative");
         }
     }
+
+    /**
+     * 过滤已注册的topic订阅, 同时使用新订阅qos替换旧订阅qos
+     */
+    public Set<TopicSubscription> filterRegisteredTopicSubscriptions(Set<TopicSubscription> subscriptions) {
+        Map<String, TopicSubscription> topic2qos = subscriptions.stream().collect(Collectors.toMap(TopicSubscription::getTopic, ts -> ts));
+        for (TopicSubscription subscription : this.subscriptions) {
+            TopicSubscription newSubscription = topic2qos.remove(subscription.getRawTopic());
+            if (Objects.nonNull(newSubscription)) {
+                subscription.setQoS(newSubscription.getQoS());
+            }
+        }
+
+        return new HashSet<>(topic2qos.values());
+    }
+
 
     //getter
     public MqttBrokerContext getBrokerContext() {
