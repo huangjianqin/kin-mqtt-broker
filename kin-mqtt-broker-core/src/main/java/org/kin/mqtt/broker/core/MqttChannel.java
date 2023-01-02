@@ -13,6 +13,7 @@ import org.kin.mqtt.broker.core.message.MqttQos2PubMessage;
 import org.kin.mqtt.broker.core.topic.TopicManager;
 import org.kin.mqtt.broker.core.topic.TopicSubscription;
 import org.kin.mqtt.broker.core.will.Will;
+import org.kin.mqtt.broker.domain.InflightMessageQueue;
 import org.kin.mqtt.broker.event.MqttClientDisConnEvent;
 import org.kin.mqtt.broker.event.MqttClientRegisterEvent;
 import org.kin.mqtt.broker.event.MqttClientUnregisterEvent;
@@ -65,11 +66,8 @@ public class MqttChannel {
     private String userName;
     /** mqtt channel status */
     private volatile ChannelStatus status = ChannelStatus.INIT;
-    /** 接收端愿意同时处理的QoS为1和2的PUBLISH消息最大数量 */
-    private int receiveMaximum;
-    /** 当前已接收但未处理的PUBLISH消息数量 */
-    private AtomicInteger receiveNum;
-
+    /** 待发送的qos>0 mqtt message */
+    private InflightMessageQueue inflightMessageQueue;
     /** 遗愿 */
     private Will will;
     /** 用于控制建立connection后, client还不发送connect消息, 则broker主动关闭connection */
@@ -104,10 +102,35 @@ public class MqttChannel {
      * @return complete signal
      */
     public Mono<Void> sendMessage(MqttMessage mqttMessage, boolean retry) {
+        return sendMessage(mqttMessage, retry, false);
+    }
+
+    /**
+     * 往指定mqtt channel发送mqtt消息
+     *
+     * @param mqttMessage mqtt消息
+     * @param retry       是否重试
+     * @param inflight    是否是inflight缓存中的mqtt消息
+     * @return complete signal
+     */
+    public Mono<Void> sendMessage(MqttMessage mqttMessage, boolean retry, boolean inflight) {
         log.debug("channel {} send {} message", getConnection(), mqttMessage.fixedHeader().messageType());
         if (retry) {
-            //发送qos > 0的publish消息
-            onSendQos1Message();
+            if (!inflight) {
+                //普通消息
+                int queuedSize = inflightMessageQueue.takeQuota(mqttMessage);
+                if (queuedSize > 0) {
+                    //拿不到配额
+                    if (queuedSize > InflightMessageQueue.MAX_QUEUE_SIZE) {
+                        //force mqtt client close
+                        close().subscribe();
+                        throw new IllegalStateException(
+                                String.format("mqtt client consume message too slow(queuedSize=%d, maxSize=%d), force close", queuedSize, InflightMessageQueue.MAX_QUEUE_SIZE));
+                    } else {
+                        return Mono.empty();
+                    }
+                }
+            }
 
             //Increase the reference count of bytebuf, and the reference count of retrybytebuf is 2
             //mqttChannel.write() method releases a reference count.
@@ -123,26 +146,21 @@ public class MqttChannel {
             long uuid = generateUuid(mqttMessageType, MqttMessageUtils.getMessageId(mqttMessage));
             retryService.execRetry(new PublishRetry(uuid, retryTask, cleaner, retryService));
 
-            return write(Mono.just(mqttMessage)).then();
+            return write(Mono.just(mqttMessage))
+                    //保证write消息过程遇到异常, 也能释放receiveNum
+                    .doOnError(t -> onRecPubRespMessage());
         } else {
             return write(Mono.just(mqttMessage));
         }
     }
 
     /**
-     * 发送publish消息时触发, 记录对端已收到但未发送响应的QoS大于0的PUBLISH消息数量
+     * 接收到publish的响应消息, 即PUBACK, PUBCOMP或PUBREC
      */
-    private void onSendQos1Message() {
-        if (receiveMaximum <= 0) {
-            return;
-        }
-
-        if (receiveNum.incrementAndGet() >= receiveMaximum) {
-            //已接收到但未处理publish消息
-            //broker直接断开连接
-            close().subscribe();
-            //然后抛异常
-            throw new IllegalStateException(String.format("mqtt channel '%s' rate limited!", clientId));
+    public void onRecPubRespMessage() {
+        MqttMessage mqttMessage = inflightMessageQueue.returnQuota();
+        if (Objects.nonNull(mqttMessage)) {
+            sendMessage(mqttMessage, mqttMessage.fixedHeader().qosLevel().value() > 0, true).subscribe();
         }
     }
 
@@ -337,11 +355,12 @@ public class MqttChannel {
         if (Objects.nonNull(sessionExpiryIntervalProp)) {
             updateSessionExpiryInterval(sessionExpiryIntervalProp.value());
         }
+        int receiveMaximumPropVal = 0;
         MqttProperties.MqttProperty<Integer> receiveMaximumProp = properties.getProperty(MqttProperties.MqttPropertyType.RECEIVE_MAXIMUM.value());
         if (Objects.nonNull(receiveMaximumProp)) {
-            this.receiveMaximum = receiveMaximumProp.value();
-            this.receiveNum = new AtomicInteger();
+            receiveMaximumPropVal = receiveMaximumProp.value();
         }
+        inflightMessageQueue = new InflightMessageQueue(receiveMaximumPropVal);
         subscriptions = new NonBlockingHashSet<>();
         messageIdGenerator = new AtomicInteger();
         qos2MessageCache = new NonBlockingHashMap<>();
@@ -410,11 +429,12 @@ public class MqttChannel {
         if (Objects.nonNull(sessionExpiryIntervalProp)) {
             updateSessionExpiryInterval(sessionExpiryIntervalProp.value());
         }
+        int receiveMaximumPropVal = 0;
         MqttProperties.MqttProperty<Integer> receiveMaximumProp = properties.getProperty(MqttProperties.MqttPropertyType.RECEIVE_MAXIMUM.value());
         if (Objects.nonNull(receiveMaximumProp)) {
-            this.receiveMaximum = receiveMaximumProp.value();
-            this.receiveNum = new AtomicInteger();
+            receiveMaximumPropVal = receiveMaximumProp.value();
         }
+        this.inflightMessageQueue.updateReceiveMaximum(receiveMaximumPropVal);
         //keepalive
         //mqtt client 空闲, broker关闭mqtt client连接
         //此时不为null
@@ -434,6 +454,21 @@ public class MqttChannel {
 
         //注册dispose逻辑
         afterDispose(this::close0);
+
+        //重连, 如果仍然有inflight消息, 则尝试重发
+        trySendInflightMqttMessage();
+    }
+
+    /**
+     * 2s后尝试发送inflight mqtt message
+     */
+    private void trySendInflightMqttMessage() {
+        HashedWheelTimer bsTimer = brokerContext.getBsTimer();
+        bsTimer.newTimeout(t -> {
+            for (MqttMessage message : inflightMessageQueue.takeInflightMqttMessages()) {
+                sendMessage(message, message.fixedHeader().qosLevel().value() > 0, true).subscribe();
+            }
+        }, 2, TimeUnit.SECONDS);
     }
 
     /**
@@ -478,7 +513,6 @@ public class MqttChannel {
         userName = null;
         will = null;
         deferCloseWithoutConnMsgDisposable = null;
-        receiveNum = null;
     }
 
     /**
@@ -633,19 +667,6 @@ public class MqttChannel {
     }
 
     /**
-     * 接收到publish的响应消息, 即PUBACK, PUBCOMP或PUBREC
-     */
-    public void onRecPubRespMessage() {
-        if (receiveMaximum <= 0) {
-            return;
-        }
-
-        if (receiveNum.decrementAndGet() < 0) {
-            log.error("mqtt channel '%s' receiveNum decrease to negative");
-        }
-    }
-
-    /**
      * 过滤已注册的topic订阅, 同时使用新订阅qos替换旧订阅qos
      */
     public Set<TopicSubscription> filterRegisteredTopicSubscriptions(Set<TopicSubscription> subscriptions) {
@@ -659,7 +680,6 @@ public class MqttChannel {
 
         return new HashSet<>(topic2qos.values());
     }
-
 
     //getter
     public MqttBrokerContext getBrokerContext() {
@@ -696,8 +716,12 @@ public class MqttChannel {
 
     @Override
     public boolean equals(Object o) {
-        if (this == o) return true;
-        if (!(o instanceof MqttChannel)) return false;
+        if (this == o) {
+            return true;
+        }
+        if (!(o instanceof MqttChannel)) {
+            return false;
+        }
         MqttChannel that = (MqttChannel) o;
         return Objects.equals(connection, that.connection) && Objects.equals(clientId, that.clientId);
     }
