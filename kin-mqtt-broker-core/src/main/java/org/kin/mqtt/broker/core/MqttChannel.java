@@ -125,7 +125,7 @@ public class MqttChannel {
                         //force mqtt client close
                         close().subscribe();
                         throw new IllegalStateException(
-                                String.format("mqtt client consume message too slow(queuedSize=%d, maxSize=%d), force close", queuedSize, InflightMessageQueue.MAX_QUEUE_SIZE));
+                                String.format("mqtt client '%s' consume message too slow(queuedSize=%d, maxSize=%d), force close", clientId, queuedSize, InflightMessageQueue.MAX_QUEUE_SIZE));
                     } else {
                         return Mono.empty();
                     }
