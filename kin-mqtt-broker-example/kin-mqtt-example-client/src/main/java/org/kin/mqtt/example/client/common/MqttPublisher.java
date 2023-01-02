@@ -43,7 +43,7 @@ public class MqttPublisher {
                 MqttMessage message = new MqttMessage((content + i).getBytes(StandardCharsets.UTF_8));
                 message.setQos(qos);
                 sampleClient.publish(topic, message);
-                System.out.printf("message %d published\r\n", i);
+                System.out.printf(System.currentTimeMillis() + ": message %d published\r\n", i);
                 Thread.sleep(5_000);
             }
 

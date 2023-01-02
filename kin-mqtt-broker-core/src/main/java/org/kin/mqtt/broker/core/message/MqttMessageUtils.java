@@ -180,6 +180,19 @@ public class MqttMessageUtils {
      * @return {@link MqttPublishMessage}
      */
     public static MqttPublishMessage wrapPublish(MqttPublishMessage message, TopicSubscription subscription, int messageId) {
+        return wrapPublish(message, subscription, message.variableHeader().topicName(), messageId);
+    }
+
+    /**
+     * 包装publish消息
+     *
+     * @param messageId    消息id
+     * @param message      {@link MqttPublishMessage}
+     * @param topicName    用于替换原mqtt publish消息的topic信息
+     * @param subscription 订阅信息
+     * @return {@link MqttPublishMessage}
+     */
+    public static MqttPublishMessage wrapPublish(MqttPublishMessage message, TopicSubscription subscription, String topicName, int messageId) {
         //原message header
         MqttPublishVariableHeader variableHeader = message.variableHeader();
         MqttFixedHeader fixedHeader = message.fixedHeader();
@@ -187,7 +200,7 @@ public class MqttMessageUtils {
         //new message header
         MqttFixedHeader newFixedHeader = new MqttFixedHeader(fixedHeader.messageType(), false, subscription.getQoS(),
                 subscription.isRetainAsPublished() && fixedHeader.isRetain(), fixedHeader.remainingLength());
-        MqttPublishVariableHeader newVariableHeader = new MqttPublishVariableHeader(variableHeader.topicName(), messageId, variableHeader.properties());
+        MqttPublishVariableHeader newVariableHeader = new MqttPublishVariableHeader(topicName, messageId, variableHeader.properties());
         // TODO: 2022/11/14 copy
         return new MqttPublishMessage(newFixedHeader, newVariableHeader, message.payload().copy());
     }

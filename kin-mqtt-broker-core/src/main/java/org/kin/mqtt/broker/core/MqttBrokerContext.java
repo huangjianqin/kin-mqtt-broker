@@ -57,7 +57,7 @@ public class MqttBrokerContext implements Closeable {
     /** 事件总线 */
     private final ReactorEventBus eventBus;
     /** 业务相关定时器 */
-    private final HashedWheelTimer bsTimer = new HashedWheelTimer(60, TimeUnit.SECONDS);
+    private final HashedWheelTimer bsTimer = new HashedWheelTimer(100, TimeUnit.MILLISECONDS, 10);
 
     public MqttBrokerContext(MqttBrokerConfig brokerConfig, MqttMessageDispatcher dispatcher, AuthService authService,
                              BrokerManager brokerManager, MqttMessageStore messageStore,

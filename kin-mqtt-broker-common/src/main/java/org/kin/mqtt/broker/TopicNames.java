@@ -10,6 +10,8 @@ public interface TopicNames {
 
     /** 共享topic前缀 */
     String SHARE_TOPIC = "$share";
+    /** 延迟发布前缀 */
+    String DELAY_TOPIC = "$delayed";
 
     //----------------------------------------------------系统topic------------------------------------------------------------------------------
     /** broker级别内置topic */

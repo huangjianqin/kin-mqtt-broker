@@ -88,6 +88,8 @@ public class MqttChannel {
     private Disposable delayHandleWillDisposable;
     /** key -> topic别名alias, value -> 真实topic */
     private NonBlockingHashMap<Integer, String> alias2TopicName;
+    /** 延迟发布publish消息的{@link Timeout} */
+    private NonBlockingHashSet<Timeout> delayPubTimeouts;
 
     public MqttChannel(MqttBrokerContext brokerContext, Connection connection) {
         this.brokerContext = brokerContext;
@@ -365,6 +367,7 @@ public class MqttChannel {
         messageIdGenerator = new AtomicInteger();
         qos2MessageCache = new NonBlockingHashMap<>();
         alias2TopicName = new NonBlockingHashMap<>();
+        delayPubTimeouts = new NonBlockingHashSet<>();
 
         //keepalive
         //mqtt client 空闲, broker关闭mqtt client连接
@@ -531,6 +534,11 @@ public class MqttChannel {
         //取消订阅
         //!!会清空MqttChannel.subscriptions
         brokerContext.getTopicManager().removeAllSubscriptions(this);
+        //取消延迟发布publish消息的task
+        for (Timeout delayPubTimeout : delayPubTimeouts) {
+            delayPubTimeout.cancel();
+        }
+        delayPubTimeouts.clear();
     }
 
     /**
@@ -679,6 +687,20 @@ public class MqttChannel {
         }
 
         return new HashSet<>(topic2qos.values());
+    }
+
+    /**
+     * 缓存延迟发布publish消息的task
+     */
+    public void addDelayPubTimeout(Timeout timeout) {
+        delayPubTimeouts.add(timeout);
+    }
+
+    /**
+     * 移除延迟发布publish消息的task缓存
+     */
+    public void removeDelayPubTimeout(Timeout timeout) {
+        delayPubTimeouts.remove(timeout);
     }
 
     //getter

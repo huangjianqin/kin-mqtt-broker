@@ -18,7 +18,7 @@ final class DefaultRetryService extends HashedWheelTimer implements RetryService
     private final Map<Long, Retry> id2Retry = new NonBlockingHashMap<>();
 
     DefaultRetryService() {
-        //相当于50ms处理一次retry
+        //相当于50ms检查一次retry timeout
         super(50, TimeUnit.MILLISECONDS, 20);
     }
 
