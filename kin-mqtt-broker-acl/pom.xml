@@ -13,6 +13,7 @@
     <packaging>pom</packaging>
     <modules>
         <module>kin-mqtt-broker-acl-api</module>
+        <module>kin-mqtt-broker-acl-db-starter</module>
     </modules>
 
 </project>

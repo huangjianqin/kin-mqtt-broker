@@ -39,7 +39,7 @@ public class SubscribeHandler extends AbstractMqttMessageHandler<MqttSubscribeMe
         AclService aclService = brokerContext.getAclService();
         TopicManager topicManager = brokerContext.getTopicManager();
         return Flux.fromIterable(message.payload().topicSubscriptions())
-                .filterWhen(st -> aclService.checkPermission(mqttChannel.getHost(), mqttChannel.getClientId(), st.topicName(), AclAction.SUBSCRIBE))
+                .filterWhen(st -> aclService.checkPermission(mqttChannel.getHost(), mqttChannel.getClientId(), mqttChannel.getUserName(), st.topicName(), AclAction.SUBSCRIBE))
                 .collect(Collectors.toSet())
                 //netty的topic subscription定义
                 .flatMap(rawSubscriptions -> {

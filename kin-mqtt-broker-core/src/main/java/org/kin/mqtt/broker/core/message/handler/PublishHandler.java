@@ -42,7 +42,7 @@ public class PublishHandler extends AbstractMqttMessageHandler<MqttPublishMessag
             MqttPublishMessage message = wrapper.getMessage();
             MqttPublishVariableHeader variableHeader = message.variableHeader();
             String topicName = variableHeader.topicName();
-            return aclService.checkPermission(mqttChannel.getHost(), mqttChannel.getClientId(), topicName, AclAction.PUBLISH)
+            return aclService.checkPermission(mqttChannel.getHost(), mqttChannel.getClientId(), mqttChannel.getUserName(), topicName, AclAction.PUBLISH)
                     .flatMap(aclResult -> {
                         if (aclResult) {
                             //允许访问

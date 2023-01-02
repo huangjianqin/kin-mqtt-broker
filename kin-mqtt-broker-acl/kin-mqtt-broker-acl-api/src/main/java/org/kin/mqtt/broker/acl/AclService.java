@@ -21,33 +21,12 @@ public interface AclService {
     /**
      * 是否有权限对{@code topicName}进行{@code action}操作
      *
-     * @param host      mqtt client host
-     * @param client    mqtt client id
+     * @param host      mqtt clientId host
+     * @param clientId  mqtt clientId id
+     * @param userName  mqtt clientId user name
      * @param topicName topic name
      * @param action    操作类型
      * @return 检查结果
      */
-    Mono<Boolean> checkPermission(String host, String client, String topicName, AclAction action);
-
-    /**
-     * 增加mqtt client对{@code sourceType}访问权限
-     *
-     * @param host      mqtt client host
-     * @param client    mqtt client id
-     * @param topicName topic name
-     * @param action    操作类型
-     * @return 执行结果
-     */
-    Mono<Boolean> addPermission(String host, String client, String topicName, AclAction action);
-
-    /**
-     * 移除mqtt client对{@code sourceType}访问权限
-     *
-     * @param host      mqtt client host
-     * @param client    mqtt client id
-     * @param topicName topic name
-     * @param action    操作类型
-     * @return 执行结果
-     */
-    Mono<Boolean> rmPermission(String host, String client, String topicName, AclAction action);
+    Mono<Boolean> checkPermission(String host, String clientId, String userName, String topicName, AclAction action);
 }

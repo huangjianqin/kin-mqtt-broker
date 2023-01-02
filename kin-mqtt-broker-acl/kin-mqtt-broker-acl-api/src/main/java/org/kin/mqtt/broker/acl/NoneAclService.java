@@ -16,17 +16,7 @@ public class NoneAclService implements AclService {
     }
 
     @Override
-    public Mono<Boolean> checkPermission(String host, String client, String topicName, AclAction action) {
+    public Mono<Boolean> checkPermission(String host, String clientId, String userName, String topicName, AclAction action) {
         return Mono.just(true);
-    }
-
-    @Override
-    public Mono<Boolean> addPermission(String host, String client, String topicName, AclAction action) {
-        throw new UnsupportedOperationException("NoneAclManager always allow any action");
-    }
-
-    @Override
-    public Mono<Boolean> rmPermission(String host, String client, String topicName, AclAction action) {
-        throw new UnsupportedOperationException("NoneAclManager always allow any ation");
     }
 }
