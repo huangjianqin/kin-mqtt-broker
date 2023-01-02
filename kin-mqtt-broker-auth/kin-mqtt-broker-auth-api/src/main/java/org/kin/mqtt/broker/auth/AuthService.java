@@ -12,10 +12,9 @@ public interface AuthService {
     /**
      * mqtt client认证入口
      *
-     * @param userName      用户名称
-     * @param passwordBytes 密钥
-     * @param clientId      mqtt client id
+     * @param userName 用户名称
+     * @param password 密钥
      * @return auth结果
      */
-    Mono<Boolean> auth(String userName, byte[] passwordBytes, String clientId);
+    Mono<Boolean> auth(String userName, String password);
 }

@@ -4,7 +4,10 @@ import org.kin.mqtt.broker.auth.AuthService;
 import org.springframework.util.CollectionUtils;
 import reactor.core.publisher.Mono;
 
-import java.util.*;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Objects;
 
 /**
  * 基于用户名和密码验证, 支持通过*匹配全部mqtt client
@@ -13,32 +16,27 @@ import java.util.*;
  * @date 2022/11/20
  */
 public class UserAuthService implements AuthService {
-    /** key -> mqtt client id, value -> username & password */
-    private Map<String, UserPasswordBytes> users = Collections.emptyMap();
+    /** key -> user name, value -> password */
+    private Map<String, String> users = Collections.emptyMap();
 
     public UserAuthService(UserAuthProperties properties) {
-        Map<String, UserPassword> users = properties.getUsers();
+        Map<String, String> users = properties.getUsers();
         if (!CollectionUtils.isEmpty(users)) {
-            Map<String, UserPasswordBytes> tmp = new HashMap<>(users.size());
-            for (Map.Entry<String, UserPassword> entry : users.entrySet()) {
-                tmp.put(entry.getKey(), entry.getValue().toUserPasswordBytes());
-            }
-            this.users = Collections.unmodifiableMap(tmp);
+            this.users = Collections.unmodifiableMap(new HashMap<>(users));
         }
     }
 
     @Override
-    public Mono<Boolean> auth(String userName, byte[] passwordBytes, String clientId) {
+    public Mono<Boolean> auth(String userName, String password) {
         return Mono.fromCallable(() -> {
-            UserPasswordBytes userPasswordBytes = users.get(clientId);
-            if (Objects.isNull(userPasswordBytes)) {
+            String userPassword = users.get(userName);
+            if (Objects.isNull(userPassword)) {
                 //尝试通配符*匹配
-                userPasswordBytes = users.get("root");
+                userPassword = users.get("root");
             }
 
-            if (Objects.nonNull(userPasswordBytes)) {
-                return userPasswordBytes.getUserName().equals(userName) &&
-                        Arrays.equals(userPasswordBytes.getPasswordBytes(), passwordBytes);
+            if (Objects.nonNull(userPassword)) {
+                return userPassword.equals(password);
             }
 
             //找不到任何user, 则直接reject

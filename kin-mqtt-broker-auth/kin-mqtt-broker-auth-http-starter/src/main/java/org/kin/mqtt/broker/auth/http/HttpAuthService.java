@@ -6,7 +6,6 @@ import org.springframework.http.MediaType;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Mono;
 
-import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -23,11 +22,10 @@ public class HttpAuthService implements AuthService {
     }
 
     @Override
-    public Mono<Boolean> auth(String userName, byte[] passwordBytes, String clientId) {
+    public Mono<Boolean> auth(String userName, String password) {
         Map<String, Object> body = new HashMap<>(3);
         body.put("userName", userName);
-        body.put("password", new String(passwordBytes, StandardCharsets.UTF_8));
-        body.put("clientId", clientId);
+        body.put("password", password);
         return WebClient.create()
                 .post()
                 .uri(url)

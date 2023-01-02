@@ -4,9 +4,7 @@ org:
       broker:
         auth:
           users:
-            root:
-              username: hjq
-              password: 12345
+            java: '12345'
 
 server:
   port: 8000

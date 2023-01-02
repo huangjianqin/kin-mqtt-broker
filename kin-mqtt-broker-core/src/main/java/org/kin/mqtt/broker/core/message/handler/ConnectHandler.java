@@ -15,6 +15,7 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 import javax.annotation.Nonnull;
+import java.nio.charset.StandardCharsets;
 import java.util.Objects;
 
 /**
@@ -56,7 +57,7 @@ public class ConnectHandler extends AbstractMqttMessageHandler<MqttConnectMessag
         }
 
         //auth
-        return authService.auth(payload.userName(), payload.passwordInBytes(), clientId)
+        return authService.auth(payload.userName(), new String(payload.passwordInBytes(), StandardCharsets.UTF_8))
                 .flatMap(authResult -> {
                     if (authResult) {
                         return handle1(oldMqttChannel, mqttChannel, brokerContext, variableHeader, payload, clientId, mqttVersion);

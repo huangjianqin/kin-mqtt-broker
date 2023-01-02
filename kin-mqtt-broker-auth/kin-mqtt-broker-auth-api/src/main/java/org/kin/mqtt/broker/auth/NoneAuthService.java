@@ -16,7 +16,7 @@ public class NoneAuthService implements AuthService {
     }
 
     @Override
-    public Mono<Boolean> auth(String userName, byte[] passwordBytes, String clientId) {
+    public Mono<Boolean> auth(String userName, String password) {
         return Mono.just(true);
     }
 }

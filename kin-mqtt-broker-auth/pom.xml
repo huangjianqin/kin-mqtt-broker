@@ -15,5 +15,6 @@
         <module>kin-mqtt-broker-auth-api</module>
         <module>kin-mqtt-broker-auth-user-starter</module>
         <module>kin-mqtt-broker-auth-http-starter</module>
+        <module>kin-mqtt-broker-auth-db-starter</module>
     </modules>
 </project>
