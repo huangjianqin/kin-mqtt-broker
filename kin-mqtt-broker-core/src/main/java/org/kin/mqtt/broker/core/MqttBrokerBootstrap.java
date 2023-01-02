@@ -9,6 +9,7 @@ import io.netty.handler.codec.mqtt.MqttDecoder;
 import io.netty.handler.codec.mqtt.MqttEncoder;
 import io.netty.handler.codec.mqtt.MqttMessage;
 import io.netty.handler.codec.mqtt.MqttPublishMessage;
+import io.netty.handler.traffic.ChannelTrafficShapingHandler;
 import org.kin.framework.event.EventListener;
 import org.kin.framework.reactor.event.EventConsumer;
 import org.kin.framework.utils.SysUtils;
@@ -231,7 +232,11 @@ public class MqttBrokerBootstrap extends ServerTransport {
                 .metrics(true)
                 .runOn(loopResources)
                 .doOnConnection(connection -> {
-                    connection.addHandlerFirst(new MqttDecoder(config.getMessageMaxSize()))
+                    connection
+                            //流量整形, 10s check
+                            .addHandlerFirst(new ChannelTrafficShapingHandler(0, config.getConnBytesPerSec(), 10000))
+                            //mqtt decoder encoder
+                            .addHandlerFirst(new MqttDecoder(config.getMessageMaxSize()))
                             .addHandlerFirst(MqttEncoder.INSTANCE);
                     onMqttClientConnected(brokerContext, new MqttChannel(brokerContext, connection));
                 });
@@ -263,11 +268,16 @@ public class MqttBrokerBootstrap extends ServerTransport {
                     .metrics(true)
                     .runOn(loopResources)
                     .doOnConnection(connection -> {
-                        connection.addHandlerLast(new HttpServerCodec())
+                        connection
+                                //流量整形, 10s check
+                                .addHandlerFirst(new ChannelTrafficShapingHandler(0, config.getConnBytesPerSec(), 10000))
+                                //websocket相关
+                                .addHandlerLast(new HttpServerCodec())
                                 .addHandlerLast(new HttpObjectAggregator(65536))
                                 .addHandlerLast(new WebSocketServerProtocolHandler(config.getWsPath(), "mqtt, mqttv3.1, mqttv3.1.1"))
                                 .addHandlerLast(new WsFrame2ByteBufDecoder())
                                 .addHandlerLast(new ByteBuf2WsFrameEncoder())
+                                //mqtt decoder encoder
                                 .addHandlerLast(new MqttDecoder(config.getMessageMaxSize()))
                                 .addHandlerLast(MqttEncoder.INSTANCE);
                         onMqttClientConnected(brokerContext, new MqttChannel(brokerContext, connection));
