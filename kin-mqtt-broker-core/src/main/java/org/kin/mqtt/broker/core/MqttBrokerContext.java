@@ -31,7 +31,7 @@ import java.util.concurrent.TimeUnit;
 public class MqttBrokerContext implements Closeable {
     private final MqttBrokerConfig brokerConfig;
     /** mqtt消息处理的{@link Scheduler} todo 如果datastore datasource auth能支持全异步的形式, 则不需要额外的scheduler也ok */
-    private final Scheduler mqttBsScheduler;
+    private final Scheduler mqttBizScheduler;
     /** retry task管理 */
     private final RetryService retryService = new DefaultRetryService();
     /** topic管理 */
@@ -64,14 +64,14 @@ public class MqttBrokerContext implements Closeable {
                              List<RuleDefinition> ruleDefinitions,
                              AclService aclService) {
         this.brokerConfig = brokerConfig;
-        this.mqttBsScheduler = Schedulers.newBoundedElastic(SysUtils.CPU_NUM * 10, Integer.MAX_VALUE, "kin-mqtt-broker-bs-" + brokerConfig.getPort(), 60);
+        this.mqttBizScheduler = Schedulers.newBoundedElastic(SysUtils.CPU_NUM * 10, Integer.MAX_VALUE, "kin-mqtt-broker-bs-" + brokerConfig.getPort(), 60);
         this.dispatcher = dispatcher;
         this.authService = authService;
         this.brokerManager = brokerManager;
         this.messageStore = messageStore;
         this.ruleManager.addRules(ruleDefinitions);
         this.aclService = aclService;
-        this.eventBus = new DefaultReactorEventBus(true, mqttBsScheduler);
+        this.eventBus = new DefaultReactorEventBus(true, mqttBizScheduler);
 
         //init
         bridgeManager.initBrokerContext(this);
@@ -86,7 +86,7 @@ public class MqttBrokerContext implements Closeable {
         //bridge close
         bridgeManager.close();
 
-        mqttBsScheduler.dispose();
+        mqttBizScheduler.dispose();
     }
 
     /**
@@ -111,8 +111,8 @@ public class MqttBrokerContext implements Closeable {
     }
 
     //getter
-    public Scheduler getMqttBsScheduler() {
-        return mqttBsScheduler;
+    public Scheduler getMqttBizScheduler() {
+        return mqttBizScheduler;
     }
 
     public RetryService getRetryService() {

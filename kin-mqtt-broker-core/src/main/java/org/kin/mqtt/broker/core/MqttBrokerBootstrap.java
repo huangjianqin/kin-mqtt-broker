@@ -324,7 +324,7 @@ public class MqttBrokerBootstrap extends Transport<MqttBrokerBootstrap> {
                         publishMessage.retain();
                     }
                 })
-                .publishOn(brokerContext.getMqttBsScheduler())
+                .publishOn(brokerContext.getMqttBizScheduler())
                 //mqtt消息处理
                 .subscribe(mqttMessage -> brokerContext.getDispatcher().dispatch(MqttMessageWrapper.common(mqttMessage), mqttChannel, brokerContext));
     }
@@ -336,7 +336,7 @@ public class MqttBrokerBootstrap extends Transport<MqttBrokerBootstrap> {
         brokerContext.getBrokerManager().start(brokerContext)
                 .then(Mono.fromRunnable(() -> brokerManager.clusterMqttMessages()
                         .onErrorResume(e -> Mono.empty())
-                        .publishOn(brokerContext.getMqttBsScheduler())
+                        .publishOn(brokerContext.getMqttBizScheduler())
                         .subscribe(clusterMessage -> brokerContext.getDispatcher().dispatch(
                                         MqttMessageWrapper.fromCluster(clusterMessage),
                                         new VirtualMqttChannel(brokerContext, clusterMessage.getClientId()),
