@@ -7,7 +7,6 @@ import org.kin.mqtt.broker.bridge.BridgeAttrNames;
 import org.kin.mqtt.broker.bridge.BridgeType;
 import org.kin.mqtt.broker.bridge.NoErrorBridge;
 import org.kin.mqtt.broker.rule.ContextAttrs;
-import org.kin.transport.netty.TransportCustomizer;
 import reactor.core.publisher.Mono;
 import reactor.netty.ByteBufFlux;
 import reactor.netty.http.client.HttpClient;
@@ -24,21 +23,10 @@ public class HttpBridge extends NoErrorBridge {
     /** reactor http client */
     private final HttpClient httpClient;
 
-    public HttpBridge() {
-        this(TransportCustomizer.DO_NOTHING);
-    }
-
-    public HttpBridge(TransportCustomizer customizer) {
-        this(DEFAULT_NAME, TransportCustomizer.DO_NOTHING);
-    }
-
     public HttpBridge(String name) {
-        this(name, TransportCustomizer.DO_NOTHING);
-    }
-
-    public HttpBridge(String name, TransportCustomizer customizer) {
         super(name);
-        this.httpClient = customizer.custom(HttpClient.create());
+        // TODO: 2023/3/30 设置http client
+        this.httpClient = HttpClient.create();
     }
 
     @Override

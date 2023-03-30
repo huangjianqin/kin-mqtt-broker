@@ -29,7 +29,7 @@ import org.kin.mqtt.broker.rule.RuleDefinition;
 import org.kin.mqtt.broker.store.MemoryMessageStore;
 import org.kin.mqtt.broker.store.MqttMessageStore;
 import org.kin.mqtt.broker.systopic.TotalClientNumPublisher;
-import org.kin.transport.netty.ServerTransport;
+import org.kin.transport.netty.Transport;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import reactor.core.publisher.Mono;
@@ -48,7 +48,7 @@ import java.util.List;
  * @author huangjianqin
  * @date 2022/11/6
  */
-public class MqttBrokerBootstrap extends ServerTransport {
+public class MqttBrokerBootstrap extends Transport<MqttBrokerBootstrap> {
     private static final Logger log = LoggerFactory.getLogger(MqttBrokerBootstrap.class);
 
     private final MqttBrokerConfig config;
@@ -240,8 +240,7 @@ public class MqttBrokerBootstrap extends ServerTransport {
                             .addHandlerFirst(MqttEncoder.INSTANCE);
                     onMqttClientConnected(brokerContext, new MqttChannel(brokerContext, connection));
                 });
-        //自定义mqtt server配置
-        tcpServer = customServerTransport(tcpServer);
+
         Mono<DisposableServer> disposableServerMono = tcpServer.bind()
                 .doOnNext(d -> {
                     //定义mqtt broker close逻辑

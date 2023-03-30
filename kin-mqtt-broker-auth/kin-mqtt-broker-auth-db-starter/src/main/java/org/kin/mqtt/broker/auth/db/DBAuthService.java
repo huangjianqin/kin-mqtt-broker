@@ -30,7 +30,7 @@ public class DBAuthService implements AuthService {
                         .flatMap(result -> Mono.from(result.map((row, rowMetadata) -> {
                             String dbPassword = row.get("password", String.class);
                             String salt = row.get("salt", String.class);
-                            return MD5.common().encode(password + salt).equals(dbPassword);
+                            return MD5.current().digestAsHex(password + salt).equals(dbPassword);
                         }))),
                 Connection::close);
     }
