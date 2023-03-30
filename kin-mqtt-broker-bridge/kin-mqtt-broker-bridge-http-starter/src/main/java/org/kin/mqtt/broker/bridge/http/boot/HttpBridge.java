@@ -39,8 +39,8 @@ public class HttpBridge extends NoErrorBridge {
 
     @Override
     public Mono<Void> transmit0(ContextAttrs attrs) {
-        String uri = attrs.rmAttr(BridgeAttrNames.HTTP_URI);
-        Map<String, Object> oHeaders = attrs.rmAttr(BridgeAttrNames.HTTP_HEADERS);
+        String uri = attrs.removeAttr(BridgeAttrNames.HTTP_URI);
+        Map<String, Object> oHeaders = attrs.removeAttr(BridgeAttrNames.HTTP_HEADERS);
 
         return webClient
                 .post()

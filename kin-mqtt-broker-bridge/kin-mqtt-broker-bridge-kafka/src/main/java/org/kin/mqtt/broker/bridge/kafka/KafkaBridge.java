@@ -69,7 +69,7 @@ public class KafkaBridge extends NoErrorBridge {
     protected Mono<Void> transmit0(ContextAttrs attrs) {
         return Mono.just(attrs)
                 .map(ca -> {
-                    String kafkaTopic = ca.rmAttr(BridgeAttrNames.KAFKA_TOPIC);
+                    String kafkaTopic = ca.removeAttr(BridgeAttrNames.KAFKA_TOPIC);
                     //mqtt client id
                     String clientId = ca.getAttr(RuleCtxAttrNames.MQTT_CLIENT_ID);
 

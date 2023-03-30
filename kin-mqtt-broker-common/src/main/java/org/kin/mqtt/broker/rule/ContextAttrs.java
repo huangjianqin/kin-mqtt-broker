@@ -9,8 +9,11 @@ import java.util.Map;
  * @author huangjianqin
  * @date 2022/11/22
  */
-public class ContextAttrs extends HashMap<String, Object> {
+public class ContextAttrs {
     private static final long serialVersionUID = -6641783935850596222L;
+
+    /** 属性 */
+    private final HashMap<String, Object> attrs = new HashMap<>();
 
     /**
      * 批量更新属性
@@ -18,7 +21,7 @@ public class ContextAttrs extends HashMap<String, Object> {
      * @param otherAttrs 属性
      */
     public void updateAttrs(Map<String, Object> otherAttrs) {
-        putAll(otherAttrs);
+        attrs.putAll(otherAttrs);
     }
 
     /**
@@ -28,7 +31,7 @@ public class ContextAttrs extends HashMap<String, Object> {
      * @param value 属性value
      */
     public void updateAttr(String key, Object value) {
-        put(key, value);
+        attrs.put(key, value);
     }
 
     /**
@@ -40,10 +43,10 @@ public class ContextAttrs extends HashMap<String, Object> {
      */
     @SuppressWarnings("unchecked")
     public <T> T getAttr(String key) {
-        if (!containsKey(key)) {
+        if (!attrs.containsKey(key)) {
             throw new IllegalArgumentException(String.format("attr '%s' is not exists", key));
         } else {
-            return (T) get(key);
+            return (T) attrs.get(key);
         }
     }
 
@@ -57,10 +60,10 @@ public class ContextAttrs extends HashMap<String, Object> {
      */
     @SuppressWarnings("unchecked")
     public <T> T getAttrOrDefault(String key, T defaultValue) {
-        if (!containsKey(key)) {
+        if (!attrs.containsKey(key)) {
             return defaultValue;
         } else {
-            return (T) get(key);
+            return (T) attrs.get(key);
         }
     }
 
@@ -72,11 +75,11 @@ public class ContextAttrs extends HashMap<String, Object> {
      * @return 属性值
      */
     @SuppressWarnings("unchecked")
-    public <T> T rmAttr(String key) {
-        if (!containsKey(key)) {
+    public <T> T removeAttr(String key) {
+        if (!attrs.containsKey(key)) {
             throw new IllegalArgumentException(String.format("attr '%s' is not exists", key));
         } else {
-            return (T) remove(key);
+            return (T) attrs.remove(key);
         }
     }
 
@@ -89,11 +92,11 @@ public class ContextAttrs extends HashMap<String, Object> {
      * @return 属性值
      */
     @SuppressWarnings("unchecked")
-    public <T> T rmAttrOrDefault(String key, T defaultValue) {
-        if (!containsKey(key)) {
+    public <T> T removeAttrOrDefault(String key, T defaultValue) {
+        if (!attrs.containsKey(key)) {
             return defaultValue;
         } else {
-            return (T) remove(key);
+            return (T) attrs.remove(key);
         }
     }
 
@@ -104,8 +107,8 @@ public class ContextAttrs extends HashMap<String, Object> {
      * @return boolean
      */
     public boolean getBooleanAttr(String key) {
-        if (containsKey(key)) {
-            return (boolean) get(key);
+        if (attrs.containsKey(key)) {
+            return (boolean) attrs.get(key);
         }
 
         return false;
@@ -118,8 +121,8 @@ public class ContextAttrs extends HashMap<String, Object> {
      * @return byte
      */
     public byte getByteAttr(String key) {
-        if (containsKey(key)) {
-            return (byte) get(key);
+        if (attrs.containsKey(key)) {
+            return (byte) attrs.get(key);
         }
 
         return 0;
@@ -132,8 +135,8 @@ public class ContextAttrs extends HashMap<String, Object> {
      * @return char
      */
     public char getCharAttr(String key) {
-        if (containsKey(key)) {
-            return (char) get(key);
+        if (attrs.containsKey(key)) {
+            return (char) attrs.get(key);
         }
 
         return 0;
@@ -146,8 +149,8 @@ public class ContextAttrs extends HashMap<String, Object> {
      * @return short
      */
     public short getShortAttr(String key) {
-        if (containsKey(key)) {
-            return (short) get(key);
+        if (attrs.containsKey(key)) {
+            return (short) attrs.get(key);
         }
 
         return 0;
@@ -160,8 +163,8 @@ public class ContextAttrs extends HashMap<String, Object> {
      * @return int
      */
     public int getIntAttr(String key) {
-        if (containsKey(key)) {
-            return (int) get(key);
+        if (attrs.containsKey(key)) {
+            return (int) attrs.get(key);
         }
 
         return 0;
@@ -174,8 +177,8 @@ public class ContextAttrs extends HashMap<String, Object> {
      * @return float
      */
     public float getFloatAttr(String key) {
-        if (containsKey(key)) {
-            return (float) get(key);
+        if (attrs.containsKey(key)) {
+            return (float) attrs.get(key);
         }
 
         return 0.0F;
@@ -188,8 +191,8 @@ public class ContextAttrs extends HashMap<String, Object> {
      * @return long
      */
     public long getLongAttr(String key) {
-        if (containsKey(key)) {
-            return (long) get(key);
+        if (attrs.containsKey(key)) {
+            return (long) attrs.get(key);
         }
 
         return 0L;
@@ -202,8 +205,8 @@ public class ContextAttrs extends HashMap<String, Object> {
      * @return double
      */
     public double getDoubleAttr(String key) {
-        if (containsKey(key)) {
-            return (double) get(key);
+        if (attrs.containsKey(key)) {
+            return (double) attrs.get(key);
         }
 
         return 0.0D;

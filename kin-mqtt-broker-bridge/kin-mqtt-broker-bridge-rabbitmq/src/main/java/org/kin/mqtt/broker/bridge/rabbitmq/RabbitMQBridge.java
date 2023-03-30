@@ -63,7 +63,7 @@ public class RabbitMQBridge extends NoErrorBridge {
 
     @Override
     protected Mono<Void> transmit0(ContextAttrs attrs) {
-        String queue = attrs.rmAttr(BridgeAttrNames.RABBITMQ_QUEUE);
+        String queue = attrs.removeAttr(BridgeAttrNames.RABBITMQ_QUEUE);
 
         return Mono.just(attrs)
                 .flatMap(a -> sender.declareQueue(QueueSpecification.queue(queue)))
