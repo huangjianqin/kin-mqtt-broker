@@ -5,7 +5,7 @@ import io.netty.handler.codec.mqtt.MqttSubscriptionOption;
 import io.netty.handler.codec.mqtt.MqttTopicSubscription;
 import org.kin.framework.utils.StringUtils;
 import org.kin.mqtt.broker.TopicNames;
-import org.kin.mqtt.broker.core.MqttChannel;
+import org.kin.mqtt.broker.core.MqttSession;
 
 import java.util.Objects;
 
@@ -21,7 +21,7 @@ public class TopicSubscription {
     /** 订阅的topic name */
     private final String topic;
     /** 发起订阅的mqtt连接 */
-    private MqttChannel mqttChannel;
+    private MqttSession mqttSession;
     /** 订阅qos */
     private MqttQoS qoS;
     /** 共享topic用到, 用于共享topic区分组, 默认null */
@@ -34,14 +34,14 @@ public class TopicSubscription {
     /**
      * 用于移除订阅
      */
-    public static TopicSubscription forRemove(String topic, MqttChannel mqttChannel) {
-        return new TopicSubscription(topic, mqttChannel);
+    public static TopicSubscription forRemove(String topic, MqttSession mqttSession) {
+        return new TopicSubscription(topic, mqttSession);
     }
 
-    public TopicSubscription(MqttTopicSubscription rawSubscription, MqttChannel mqttChannel) {
+    public TopicSubscription(MqttTopicSubscription rawSubscription, MqttSession mqttSession) {
         this.rawTopic = rawSubscription.topicName();
         this.qoS = rawSubscription.qualityOfService();
-        this.mqttChannel = mqttChannel;
+        this.mqttSession = mqttSession;
         if (TopicNames.isShareTopic(rawTopic)) {
             //共享topic
             String[] splits = rawTopic.split(TopicFilter.SEPARATOR, 3);
@@ -59,19 +59,19 @@ public class TopicSubscription {
     /**
      * 用于移除订阅
      */
-    private TopicSubscription(String topic, MqttChannel mqttChannel) {
+    private TopicSubscription(String topic, MqttSession mqttSession) {
         this.rawTopic = topic;
         this.topic = topic;
-        this.mqttChannel = mqttChannel;
+        this.mqttSession = mqttSession;
     }
 
     /**
      * 用于内部topic subscription复制
      */
-    private TopicSubscription(String rawTopic, String topic, MqttChannel mqttChannel, MqttQoS qoS, String group) {
+    private TopicSubscription(String rawTopic, String topic, MqttSession mqttSession, MqttQoS qoS, String group) {
         this.rawTopic = rawTopic;
         this.topic = topic;
-        this.mqttChannel = mqttChannel;
+        this.mqttSession = mqttSession;
         this.qoS = qoS;
         this.group = group;
     }
@@ -84,7 +84,7 @@ public class TopicSubscription {
      * @return 结合publish消息后, 真实订阅信息
      */
     public TopicSubscription convert(MqttQoS mqttQoS) {
-        return new TopicSubscription(rawTopic, topic, mqttChannel,
+        return new TopicSubscription(rawTopic, topic, mqttSession,
                 MqttQoS.valueOf(Math.min(mqttQoS.value(), qoS.value())), group);
     }
 
@@ -92,14 +92,14 @@ public class TopicSubscription {
      * 添加进{@link TopicFilter}才触发, 不然事实上并没有订阅成功
      */
     public void onLinked() {
-        mqttChannel.addSubscription(this);
+        mqttSession.addSubscription(this);
     }
 
     /**
      * 取消订阅, 也是从{@link  TopicFilter}移除, 才触发, 不然事实上并没有取消成功
      */
     public void onUnlinked() {
-        mqttChannel.removeSubscription(this);
+        mqttSession.removeSubscription(this);
     }
 
     /**
@@ -129,8 +129,8 @@ public class TopicSubscription {
         return qoS;
     }
 
-    public MqttChannel getMqttChannel() {
-        return mqttChannel;
+    public MqttSession getMqttSession() {
+        return mqttSession;
     }
 
     public String getGroup() {
@@ -154,12 +154,12 @@ public class TopicSubscription {
             return false;
         }
         TopicSubscription that = (TopicSubscription) o;
-        return Objects.equals(topic, that.topic) && Objects.equals(mqttChannel, that.mqttChannel);
+        return Objects.equals(topic, that.topic) && Objects.equals(mqttSession, that.mqttSession);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(topic, mqttChannel);
+        return Objects.hash(topic, mqttSession);
     }
 
     @Override
@@ -167,7 +167,7 @@ public class TopicSubscription {
         return "TopicSubscription{" +
                 "rawTopic='" + rawTopic + '\'' +
                 ", topic='" + topic + '\'' +
-                ", mqttChannel=" + mqttChannel +
+                ", mqttSession=" + mqttSession +
                 ", qoS=" + qoS +
                 ", group='" + group + '\'' +
                 ", noLocal='" + noLocal + '\'' +

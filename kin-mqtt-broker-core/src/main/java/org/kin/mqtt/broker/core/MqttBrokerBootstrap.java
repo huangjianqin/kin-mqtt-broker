@@ -259,7 +259,7 @@ public class MqttBrokerBootstrap extends ServerTransport<MqttBrokerBootstrap> {
                             .addHandlerLast(new MqttDecoder(config.getMessageMaxSize()))
                             .addHandlerLast(MqttEncoder.INSTANCE)
                             .addHandlerLast(MqttBrokerHandler.DEFAULT);
-                    onMqttClientConnected(brokerContext, new MqttChannel(brokerContext, connection));
+                    onMqttClientConnected(brokerContext, new MqttSession(brokerContext, connection));
                 });
 
         applyOptions(tcpServer);
@@ -307,7 +307,7 @@ public class MqttBrokerBootstrap extends ServerTransport<MqttBrokerBootstrap> {
                                 //mqtt decoder encoder
                                 .addHandlerLast(new MqttDecoder(config.getMessageMaxSize()))
                                 .addHandlerLast(MqttEncoder.INSTANCE);
-                        onMqttClientConnected(brokerContext, new MqttChannel(brokerContext, connection));
+                        onMqttClientConnected(brokerContext, new MqttSession(brokerContext, connection));
                     });
 
             applyOptions(wsServer);
@@ -335,10 +335,10 @@ public class MqttBrokerBootstrap extends ServerTransport<MqttBrokerBootstrap> {
     }
 
     /**
-     * mqtt client建立连接时触发, mqtt channel配置以及处理mqtt消息逻辑
+     * mqtt client建立连接时触发, mqtt session配置以及处理mqtt消息逻辑
      */
-    private void onMqttClientConnected(MqttBrokerContext brokerContext, MqttChannel mqttChannel) {
-        mqttChannel.deferCloseWithoutConnMsg()
+    private void onMqttClientConnected(MqttBrokerContext brokerContext, MqttSession mqttSession) {
+        mqttSession.deferCloseWithoutConnMsg()
                 .getConnection()
                 .inbound()
                 //处理inbound bytes
@@ -358,7 +358,7 @@ public class MqttBrokerBootstrap extends ServerTransport<MqttBrokerBootstrap> {
                 })
                 .publishOn(brokerContext.getMqttBizScheduler())
                 //mqtt消息处理
-                .subscribe(mqttMessage -> brokerContext.getDispatcher().dispatch(MqttMessageWrapper.common(mqttMessage), mqttChannel, brokerContext));
+                .subscribe(mqttMessage -> brokerContext.getDispatcher().dispatch(MqttMessageWrapper.common(mqttMessage), mqttSession, brokerContext));
     }
 
     /**
@@ -371,7 +371,7 @@ public class MqttBrokerBootstrap extends ServerTransport<MqttBrokerBootstrap> {
                         .publishOn(brokerContext.getMqttBizScheduler())
                         .subscribe(clusterMessage -> brokerContext.getDispatcher().dispatch(
                                         MqttMessageWrapper.fromCluster(clusterMessage),
-                                        new VirtualMqttChannel(brokerContext, clusterMessage.getClientId()),
+                                        new VirtualMqttSession(brokerContext, clusterMessage.getClientId()),
                                         brokerContext),
                                 t -> log.error("broker manager handle cluster message error", t))))
                 .subscribe();

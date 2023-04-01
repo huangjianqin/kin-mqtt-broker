@@ -3,7 +3,7 @@ package org.kin.mqtt.broker.core.message.handler;
 import io.netty.handler.codec.mqtt.MqttMessage;
 import io.netty.handler.codec.mqtt.MqttMessageType;
 import org.kin.mqtt.broker.core.MqttBrokerContext;
-import org.kin.mqtt.broker.core.MqttChannel;
+import org.kin.mqtt.broker.core.MqttSession;
 import org.kin.mqtt.broker.core.message.MqttMessageUtils;
 import org.kin.mqtt.broker.core.message.MqttMessageWrapper;
 import reactor.core.publisher.Mono;
@@ -18,8 +18,8 @@ import javax.annotation.Nonnull;
  */
 public class PingReqHandler extends AbstractMqttMessageHandler<MqttMessage> {
     @Override
-    public Mono<Void> handle(MqttMessageWrapper<MqttMessage> wrapper, MqttChannel mqttChannel, MqttBrokerContext brokerContext) {
-        return mqttChannel.sendMessage(MqttMessageUtils.createPingResp(), false);
+    public Mono<Void> handle(MqttMessageWrapper<MqttMessage> wrapper, MqttSession mqttSession, MqttBrokerContext brokerContext) {
+        return mqttSession.sendMessage(MqttMessageUtils.createPingResp(), false);
     }
 
     @Nonnull

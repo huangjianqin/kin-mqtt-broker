@@ -1,7 +1,7 @@
 package org.kin.mqtt.broker.rule.action.bridge;
 
 import org.kin.mqtt.broker.core.MqttBrokerContext;
-import org.kin.mqtt.broker.core.VirtualMqttChannel;
+import org.kin.mqtt.broker.core.VirtualMqttSession;
 import org.kin.mqtt.broker.core.message.MqttMessageReplica;
 import org.kin.mqtt.broker.core.message.MqttMessageUtils;
 import org.kin.mqtt.broker.core.message.MqttMessageWrapper;
@@ -33,7 +33,7 @@ public class MqttTopicAction implements Action {
         //交给mqtt消息handler处理
         return Mono.fromRunnable(() -> brokerContext.getDispatcher().dispatch(
                 MqttMessageWrapper.common(MqttMessageUtils.createPublish(replica, definition.getTopic())),
-                new VirtualMqttChannel(brokerContext, replica.getClientId()),
+                new VirtualMqttSession(brokerContext, replica.getClientId()),
                 brokerContext));
     }
 

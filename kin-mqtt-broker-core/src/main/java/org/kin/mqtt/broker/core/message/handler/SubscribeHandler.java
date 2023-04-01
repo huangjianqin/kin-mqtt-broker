@@ -9,7 +9,7 @@ import org.kin.mqtt.broker.acl.AclAction;
 import org.kin.mqtt.broker.acl.AclService;
 import org.kin.mqtt.broker.cluster.event.SubscriptionsAddEvent;
 import org.kin.mqtt.broker.core.MqttBrokerContext;
-import org.kin.mqtt.broker.core.MqttChannel;
+import org.kin.mqtt.broker.core.MqttSession;
 import org.kin.mqtt.broker.core.message.MqttMessageUtils;
 import org.kin.mqtt.broker.core.message.MqttMessageWrapper;
 import org.kin.mqtt.broker.core.topic.TopicManager;
@@ -33,13 +33,13 @@ public class SubscribeHandler extends AbstractMqttMessageHandler<MqttSubscribeMe
     private static final Logger log = LoggerFactory.getLogger(SubscribeHandler.class);
 
     @Override
-    public Mono<Void> handle(MqttMessageWrapper<MqttSubscribeMessage> wrapper, MqttChannel mqttChannel, MqttBrokerContext brokerContext) {
+    public Mono<Void> handle(MqttMessageWrapper<MqttSubscribeMessage> wrapper, MqttSession mqttSession, MqttBrokerContext brokerContext) {
         MqttSubscribeMessage message = wrapper.getMessage();
 
         AclService aclService = brokerContext.getAclService();
         TopicManager topicManager = brokerContext.getTopicManager();
         return Flux.fromIterable(message.payload().topicSubscriptions())
-                .filterWhen(st -> aclService.checkPermission(mqttChannel.getHost(), mqttChannel.getClientId(), mqttChannel.getUserName(), st.topicName(), AclAction.SUBSCRIBE))
+                .filterWhen(st -> aclService.checkPermission(mqttSession.getHost(), mqttSession.getClientId(), mqttSession.getUserName(), st.topicName(), AclAction.SUBSCRIBE))
                 .collect(Collectors.toSet())
                 //netty的topic subscription定义
                 .flatMap(rawSubscriptions -> {
@@ -47,7 +47,7 @@ public class SubscribeHandler extends AbstractMqttMessageHandler<MqttSubscribeMe
                     Set<TopicSubscription> subscriptions = new HashSet<>(rawSubscriptions.size());
                     Map<String, MqttTopicSubscription> topic2RawTs = new HashMap<>(4);
                     for (MqttTopicSubscription rawSubscription : rawSubscriptions) {
-                        TopicSubscription subscription = new TopicSubscription(rawSubscription, mqttChannel);
+                        TopicSubscription subscription = new TopicSubscription(rawSubscription, mqttSession);
                         subscriptions.add(subscription);
                         topic2RawTs.put(subscription.getTopic(), rawSubscription);
                     }
@@ -55,7 +55,7 @@ public class SubscribeHandler extends AbstractMqttMessageHandler<MqttSubscribeMe
                     Set<String> filteredTopics = Collections.emptySet();
                     if (CollectionUtils.isNonEmpty(subscriptions)) {
                         //过滤已注册的同时替换旧订阅的qos
-                        Set<TopicSubscription> filteredTopicSubscriptions = mqttChannel.filterRegisteredTopicSubscriptions(subscriptions);
+                        Set<TopicSubscription> filteredTopicSubscriptions = mqttSession.filterRegisteredTopicSubscriptions(subscriptions);
                         filteredTopics = filteredTopicSubscriptions.stream()
                                 .map(TopicSubscription::getTopic)
                                 .collect(Collectors.toSet());
@@ -70,13 +70,13 @@ public class SubscribeHandler extends AbstractMqttMessageHandler<MqttSubscribeMe
                     //发送retain消息
                     Set<String> finalFilteredTopics = filteredTopics;
                     Flux<Void> sendRetainFlux = Flux.fromIterable(topic2RawTs.entrySet())
-                            .flatMap(entry -> sendRetainMessage(messageStore, mqttChannel, finalFilteredTopics, entry.getKey(), entry.getValue()));
+                            .flatMap(entry -> sendRetainMessage(messageStore, mqttSession, finalFilteredTopics, entry.getKey(), entry.getValue()));
                     //response sub ack
-                    return Mono.from(mqttChannel.sendMessage(MqttMessageUtils.createSubAck(messageId, respQosList), false))
+                    return Mono.from(mqttSession.sendMessage(MqttMessageUtils.createSubAck(messageId, respQosList), false))
                             //send retain message
                             .thenEmpty(sendRetainFlux)
                             //broadcast mqtt event
-                            .then(Mono.fromRunnable(() -> brokerContext.broadcastEvent(new MqttSubscribeEvent(mqttChannel, subscriptions))))
+                            .then(Mono.fromRunnable(() -> brokerContext.broadcastEvent(new MqttSubscribeEvent(mqttSession, subscriptions))))
                             .then(Mono.fromRunnable(() -> brokerContext.broadcastClusterEvent(
                                     SubscriptionsAddEvent.of(subscriptions.stream().map(TopicSubscription::getTopic).collect(Collectors.toList())))));
                 });
@@ -86,28 +86,28 @@ public class SubscribeHandler extends AbstractMqttMessageHandler<MqttSubscribeMe
      * 订阅成功后, 往mqtt client发送retain消息
      *
      * @param messageStore    外部消息存储
-     * @param mqttChannel     mqtt client
+     * @param mqttSession     mqtt client
      * @param topic           订阅的topic name
      * @param rawSubscription 原始订阅信息
      */
-    private Flux<Void> sendRetainMessage(MqttMessageStore messageStore, MqttChannel mqttChannel, Set<String> filteredTopics,
+    private Flux<Void> sendRetainMessage(MqttMessageStore messageStore, MqttSession mqttSession, Set<String> filteredTopics,
                                          String topic, MqttTopicSubscription rawSubscription) {
         MqttSubscriptionOption option = rawSubscription.option();
         MqttSubscriptionOption.RetainedHandlingPolicy retainedHandlingPolicy = option.retainHandling();
 
         if (Objects.isNull(retainedHandlingPolicy)) {
-            return sendRetainMessage(messageStore, mqttChannel, topic);
+            return sendRetainMessage(messageStore, mqttSession, topic);
         }
 
         switch (retainedHandlingPolicy) {
             case SEND_AT_SUBSCRIBE:
                 //只要客户端订阅成功, 服务端就发送保留消息
-                return sendRetainMessage(messageStore, mqttChannel, topic);
+                return sendRetainMessage(messageStore, mqttSession, topic);
             case SEND_AT_SUBSCRIBE_IF_NOT_YET_EXISTS:
                 //客户端订阅成功且该订阅此前不存在, 服务端才发送保留消息. 毕竟有些时候客户端重新发起订阅可能只是为了改变一下 QoS, 并不意味着它想再次接收保留消息
                 if (!filteredTopics.contains(topic)) {
                     //之前已订阅
-                    return sendRetainMessage(messageStore, mqttChannel, topic);
+                    return sendRetainMessage(messageStore, mqttSession, topic);
                 } else {
                     return Flux.empty();
                 }
@@ -123,17 +123,17 @@ public class SubscribeHandler extends AbstractMqttMessageHandler<MqttSubscribeMe
      * 订阅成功后, 往mqtt client发送retain消息
      *
      * @param messageStore 外部消息存储
-     * @param mqttChannel  mqtt client
+     * @param mqttSession  mqtt client
      * @param topic        订阅的topic name
      */
-    private Flux<Void> sendRetainMessage(MqttMessageStore messageStore, MqttChannel mqttChannel, String topic) {
+    private Flux<Void> sendRetainMessage(MqttMessageStore messageStore, MqttSession mqttSession, String topic) {
         return messageStore.getRetainMessage(topic)
                 //以往异常导致正常流程无法继续
                 .onErrorResume(t -> {
                     log.error("", t);
                     return Flux.empty();
                 })
-                .flatMap(retainMessage -> mqttChannel.sendMessage(MqttMessageUtils.createPublish(mqttChannel, retainMessage), retainMessage.getQos() > 0));
+                .flatMap(retainMessage -> mqttSession.sendMessage(MqttMessageUtils.createPublish(mqttSession, retainMessage), retainMessage.getQos() > 0));
     }
 
     @Nonnull

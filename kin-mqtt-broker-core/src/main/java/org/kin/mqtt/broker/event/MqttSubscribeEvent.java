@@ -1,6 +1,6 @@
 package org.kin.mqtt.broker.event;
 
-import org.kin.mqtt.broker.core.MqttChannel;
+import org.kin.mqtt.broker.core.MqttSession;
 import org.kin.mqtt.broker.core.topic.TopicSubscription;
 
 import java.util.Set;
@@ -13,18 +13,18 @@ import java.util.Set;
  */
 public class MqttSubscribeEvent implements MqttEvent {
     /** mqtt client信息 */
-    private final MqttChannel mqttChannel;
+    private final MqttSession mqttSession;
     /** 该client的订阅 */
     private final Set<TopicSubscription> subscriptions;
 
-    public MqttSubscribeEvent(MqttChannel mqttChannel, Set<TopicSubscription> subscriptions) {
-        this.mqttChannel = mqttChannel;
+    public MqttSubscribeEvent(MqttSession mqttSession, Set<TopicSubscription> subscriptions) {
+        this.mqttSession = mqttSession;
         this.subscriptions = subscriptions;
     }
 
     //getter
-    public MqttChannel getMqttChannel() {
-        return mqttChannel;
+    public MqttSession getMqttSession() {
+        return mqttSession;
     }
 
     public Set<TopicSubscription> getSubscriptions() {

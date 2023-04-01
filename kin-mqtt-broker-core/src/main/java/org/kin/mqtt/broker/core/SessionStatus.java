@@ -1,12 +1,12 @@
 package org.kin.mqtt.broker.core;
 
 /**
- * channel状态
+ * session状态
  *
  * @author huangjianqin
  * @date 2022/11/14
  */
-public enum ChannelStatus {
+public enum SessionStatus {
     /**
      * 初始化
      */

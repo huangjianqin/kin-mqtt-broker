@@ -1,6 +1,6 @@
 package org.kin.mqtt.broker.event;
 
-import org.kin.mqtt.broker.core.MqttChannel;
+import org.kin.mqtt.broker.core.MqttSession;
 
 /**
  * mqtt client注销成功事件, 即只有非持久化mqtt client下线才会触发
@@ -10,14 +10,14 @@ import org.kin.mqtt.broker.core.MqttChannel;
  */
 public class MqttClientUnregisterEvent implements MqttEvent {
     /** mqtt client信息 */
-    private final MqttChannel mqttChannel;
+    private final MqttSession mqttSession;
 
-    public MqttClientUnregisterEvent(MqttChannel mqttChannel) {
-        this.mqttChannel = mqttChannel;
+    public MqttClientUnregisterEvent(MqttSession mqttSession) {
+        this.mqttSession = mqttSession;
     }
 
     //getter
-    public MqttChannel getMqttChannel() {
-        return mqttChannel;
+    public MqttSession getMqttSession() {
+        return mqttSession;
     }
 }

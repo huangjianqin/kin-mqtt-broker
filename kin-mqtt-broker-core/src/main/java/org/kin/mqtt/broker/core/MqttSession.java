@@ -42,8 +42,8 @@ import java.util.stream.Collectors;
  * @author huangjianqin
  * @date 2022/11/13
  */
-public class MqttChannel {
-    private static final Logger log = LoggerFactory.getLogger(MqttChannel.class);
+public class MqttSession {
+    private static final Logger log = LoggerFactory.getLogger(MqttSession.class);
 
     /** 用于控制建立connection后, client还不发送connect消息, 则broker主动关闭connection. 默认10s */
     private static final int DEFER_CLOSE_WITHOUT_CONNECT_MESSAGE_SECONDS = 10;
@@ -66,8 +66,8 @@ public class MqttChannel {
     private int sessionExpiryInterval;
     /** mqtt client user name */
     private String userName;
-    /** mqtt channel status */
-    private volatile ChannelStatus status = ChannelStatus.INIT;
+    /** mqtt session status */
+    private volatile SessionStatus status = SessionStatus.INIT;
     /** 待发送的qos>0 mqtt message */
     private InflightMessageQueue inflightMessageQueue;
     /** 遗愿 */
@@ -95,7 +95,7 @@ public class MqttChannel {
     /** 单个连接消息速率整型 */
     private RateLimiter messageRateLimiter;
 
-    public MqttChannel(MqttBrokerContext brokerContext, Connection connection) {
+    public MqttSession(MqttBrokerContext brokerContext, Connection connection) {
         this.brokerContext = brokerContext;
         this.connection = connection;
     }
@@ -120,7 +120,7 @@ public class MqttChannel {
      * @return complete signal
      */
     public Mono<Void> sendMessage(MqttMessage mqttMessage, boolean retry, boolean inflight) {
-        log.debug("channel {} send {} message", getConnection(), mqttMessage.fixedHeader().messageType());
+        log.debug("session {} send {} message", getConnection(), mqttMessage.fixedHeader().messageType());
         if (retry) {
             if (!inflight) {
                 //普通消息
@@ -139,7 +139,7 @@ public class MqttChannel {
             }
 
             //Increase the reference count of bytebuf, and the reference count of retrybytebuf is 2
-            //mqttChannel.write() method releases a reference count.
+            //mqttSession.write() method releases a reference count.
             MqttMessageType mqttMessageType = mqttMessage.fixedHeader().messageType();
             //待发送的mqtt消息
             MqttMessage reply = getReplyMqttMessage(mqttMessage);
@@ -297,23 +297,23 @@ public class MqttChannel {
     }
 
     /**
-     * @return mqtt channel是否在线
+     * @return mqtt session是否在线
      */
     public boolean isOnline() {
-        return status == ChannelStatus.ONLINE;
+        return status == SessionStatus.ONLINE;
     }
 
     /**
-     * @return mqtt channel是否离线
+     * @return mqtt session是否离线
      */
     public boolean isOffline() {
-        return status == ChannelStatus.OFFLINE;
+        return status == SessionStatus.OFFLINE;
     }
 
     /**
-     * @return 是否是虚拟mqtt channel实例, 即来自于集群, 规则引擎触发的mqtt消息处理
+     * @return 是否是虚拟mqtt session实例, 即来自于集群, 规则引擎触发的mqtt消息处理
      */
-    public boolean isVirtualChannel() {
+    public boolean isVirtualSession() {
         return false;
     }
 
@@ -322,7 +322,7 @@ public class MqttChannel {
      *
      * @return this
      */
-    public MqttChannel deferCloseWithoutConnMsg() {
+    public MqttSession deferCloseWithoutConnMsg() {
         // registry tcp close event
         deferCloseWithoutConnMsgDisposable = Mono.fromRunnable(() -> {
             //此时不为null
@@ -334,7 +334,7 @@ public class MqttChannel {
     }
 
     /**
-     * 接受connect消息并成功通过校验后, 执行channel初始化
+     * 接受connect消息并成功通过校验后, 执行session初始化
      */
     @SuppressWarnings("unchecked")
     public void onConnect(String clientId, MqttConnectVariableHeader variableHeader,
@@ -346,15 +346,15 @@ public class MqttChannel {
             deferCloseWithoutConnMsgDisposable = null;
         }
 
-        //初始化字段, 因为离线后, 新连接会创建mqtt channel, 选择不在定义时初始化字段,
-        //则是在session持久化场景下可以减少新对象分配(新mqtt channel对象仅用于恢复旧mqtt channel, 然后会被抛弃)
+        //初始化字段, 因为离线后, 新连接会创建mqtt session, 选择不在定义时初始化字段,
+        //则是在session持久化场景下可以减少新对象分配(新mqtt session对象仅用于恢复旧mqtt session, 然后会被抛弃)
         //此时不为null
         this.host = connection.address().toString().split(":")[0];
         this.channelHashCode = connection.channel().hashCode();
         this.clientId = clientId;
         connectTime = System.currentTimeMillis();
         cleanSession = variableHeader.isCleanSession();
-        status = ChannelStatus.ONLINE;
+        status = SessionStatus.ONLINE;
         userName = payload.userName();
         MqttProperties properties = variableHeader.properties();
         MqttProperties.MqttProperty<Integer> sessionExpiryIntervalProp = properties.getProperty(MqttProperties.MqttPropertyType.SESSION_EXPIRY_INTERVAL.value());
@@ -373,7 +373,7 @@ public class MqttChannel {
         alias2TopicName = new NonBlockingHashMap<>();
         delayPubTimeouts = new NonBlockingHashSet<>();
         int connMessagePerSec = brokerContext.getBrokerConfig().getConnMessagePerSec();
-        if (!isVirtualChannel() && connMessagePerSec > 0) {
+        if (!isVirtualSession() && connMessagePerSec > 0) {
             messageRateLimiter = RateLimiter.create(connMessagePerSec);
         }
 
@@ -403,20 +403,20 @@ public class MqttChannel {
         //注册dispose逻辑
         afterDispose(this::close0);
 
-        //register channel
-        if (brokerContext.getChannelManager().register(clientId, this)) {
+        //register session
+        if (brokerContext.getSessionManager().register(clientId, this)) {
             brokerContext.broadcastEvent(new MqttClientRegisterEvent(this));
         }
     }
 
     /**
-     * 基于新connection恢复原channel状态
+     * 基于新connection恢复原session状态
      */
     @SuppressWarnings("unchecked")
-    public void onReconnect(MqttChannel newMqttChannel, MqttConnectVariableHeader variableHeader,
+    public void onReconnect(MqttSession newMqttSession, MqttConnectVariableHeader variableHeader,
                             MqttConnectPayload payload) {
         //防止自动断开新connection
-        Disposable deferCloseWithoutConnMsgDisposable = newMqttChannel.deferCloseWithoutConnMsgDisposable;
+        Disposable deferCloseWithoutConnMsgDisposable = newMqttSession.deferCloseWithoutConnMsgDisposable;
         if (deferCloseWithoutConnMsgDisposable != null && !deferCloseWithoutConnMsgDisposable.isDisposed()) {
             deferCloseWithoutConnMsgDisposable.dispose();
         }
@@ -428,12 +428,12 @@ public class MqttChannel {
 
         //初始化字段
         //替换connection
-        this.connection = newMqttChannel.connection;
+        this.connection = newMqttSession.connection;
         //此时不为null
         this.host = connection.address().toString().split(":")[0];
         this.channelHashCode = connection.channel().hashCode();
         cleanSession = variableHeader.isCleanSession();
-        status = ChannelStatus.ONLINE;
+        status = SessionStatus.ONLINE;
         userName = payload.userName();
         MqttProperties properties = variableHeader.properties();
         MqttProperties.MqttProperty<Integer> sessionExpiryIntervalProp = properties.getProperty(MqttProperties.MqttPropertyType.SESSION_EXPIRY_INTERVAL.value());
@@ -490,7 +490,7 @@ public class MqttChannel {
             return;
         }
 
-        log.info("mqtt channel closed, {}", this);
+        log.info("mqtt session closed, {}", this);
 
         releaseSessionLessField();
         SubscriptionsRemoveEvent subscriptionsRemoveEvent = SubscriptionsRemoveEvent.of(subscriptions.stream().map(TopicSubscription::getTopic).collect(Collectors.toList()));
@@ -529,18 +529,18 @@ public class MqttChannel {
     /**
      * 清空会话状态
      *
-     * @param replaceOldChannelFlag 持久化session断开连接后, 重连成功并且不设置持久化才设置该标识,
-     *                              表示新mqtt channel直接替代旧mqtt channel, 而不是恢复其状态
+     * @param replaceOldSessionFlag 持久化session断开连接后, 重连成功并且不设置持久化才设置该标识,
+     *                              表示新mqtt session直接替代旧mqtt session, 而不是恢复其状态
      */
-    public void cleanSession(boolean replaceOldChannelFlag) {
-        if (replaceOldChannelFlag) {
+    public void cleanSession(boolean replaceOldSessionFlag) {
+        if (replaceOldSessionFlag) {
             //也算是重连, 取消will延迟处理
             tryCancelDelayHandleWillDisposable();
         }
-        //取消channel注册
-        brokerContext.getChannelManager().remove(clientId);
+        //取消session注册
+        brokerContext.getSessionManager().remove(clientId);
         //取消订阅
-        //!!会清空MqttChannel.subscriptions
+        //!!会清空MqttSession.subscriptions
         brokerContext.getTopicManager().removeAllSubscriptions(this);
         //取消延迟发布publish消息的task
         for (Timeout delayPubTimeout : delayPubTimeouts) {
@@ -550,7 +550,7 @@ public class MqttChannel {
     }
 
     /**
-     * mqtt channel close
+     * mqtt session close
      *
      * @return close complete signal
      */
@@ -599,7 +599,7 @@ public class MqttChannel {
         TopicManager topicManager = brokerContext.getTopicManager();
         topicManager.getSubscriptions(will.getTopic(), will.getQoS(), this)
                 .forEach(subscription -> {
-                    MqttChannel channel = subscription.getMqttChannel();
+                    MqttSession session = subscription.getMqttSession();
 
                     //此时不为null
                     ByteBuf byteBuf = connection.channel().alloc().directBuffer();
@@ -607,7 +607,7 @@ public class MqttChannel {
                     sendMessage(MqttMessageUtils.createPublish(false,
                                     subscription.getQoS(),
                                     will.isRetain(),
-                                    subscription.getQoS() == MqttQoS.AT_MOST_ONCE ? 0 : channel.nextMessageId(),
+                                    subscription.getQoS() == MqttQoS.AT_MOST_ONCE ? 0 : session.nextMessageId(),
                                     will.getTopic(),
                                     byteBuf,
                                     subscription.isRetainAsPublished()),
@@ -626,10 +626,10 @@ public class MqttChannel {
     }
 
     /**
-     * 将状态设置为{@link ChannelStatus#OFFLINE}
+     * 将状态设置为{@link SessionStatus#OFFLINE}
      */
     private void offline() {
-        status = ChannelStatus.OFFLINE;
+        status = SessionStatus.OFFLINE;
     }
 
     /**
@@ -775,10 +775,10 @@ public class MqttChannel {
         if (this == o) {
             return true;
         }
-        if (!(o instanceof MqttChannel)) {
+        if (!(o instanceof MqttSession)) {
             return false;
         }
-        MqttChannel that = (MqttChannel) o;
+        MqttSession that = (MqttSession) o;
         return Objects.equals(connection, that.connection) && Objects.equals(clientId, that.clientId);
     }
 
@@ -789,7 +789,7 @@ public class MqttChannel {
 
     @Override
     public String toString() {
-        return "MqttChannel{" +
+        return "MqttSession{" +
                 "connection=" + connection +
                 ", channelHashCode=" + channelHashCode +
                 ", host='" + host + '\'' +

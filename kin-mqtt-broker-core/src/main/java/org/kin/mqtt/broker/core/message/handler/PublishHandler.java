@@ -7,7 +7,7 @@ import io.netty.util.Timeout;
 import org.kin.mqtt.broker.acl.AclAction;
 import org.kin.mqtt.broker.acl.AclService;
 import org.kin.mqtt.broker.core.MqttBrokerContext;
-import org.kin.mqtt.broker.core.MqttChannel;
+import org.kin.mqtt.broker.core.MqttSession;
 import org.kin.mqtt.broker.core.message.MqttMessageUtils;
 import org.kin.mqtt.broker.core.message.MqttMessageWrapper;
 import org.kin.mqtt.broker.core.topic.PubTopic;
@@ -28,9 +28,9 @@ import java.util.stream.Collectors;
  */
 public class PublishHandler extends AbstractMqttMessageHandler<MqttPublishMessage> {
     @Override
-    public Mono<Void> handle(MqttMessageWrapper<MqttPublishMessage> wrapper, MqttChannel mqttChannel, MqttBrokerContext brokerContext) {
+    public Mono<Void> handle(MqttMessageWrapper<MqttPublishMessage> wrapper, MqttSession mqttSession, MqttBrokerContext brokerContext) {
         //单个连接消息速率整型
-        mqttChannel.checkPubMessageRate();
+        mqttSession.checkPubMessageRate();
 
         if (wrapper.isFromCluster()) {
             Metrics.counter(MetricsNames.CLUSTER_PUBLISH_MSG_COUNT).increment();
@@ -40,17 +40,17 @@ public class PublishHandler extends AbstractMqttMessageHandler<MqttPublishMessag
 
         //acl访问权限检查
         AclService aclService = brokerContext.getAclService();
-        if (mqttChannel.isVirtualChannel()) {
-            return handle0(wrapper, mqttChannel, brokerContext);
+        if (mqttSession.isVirtualSession()) {
+            return handle0(wrapper, mqttSession, brokerContext);
         } else {
             MqttPublishMessage message = wrapper.getMessage();
             MqttPublishVariableHeader variableHeader = message.variableHeader();
             String topicName = variableHeader.topicName();
-            return aclService.checkPermission(mqttChannel.getHost(), mqttChannel.getClientId(), mqttChannel.getUserName(), topicName, AclAction.PUBLISH)
+            return aclService.checkPermission(mqttSession.getHost(), mqttSession.getClientId(), mqttSession.getUserName(), topicName, AclAction.PUBLISH)
                     .flatMap(aclResult -> {
                         if (aclResult) {
                             //允许访问
-                            return handle0(wrapper, mqttChannel, brokerContext);
+                            return handle0(wrapper, mqttSession, brokerContext);
                         } else {
                             return Mono.error(new IllegalStateException(String.format("mqtt publish message for topic '%s' acl is not allowed, %s", topicName, message)));
                         }
@@ -58,8 +58,8 @@ public class PublishHandler extends AbstractMqttMessageHandler<MqttPublishMessag
         }
     }
 
-    private Mono<Void> handle0(MqttMessageWrapper<MqttPublishMessage> wrapper, MqttChannel mqttChannel, MqttBrokerContext brokerContext) {
-        String clientId = mqttChannel.getClientId();
+    private Mono<Void> handle0(MqttMessageWrapper<MqttPublishMessage> wrapper, MqttSession mqttSession, MqttBrokerContext brokerContext) {
+        String clientId = mqttSession.getClientId();
         MqttPublishMessage message = wrapper.getMessage();
         long timestamp = wrapper.getTimestamp();
 
@@ -71,31 +71,31 @@ public class PublishHandler extends AbstractMqttMessageHandler<MqttPublishMessag
 
         PubTopic pubTopic = TopicUtils.parsePubTopic(variableHeader.topicName());
 
-        if (mqttChannel.isVirtualChannel()) {
+        if (mqttSession.isVirtualSession()) {
             //其他集群广播 | 消息重发(rule) 接收到的publish消息
-            return broadcastPublish(brokerContext, mqttChannel, pubTopic, wrapper);
+            return broadcastPublish(brokerContext, mqttSession, pubTopic, wrapper);
         }
 
         switch (qos) {
             case AT_MOST_ONCE:
-                return broadcastPublish(brokerContext, mqttChannel, pubTopic, wrapper);
+                return broadcastPublish(brokerContext, mqttSession, pubTopic, wrapper);
             case AT_LEAST_ONCE:
-                return broadcastPublish0(brokerContext, mqttChannel, pubTopic, wrapper)
-                        .then(mqttChannel.sendMessage(MqttMessageUtils.createPubAck(packetId), false))
+                return broadcastPublish0(brokerContext, mqttSession, pubTopic, wrapper)
+                        .then(mqttSession.sendMessage(MqttMessageUtils.createPubAck(packetId), false))
                         .then(trySaveRetainMessage(messageStore, clientId, message, timestamp));
             case EXACTLY_ONCE:
-                if (!mqttChannel.existQos2Message(packetId)) {
+                if (!mqttSession.existQos2Message(packetId)) {
                     //Mqtt client -> broker: publish
                     //Mqtt client <- broker: pub rec
                     //Mqtt client -> broker: pub rel
                     //Mqtt client <- broker: publish
                     //...
                     //Mqtt client <- broker: pub comp
-                    return mqttChannel
+                    return mqttSession
                             .cacheQos2Message(packetId,
                                     //暂不移除topic中delayed相关信息, pub rel时再移除
                                     new MqttMessageWrapper<>(wrapper, MqttMessageUtils.wrapPublish(message, qos, 0)))
-                            .then(mqttChannel.sendMessage(MqttMessageUtils.createPubRec(packetId), true));
+                            .then(mqttSession.sendMessage(MqttMessageUtils.createPubRec(packetId), true));
                 }
             default:
                 return Mono.empty();
@@ -111,7 +111,7 @@ public class PublishHandler extends AbstractMqttMessageHandler<MqttPublishMessag
      * @param sender        mqtt message sender
      * @return complete signal
      */
-    private Mono<Void> broadcastPublish(MqttBrokerContext brokerContext, MqttChannel sender, PubTopic pubTopic,
+    private Mono<Void> broadcastPublish(MqttBrokerContext brokerContext, MqttSession sender, PubTopic pubTopic,
                                         MqttMessageWrapper<MqttPublishMessage> wrapper) {
         return broadcastPublish0(brokerContext, sender, pubTopic, wrapper)
                 .then(trySaveRetainMessage(brokerContext.getMessageStore(), sender.getClientId(), wrapper.getMessage(), wrapper.getTimestamp()));
@@ -126,7 +126,7 @@ public class PublishHandler extends AbstractMqttMessageHandler<MqttPublishMessag
      * @param sender        mqtt message sender
      * @return complete signal
      */
-    private Mono<Void> broadcastPublish0(MqttBrokerContext brokerContext, MqttChannel sender,
+    private Mono<Void> broadcastPublish0(MqttBrokerContext brokerContext, MqttSession sender,
                                          PubTopic pubTopic, MqttMessageWrapper<MqttPublishMessage> wrapper) {
         int delay = pubTopic.getDelay();
         if (delay > 0) {
@@ -155,7 +155,7 @@ public class PublishHandler extends AbstractMqttMessageHandler<MqttPublishMessag
      * @param sender        mqtt message sender
      * @return complete signal
      */
-    private Mono<Void> broadcastPublish1(MqttBrokerContext brokerContext, MqttChannel sender,
+    private Mono<Void> broadcastPublish1(MqttBrokerContext brokerContext, MqttSession sender,
                                          PubTopic pubTopic, MqttMessageWrapper<MqttPublishMessage> wrapper) {
         MqttFixedHeader fixedHeader = wrapper.getMessage().fixedHeader();
         MqttQoS qos = fixedHeader.qosLevel();
@@ -163,13 +163,13 @@ public class PublishHandler extends AbstractMqttMessageHandler<MqttPublishMessag
         Set<TopicSubscription> subscriptions = brokerContext.getTopicManager().getSubscriptions(pubTopic.getName(), qos, sender);
 
         return Mono.when(subscriptions.stream()
-                .filter(subscription -> filterOfflineSession(subscription.getMqttChannel(), brokerContext.getMessageStore(),
+                .filter(subscription -> filterOfflineSession(subscription.getMqttSession(), brokerContext.getMessageStore(),
                         wrapper::getMessage, wrapper.getTimestamp()))
                 .filter(s -> !wrapper.isExpire())
                 .map(subscription -> {
-                    MqttChannel mqttChannel = subscription.getMqttChannel();
+                    MqttSession mqttSession = subscription.getMqttSession();
                     //如果是delayed topic, 移除topic中delayed相关信息
-                    return mqttChannel.sendMessage(MqttMessageUtils.wrapPublish(wrapper.getMessage(), subscription, pubTopic.getName(), mqttChannel.nextMessageId()),
+                    return mqttSession.sendMessage(MqttMessageUtils.wrapPublish(wrapper.getMessage(), subscription, pubTopic.getName(), mqttSession.nextMessageId()),
                             subscription.getQoS().value() > 0);
                 })
                 .collect(Collectors.toList()));

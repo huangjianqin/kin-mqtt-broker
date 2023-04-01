@@ -5,7 +5,7 @@ import io.netty.buffer.PooledByteBufAllocator;
 import io.netty.handler.codec.mqtt.*;
 import org.kin.framework.utils.CollectionUtils;
 import org.kin.mqtt.broker.core.MqttBrokerConfig;
-import org.kin.mqtt.broker.core.MqttChannel;
+import org.kin.mqtt.broker.core.MqttSession;
 import org.kin.mqtt.broker.core.topic.TopicSubscription;
 
 import javax.annotation.Nullable;
@@ -141,11 +141,11 @@ public class MqttMessageUtils {
      *
      * @return publish消息
      */
-    public static MqttPublishMessage createPublish(MqttChannel mqttChannel, MqttMessageReplica replica) {
+    public static MqttPublishMessage createPublish(MqttSession mqttSession, MqttMessageReplica replica) {
         int qos = replica.getQos();
         return createPublish(false,
                 MqttQoS.valueOf(qos),
-                qos > 0 ? mqttChannel.nextMessageId() : 0,
+                qos > 0 ? mqttSession.nextMessageId() : 0,
                 replica.getTopic(),
                 PooledByteBufAllocator.DEFAULT.directBuffer().writeBytes(replica.getPayload()),
                 replica.getProperties());

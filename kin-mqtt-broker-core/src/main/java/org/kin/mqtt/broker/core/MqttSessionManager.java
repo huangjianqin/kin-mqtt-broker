@@ -3,43 +3,43 @@ package org.kin.mqtt.broker.core;
 import java.util.Collection;
 
 /**
- * mqtt channel管理
+ * mqtt session管理
  * todo 持久化session支持存库和集群共享
  *
  * @author huangjianqin
  * @date 2022/11/15
  */
-public interface MqttChannelManager {
+public interface MqttSessionManager {
     /**
      * 注册新连接的mqtt client
      *
      * @param clientId    mqtt client id
-     * @param mqttChannel mqtt channel
+     * @param mqttSession mqtt session
      * @return 是否首次注册, 对于持久化session的mqtt client, 则只有第一次注册才返回true
      */
-    boolean register(String clientId, MqttChannel mqttChannel);
+    boolean register(String clientId, MqttSession mqttSession);
 
     /**
-     * 根据client id获取mqtt channel
+     * 根据client id获取mqtt session
      *
      * @param clientId mqtt client id
-     * @return mqtt channel
+     * @return mqtt session
      */
-    MqttChannel get(String clientId);
+    MqttSession get(String clientId);
 
     /**
-     * 移除指定client id的mqtt channel
+     * 移除指定client id的mqtt session
      *
      * @param clientId mqtt client id
      * @return 是否移除成功
      */
-    MqttChannel remove(String clientId);
+    MqttSession remove(String clientId);
 
     /**
-     * 是否包含指定client id的mqtt channel
+     * 是否包含指定client id的mqtt session
      *
      * @param clientId mqtt client id
-     * @return 是否包含指定client id的mqtt channel
+     * @return 是否包含指定client id的mqtt session
      */
     boolean contains(String clientId);
 
@@ -51,9 +51,9 @@ public interface MqttChannelManager {
     int size();
 
     /**
-     * 获取所有已注册mqtt channel
+     * 获取所有已注册mqtt session
      *
-     * @return 所有已注册mqtt channel
+     * @return 所有已注册mqtt session
      */
-    Collection<MqttChannel> all();
+    Collection<MqttSession> all();
 }

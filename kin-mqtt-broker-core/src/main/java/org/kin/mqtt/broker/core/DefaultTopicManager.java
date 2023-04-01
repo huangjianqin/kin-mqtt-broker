@@ -28,7 +28,7 @@ public class DefaultTopicManager implements TopicManager {
     }
 
     @Override
-    public Set<TopicSubscription> getSubscriptions(String topic, MqttQoS qos, @Nullable MqttChannel sender) {
+    public Set<TopicSubscription> getSubscriptions(String topic, MqttQoS qos, @Nullable MqttSession sender) {
         //普通topic订阅+all(共享topic订阅组内根据策略选一个)
         Set<TopicSubscription> finalSubscriptions = new HashSet<>();
 
@@ -65,7 +65,7 @@ public class DefaultTopicManager implements TopicManager {
 
         return finalSubscriptions.stream().filter(s -> {
             //如果mqtt client订阅了自己的publish的topic, 将noLocal设置为true, 则mqtt client不会收到该topic自己publish的消息
-            return !s.isNoLocal() || !Objects.nonNull(sender) || !s.getMqttChannel().equals(sender);
+            return !s.isNoLocal() || !Objects.nonNull(sender) || !s.getMqttSession().equals(sender);
         }).collect(Collectors.toSet());
     }
 
@@ -104,8 +104,8 @@ public class DefaultTopicManager implements TopicManager {
     }
 
     @Override
-    public void removeAllSubscriptions(MqttChannel mqttChannel) {
-        Set<TopicSubscription> subscriptions = mqttChannel.getSubscriptions();
+    public void removeAllSubscriptions(MqttSession mqttSession) {
+        Set<TopicSubscription> subscriptions = mqttSession.getSubscriptions();
         for (TopicSubscription subscription : subscriptions) {
             removeSubscription(subscription);
         }
@@ -119,9 +119,9 @@ public class DefaultTopicManager implements TopicManager {
     }
 
     @Override
-    public Map<String, Set<MqttChannel>> getSubscriptionView() {
+    public Map<String, Set<MqttSession>> getSubscriptionView() {
         return getAllSubscriptions().stream()
                 .collect(Collectors.groupingBy(TopicSubscription::getTopic,
-                        Collectors.mapping(TopicSubscription::getMqttChannel, Collectors.toSet())));
+                        Collectors.mapping(TopicSubscription::getMqttSession, Collectors.toSet())));
     }
 }

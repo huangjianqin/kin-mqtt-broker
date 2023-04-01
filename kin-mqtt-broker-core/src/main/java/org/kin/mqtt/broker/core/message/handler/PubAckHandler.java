@@ -5,7 +5,7 @@ import io.netty.handler.codec.mqtt.MqttMessageIdVariableHeader;
 import io.netty.handler.codec.mqtt.MqttMessageType;
 import io.netty.handler.codec.mqtt.MqttPubAckMessage;
 import org.kin.mqtt.broker.core.MqttBrokerContext;
-import org.kin.mqtt.broker.core.MqttChannel;
+import org.kin.mqtt.broker.core.MqttSession;
 import org.kin.mqtt.broker.core.Retry;
 import org.kin.mqtt.broker.core.message.MqttMessageWrapper;
 import reactor.core.publisher.Mono;
@@ -21,14 +21,14 @@ import java.util.Optional;
  */
 public class PubAckHandler extends AbstractMqttMessageHandler<MqttPubAckMessage> {
     @Override
-    public Mono<Void> handle(MqttMessageWrapper<MqttPubAckMessage> wrapper, MqttChannel mqttChannel, MqttBrokerContext brokerContext) {
+    public Mono<Void> handle(MqttMessageWrapper<MqttPubAckMessage> wrapper, MqttSession mqttSession, MqttBrokerContext brokerContext) {
         return Mono.fromRunnable(() -> {
-            mqttChannel.onRecPubRespMessage();
+            mqttSession.onRecPubRespMessage();
 
             MqttMessage message = wrapper.getMessage();
             MqttMessageIdVariableHeader variableHeader = (MqttMessageIdVariableHeader) message.variableHeader();
             int messageId = variableHeader.messageId();
-            Optional.ofNullable(brokerContext.getRetryService().getRetry(mqttChannel.generateUuid(MqttMessageType.PUBLISH, messageId))).ifPresent(Retry::cancel);
+            Optional.ofNullable(brokerContext.getRetryService().getRetry(mqttSession.generateUuid(MqttMessageType.PUBLISH, messageId))).ifPresent(Retry::cancel);
         });
     }
 

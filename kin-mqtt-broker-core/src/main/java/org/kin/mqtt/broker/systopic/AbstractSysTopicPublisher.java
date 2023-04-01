@@ -6,7 +6,7 @@ import io.netty.handler.codec.mqtt.MqttPublishMessage;
 import io.netty.handler.codec.mqtt.MqttQoS;
 import org.kin.framework.utils.JSON;
 import org.kin.mqtt.broker.core.MqttBrokerContext;
-import org.kin.mqtt.broker.core.VirtualMqttChannel;
+import org.kin.mqtt.broker.core.VirtualMqttSession;
 import org.kin.mqtt.broker.core.message.MqttMessageUtils;
 import org.kin.mqtt.broker.core.message.MqttMessageWrapper;
 
@@ -33,6 +33,6 @@ public abstract class AbstractSysTopicPublisher {
                 topic,
                 buffer);
         brokerContext.getDispatcher().dispatch(MqttMessageWrapper.common(message),
-                new VirtualMqttChannel(brokerContext, brokerContext.getBrokerClientId()), brokerContext);
+                new VirtualMqttSession(brokerContext, brokerContext.getBrokerClientId()), brokerContext);
     }
 }

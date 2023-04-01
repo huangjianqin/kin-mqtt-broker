@@ -64,15 +64,15 @@ public class MqttMessageDispatcher {
      * mqtt消息分派处理逻辑
      *
      * @param wrapper       mqtt message wrapper
-     * @param mqttChannel   mqtt channel
+     * @param mqttSession   mqtt session
      * @param brokerContext mqtt broker context
      */
     @SuppressWarnings("unchecked")
-    public void dispatch(MqttMessageWrapper<? extends MqttMessage> wrapper, MqttChannel mqttChannel, MqttBrokerContext brokerContext) {
+    public void dispatch(MqttMessageWrapper<? extends MqttMessage> wrapper, MqttSession mqttSession, MqttBrokerContext brokerContext) {
         //interceptor handle
         //目前mqtt消息处理是全异步过程, 所以这里不打算使用递归形式的拦截器实现
         for (Interceptor interceptor : interceptors) {
-            if (interceptor.intercept(wrapper, mqttChannel, brokerContext)) {
+            if (interceptor.intercept(wrapper, mqttSession, brokerContext)) {
                 //intercept
                 return;
             }
@@ -88,25 +88,25 @@ public class MqttMessageDispatcher {
 
             if (wrapper.isFromCluster()) {
                 //非集群广播消息
-                publishMessage = tryReplaceRealTopic(mqttChannel, publishMessage);
+                publishMessage = tryReplaceRealTopic(mqttSession, publishMessage);
                 //replace
                 mqttMessage = publishMessage;
                 wrapper.replaceMessage(mqttMessage);
             }
 
-            messageReplica = MqttMessageUtils.toReplica(mqttChannel.clientId, publishMessage, wrapper.getTimestamp());
+            messageReplica = MqttMessageUtils.toReplica(mqttSession.clientId, publishMessage, wrapper.getTimestamp());
         }
 
         MqttMessageType mqttMessageType = fixedHeader.messageType();
-        log.debug("prepare to handle {} message from channel {}", mqttMessageType, mqttChannel);
+        log.debug("prepare to handle {} message from session {}", mqttMessageType, mqttSession);
         MqttMessageHandler<MqttMessage> messageHandler = type2handler.get(mqttMessageType);
         if (Objects.nonNull(messageHandler)) {
             MqttMessage internalMqttMessage = mqttMessage;
-            messageHandler.handle((MqttMessageWrapper<MqttMessage>) wrapper, mqttChannel, brokerContext)
+            messageHandler.handle((MqttMessageWrapper<MqttMessage>) wrapper, mqttSession, brokerContext)
                     .contextWrite(context -> context.putNonNull(MqttBrokerContext.class, brokerContext))
                     .subscribe(v -> {
                             },
-                            error -> log.error("handle {} message from channel {} error", mqttMessageType, mqttChannel, error),
+                            error -> log.error("handle {} message from session {} error", mqttMessageType, mqttSession, error),
                             //释放onMqttClientConnected里面的retain(), 还有initBrokerManager的MqttMessageReplica.fromCluster(....)
                             () -> ReactorNetty.safeRelease(internalMqttMessage.payload()));
         } else {
@@ -126,7 +126,7 @@ public class MqttMessageDispatcher {
                 brokerContext.getRuleEngine().execute(brokerContext, messageReplica).subscribe();
             }
 
-            brokerContext.broadcastEvent(new MqttPublishEvent(mqttChannel, messageReplica));
+            brokerContext.broadcastEvent(new MqttPublishEvent(mqttSession, messageReplica));
         }
     }
 
@@ -136,7 +136,7 @@ public class MqttMessageDispatcher {
      * @return 替换后的MqttPublishMessage实例
      */
     @SuppressWarnings("unchecked")
-    private MqttPublishMessage tryReplaceRealTopic(MqttChannel mqttChannel, MqttPublishMessage publishMessage) {
+    private MqttPublishMessage tryReplaceRealTopic(MqttSession mqttSession, MqttPublishMessage publishMessage) {
         //因为topic alias仅在对应连接生效和维护, 所以集群广播消息需要带真实topic
         MqttFixedHeader fixedHeader = publishMessage.fixedHeader();
         MqttPublishVariableHeader publishVariableHeader = publishMessage.variableHeader();
@@ -149,7 +149,7 @@ public class MqttMessageDispatcher {
             MqttProperties.MqttProperty<Integer> topicAliasProp = properties.getProperty(MqttProperties.MqttPropertyType.TOPIC_ALIAS.value());
             if (Objects.nonNull(topicAliasProp)) {
                 //带了topic别名, 则尝试获取真实topic
-                topic = mqttChannel.getTopicByAlias(topicAliasProp.value());
+                topic = mqttSession.getTopicByAlias(topicAliasProp.value());
                 needReplaceMqttMessage = true;
             }
             if (StringUtils.isBlank(topic)) {
@@ -161,7 +161,7 @@ public class MqttMessageDispatcher {
             MqttProperties.MqttProperty<Integer> topicAliasProp = properties.getProperty(MqttProperties.MqttPropertyType.TOPIC_ALIAS.value());
             if (Objects.nonNull(topicAliasProp)) {
                 //带了topic别名, 则注册
-                mqttChannel.registerTopicAlias(topicAliasProp.value(), topic);
+                mqttSession.registerTopicAlias(topicAliasProp.value(), topic);
             }
         }
 

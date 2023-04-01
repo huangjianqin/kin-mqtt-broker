@@ -14,11 +14,11 @@ public interface Interceptor {
      * mqtt消息处理逻辑
      *
      * @param wrapper     mqtt message wrapper
-     * @param mqttChannel mqtt channel
+     * @param mqttSession mqtt session
      * @param context     mqtt broker context
      * @return 是否拦截, 返回true, 后续拦截器将无法继续执行
      */
-    boolean intercept(MqttMessageWrapper<? extends MqttMessage> wrapper, MqttChannel mqttChannel, MqttBrokerContext context);
+    boolean intercept(MqttMessageWrapper<? extends MqttMessage> wrapper, MqttSession mqttSession, MqttBrokerContext context);
 
     /**
      * @return 优先级

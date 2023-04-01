@@ -3,7 +3,7 @@ package org.kin.mqtt.broker.core.message.handler;
 import io.netty.handler.codec.mqtt.MqttMessageType;
 import io.netty.handler.codec.mqtt.MqttUnsubscribeMessage;
 import org.kin.mqtt.broker.core.MqttBrokerContext;
-import org.kin.mqtt.broker.core.MqttChannel;
+import org.kin.mqtt.broker.core.MqttSession;
 import org.kin.mqtt.broker.core.message.MqttMessageUtils;
 import org.kin.mqtt.broker.core.message.MqttMessageWrapper;
 import org.kin.mqtt.broker.core.topic.TopicManager;
@@ -18,16 +18,16 @@ import javax.annotation.Nonnull;
  */
 public class UnsubscribeHandler extends AbstractMqttMessageHandler<MqttUnsubscribeMessage> {
     @Override
-    public Mono<Void> handle(MqttMessageWrapper<MqttUnsubscribeMessage> wrapper, MqttChannel mqttChannel, MqttBrokerContext brokerContext) {
+    public Mono<Void> handle(MqttMessageWrapper<MqttUnsubscribeMessage> wrapper, MqttSession mqttSession, MqttBrokerContext brokerContext) {
         MqttUnsubscribeMessage message = wrapper.getMessage();
         return Mono.fromRunnable(() -> {
             TopicManager topicManager = brokerContext.getTopicManager();
             message.payload()
                     .topics()
                     .stream()
-                    .map(topic -> TopicSubscription.forRemove(topic, mqttChannel))
+                    .map(topic -> TopicSubscription.forRemove(topic, mqttSession))
                     .forEach(topicManager::removeSubscription);
-        }).then(mqttChannel.sendMessage(MqttMessageUtils.createUnsubAck(message.variableHeader().messageId()), false));
+        }).then(mqttSession.sendMessage(MqttMessageUtils.createUnsubAck(message.variableHeader().messageId()), false));
     }
 
     @Nonnull

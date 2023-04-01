@@ -36,8 +36,8 @@ public class MqttBrokerContext implements Closeable {
     private final RetryService retryService = new DefaultRetryService();
     /** topic管理 */
     private final TopicManager topicManager = new DefaultTopicManager();
-    /** channel管理 */
-    private final MqttChannelManager channelManager = new DefaultMqttChannelManager();
+    /** session管理 */
+    private final MqttSessionManager sessionManager = new DefaultMqttSessionManager();
     /** mqtt消息处理实现 */
     private final MqttMessageDispatcher dispatcher;
     /** auth service */
@@ -131,8 +131,8 @@ public class MqttBrokerContext implements Closeable {
         return messageStore;
     }
 
-    public MqttChannelManager getChannelManager() {
-        return channelManager;
+    public MqttSessionManager getSessionManager() {
+        return sessionManager;
     }
 
     public AuthService getAuthService() {

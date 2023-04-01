@@ -1,6 +1,6 @@
 package org.kin.mqtt.broker.event;
 
-import org.kin.mqtt.broker.core.MqttChannel;
+import org.kin.mqtt.broker.core.MqttSession;
 
 /**
  * mqtt client上线事件, 注意持久化mqtt client会触发多次
@@ -10,14 +10,14 @@ import org.kin.mqtt.broker.core.MqttChannel;
  */
 public class MqttClientConnEvent implements MqttEvent {
     /** mqtt client信息 */
-    private final MqttChannel mqttChannel;
+    private final MqttSession mqttSession;
 
-    public MqttClientConnEvent(MqttChannel mqttChannel) {
-        this.mqttChannel = mqttChannel;
+    public MqttClientConnEvent(MqttSession mqttSession) {
+        this.mqttSession = mqttSession;
     }
 
     //getter
-    public MqttChannel getMqttChannel() {
-        return mqttChannel;
+    public MqttSession getMqttSession() {
+        return mqttSession;
     }
 }
