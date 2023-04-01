@@ -9,7 +9,6 @@ import io.netty.handler.codec.mqtt.MqttDecoder;
 import io.netty.handler.codec.mqtt.MqttEncoder;
 import io.netty.handler.codec.mqtt.MqttMessage;
 import io.netty.handler.codec.mqtt.MqttPublishMessage;
-import io.netty.handler.traffic.ChannelTrafficShapingHandler;
 import org.kin.framework.event.EventListener;
 import org.kin.framework.reactor.event.EventConsumer;
 import org.kin.framework.utils.SysUtils;
@@ -20,16 +19,17 @@ import org.kin.mqtt.broker.auth.NoneAuthService;
 import org.kin.mqtt.broker.bridge.Bridge;
 import org.kin.mqtt.broker.cluster.BrokerManager;
 import org.kin.mqtt.broker.cluster.StandaloneBrokerManager;
+import org.kin.mqtt.broker.core.handler.ByteBuf2WsFrameEncoder;
+import org.kin.mqtt.broker.core.handler.MqttBrokerHandler;
+import org.kin.mqtt.broker.core.handler.WsFrame2ByteBufDecoder;
 import org.kin.mqtt.broker.core.message.MqttMessageWrapper;
 import org.kin.mqtt.broker.core.topic.share.RandomShareSubLoadBalance;
 import org.kin.mqtt.broker.core.topic.share.ShareSubLoadBalance;
-import org.kin.mqtt.broker.core.websocket.ByteBuf2WsFrameEncoder;
-import org.kin.mqtt.broker.core.websocket.WsFrame2ByteBufDecoder;
 import org.kin.mqtt.broker.rule.RuleDefinition;
 import org.kin.mqtt.broker.store.MemoryMessageStore;
 import org.kin.mqtt.broker.store.MqttMessageStore;
 import org.kin.mqtt.broker.systopic.TotalClientNumPublisher;
-import org.kin.transport.netty.Transport;
+import org.kin.transport.netty.ServerTransport;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import reactor.core.publisher.Mono;
@@ -37,10 +37,7 @@ import reactor.netty.DisposableServer;
 import reactor.netty.resources.LoopResources;
 import reactor.netty.tcp.TcpServer;
 
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.LinkedList;
-import java.util.List;
+import java.util.*;
 
 /**
  * mqtt broker启动类
@@ -48,7 +45,7 @@ import java.util.List;
  * @author huangjianqin
  * @date 2022/11/6
  */
-public class MqttBrokerBootstrap extends Transport<MqttBrokerBootstrap> {
+public class MqttBrokerBootstrap extends ServerTransport<MqttBrokerBootstrap> {
     private static final Logger log = LoggerFactory.getLogger(MqttBrokerBootstrap.class);
 
     private final MqttBrokerConfig config;
@@ -81,6 +78,23 @@ public class MqttBrokerBootstrap extends Transport<MqttBrokerBootstrap> {
 
     private MqttBrokerBootstrap(MqttBrokerConfig config) {
         this.config = config;
+
+        //设置ssl相关
+        ssl(config.isSsl());
+        String caFile = config.getCaFile();
+        if (Objects.nonNull(caFile)) {
+            caFile(caFile);
+        }
+
+        String certFile = config.getCertFile();
+        if (Objects.nonNull(certFile)) {
+            certFile(certFile);
+        }
+
+        String certKeyFile = config.getCertKeyFile();
+        if (Objects.nonNull(certKeyFile)) {
+            certKeyFile(certKeyFile);
+        }
     }
 
     /**
@@ -202,6 +216,7 @@ public class MqttBrokerBootstrap extends Transport<MqttBrokerBootstrap> {
      */
     public MqttBroker start() {
         config.selfCheck();
+        checkRequire();
 
         //系统topic配置
         if (config.isEnableSysTopic()) {
@@ -233,13 +248,15 @@ public class MqttBrokerBootstrap extends Transport<MqttBrokerBootstrap> {
                 .runOn(loopResources)
                 .doOnConnection(connection -> {
                     connection
-                            //流量整形, 10s check
-                            .addHandlerFirst(new ChannelTrafficShapingHandler(0, config.getConnBytesPerSec(), 10000))
                             //mqtt decoder encoder
-                            .addHandlerFirst(new MqttDecoder(config.getMessageMaxSize()))
-                            .addHandlerFirst(MqttEncoder.INSTANCE);
+                            .addHandlerLast(new MqttDecoder(config.getMessageMaxSize()))
+                            .addHandlerLast(MqttEncoder.INSTANCE)
+                            .addHandlerLast(MqttBrokerHandler.DEFAULT);
                     onMqttClientConnected(brokerContext, new MqttChannel(brokerContext, connection));
                 });
+
+        applyOptions(tcpServer);
+        applyChildOptions(tcpServer);
 
         Mono<DisposableServer> disposableServerMono = tcpServer.bind()
                 .doOnNext(d -> {
@@ -268,8 +285,6 @@ public class MqttBrokerBootstrap extends Transport<MqttBrokerBootstrap> {
                     .runOn(loopResources)
                     .doOnConnection(connection -> {
                         connection
-                                //流量整形, 10s check
-                                .addHandlerFirst(new ChannelTrafficShapingHandler(0, config.getConnBytesPerSec(), 10000))
                                 //websocket相关
                                 .addHandlerLast(new HttpServerCodec())
                                 .addHandlerLast(new HttpObjectAggregator(65536))
@@ -281,6 +296,10 @@ public class MqttBrokerBootstrap extends Transport<MqttBrokerBootstrap> {
                                 .addHandlerLast(MqttEncoder.INSTANCE);
                         onMqttClientConnected(brokerContext, new MqttChannel(brokerContext, connection));
                     });
+
+            applyOptions(wsServer);
+            applyChildOptions(wsServer);
+
             disposableServerMono = wsServer.bind()
                     .doOnNext(d -> {
                         //定义mqtt broker over websocket close逻辑

@@ -356,10 +356,6 @@ public class MqttMessageUtils {
             }
         }
 
-        //1. 不限制topic alias长度, 则允许2字节, 最大65536
-        //...
-
-
         MqttConnAckVariableHeader mqttConnAckVariableHeader = new MqttConnAckVariableHeader(returnCode, false, properties);
         MqttFixedHeader mqttFixedHeader = new MqttFixedHeader(MqttMessageType.CONNACK, false, MqttQoS.AT_MOST_ONCE, false, 0X02);
         return new MqttConnAckMessage(mqttFixedHeader, mqttConnAckVariableHeader);

@@ -1,4 +1,4 @@
-package org.kin.mqtt.broker.core.websocket;
+package org.kin.mqtt.broker.core.handler;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
