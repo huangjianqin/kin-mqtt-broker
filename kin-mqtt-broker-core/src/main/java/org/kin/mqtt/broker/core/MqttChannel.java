@@ -1,6 +1,8 @@
 package org.kin.mqtt.broker.core;
 
+import com.google.common.util.concurrent.RateLimiter;
 import io.netty.buffer.ByteBuf;
+import io.netty.channel.Channel;
 import io.netty.handler.codec.mqtt.*;
 import io.netty.util.HashedWheelTimer;
 import io.netty.util.Timeout;
@@ -90,6 +92,8 @@ public class MqttChannel {
     private NonBlockingHashMap<Integer, String> alias2TopicName;
     /** 延迟发布publish消息的{@link Timeout} */
     private NonBlockingHashSet<Timeout> delayPubTimeouts;
+    /** 单个连接消息速率整型 */
+    private RateLimiter messageRateLimiter;
 
     public MqttChannel(MqttBrokerContext brokerContext, Connection connection) {
         this.brokerContext = brokerContext;
@@ -368,6 +372,10 @@ public class MqttChannel {
         qos2MessageCache = new NonBlockingHashMap<>();
         alias2TopicName = new NonBlockingHashMap<>();
         delayPubTimeouts = new NonBlockingHashSet<>();
+        int connMessagePerSec = brokerContext.getBrokerConfig().getConnMessagePerSec();
+        if (!isVirtualChannel() && connMessagePerSec > 0) {
+            messageRateLimiter = RateLimiter.create(connMessagePerSec);
+        }
 
         //keepalive
         //mqtt client 空闲, broker关闭mqtt client连接
@@ -701,6 +709,32 @@ public class MqttChannel {
      */
     public void removeDelayPubTimeout(Timeout timeout) {
         delayPubTimeouts.remove(timeout);
+    }
+
+    /**
+     * 检查单个连接消息速率整型
+     * 不精准, 这里是处理publish消息时做检查, 那么还存在可能部分消息解析好但等待处理
+     */
+    public void checkPubMessageRate() {
+        if (Objects.isNull(messageRateLimiter) || !messageRateLimiter.tryAcquire()) {
+            return;
+        }
+
+        //没有拿到令牌
+        long now = System.nanoTime();
+        long nextSec = TimeUnit.SECONDS.toNanos(TimeUnit.NANOSECONDS.toSeconds(now) + 1);
+        //20ms兜底
+        long waitTime = nextSec - now + TimeUnit.MILLISECONDS.toNanos(20);
+        if (waitTime > 0) {
+            log.warn("mqtt client({}) send publish message too fast, reach limit {} msg/s",
+                    clientId, brokerContext.getBrokerConfig().getConnMessagePerSec());
+            Channel channel = connection.channel();
+            channel.config().setAutoRead(false);
+            channel.eventLoop().schedule(() -> {
+                channel.config().setAutoRead(true);
+                log.warn("mqtt broker available to read mqtt client({})'s  publish message", clientId);
+            }, waitTime, TimeUnit.NANOSECONDS);
+        }
     }
 
     //getter

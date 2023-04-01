@@ -29,6 +29,9 @@ import java.util.stream.Collectors;
 public class PublishHandler extends AbstractMqttMessageHandler<MqttPublishMessage> {
     @Override
     public Mono<Void> handle(MqttMessageWrapper<MqttPublishMessage> wrapper, MqttChannel mqttChannel, MqttBrokerContext brokerContext) {
+        //单个连接消息速率整型
+        mqttChannel.checkPubMessageRate();
+
         if (wrapper.isFromCluster()) {
             Metrics.counter(MetricsNames.CLUSTER_PUBLISH_MSG_COUNT).increment();
         } else {

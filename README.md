@@ -66,8 +66,7 @@
 * topic retain消息
 
 ## 展望
-* 持久化session信息
-* 单连接上允许的最大发布速率 (msg/s), 存储到session中, 可能需外部系统协助, 如redis, sentinel
+* 持久化session信息, 需外部系统协助, 如redis
 * 补充更多broker系统内置topic和内置event
 * coap网关
 * 自动订阅, 检查配置, connect时根据配置给指定client id自动注册订阅, 是否需要支持后台操作, 然后配置是否是持久化

@@ -111,6 +111,10 @@ public class MqttBrokerContext implements Closeable {
     }
 
     //getter
+    public MqttBrokerConfig getBrokerConfig() {
+        return brokerConfig;
+    }
+
     public Scheduler getMqttBizScheduler() {
         return mqttBizScheduler;
     }

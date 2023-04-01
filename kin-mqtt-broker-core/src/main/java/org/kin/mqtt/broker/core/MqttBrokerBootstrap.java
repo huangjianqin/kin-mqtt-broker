@@ -9,6 +9,7 @@ import io.netty.handler.codec.mqtt.MqttDecoder;
 import io.netty.handler.codec.mqtt.MqttEncoder;
 import io.netty.handler.codec.mqtt.MqttMessage;
 import io.netty.handler.codec.mqtt.MqttPublishMessage;
+import io.netty.handler.traffic.ChannelTrafficShapingHandler;
 import org.kin.framework.event.EventListener;
 import org.kin.framework.reactor.event.EventConsumer;
 import org.kin.framework.utils.SysUtils;
@@ -247,6 +248,12 @@ public class MqttBrokerBootstrap extends ServerTransport<MqttBrokerBootstrap> {
                 .metrics(true)
                 .runOn(loopResources)
                 .doOnConnection(connection -> {
+                    int connBytesPerSec = config.getConnBytesPerSec();
+                    if (connBytesPerSec > 0) {
+                        //流量整形
+                        connection.addHandlerLast(new ChannelTrafficShapingHandler(0, connBytesPerSec));
+                    }
+
                     connection
                             //mqtt decoder encoder
                             .addHandlerLast(new MqttDecoder(config.getMessageMaxSize()))
@@ -284,6 +291,12 @@ public class MqttBrokerBootstrap extends ServerTransport<MqttBrokerBootstrap> {
                     .metrics(true)
                     .runOn(loopResources)
                     .doOnConnection(connection -> {
+                        int connBytesPerSec = config.getConnBytesPerSec();
+                        if (connBytesPerSec > 0) {
+                            //流量整形
+                            connection.addHandlerLast(new ChannelTrafficShapingHandler(0, connBytesPerSec));
+                        }
+
                         connection
                                 //websocket相关
                                 .addHandlerLast(new HttpServerCodec())

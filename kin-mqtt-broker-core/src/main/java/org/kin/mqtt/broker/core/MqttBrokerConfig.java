@@ -32,6 +32,10 @@ public class MqttBrokerConfig {
     private int sysTopicInterval = 60;
     /** 单个接收端愿意同时处理的QoS为1和2的PUBLISH消息最大数量, 默认64 */
     private int receiveMaximum = 64;
+    /** 单个连接流量整型, 默认无限制 */
+    private int connBytesPerSec = -1;
+    /** 单个连接消息速率整型, 默认无限制 */
+    private int connMessagePerSec = -1;
 
     public static MqttBrokerConfig create() {
         return new MqttBrokerConfig();
@@ -164,6 +168,22 @@ public class MqttBrokerConfig {
         return this;
     }
 
+    /**
+     * 单个连接流量整型, 默认无限制
+     */
+    public MqttBrokerConfig connBytesPerSec(int connBytesPerSec) {
+        this.connBytesPerSec = connBytesPerSec;
+        return this;
+    }
+
+    /**
+     * 单个连接消息数整型, 默认无限制
+     */
+    public MqttBrokerConfig connMessagePerSec(int connMessagePerSec) {
+        this.connMessagePerSec = connMessagePerSec;
+        return this;
+    }
+
     //setter && getter
     public int getBrokerId() {
         return brokerId;
@@ -259,5 +279,13 @@ public class MqttBrokerConfig {
 
     public void setReceiveMaximum(int receiveMaximum) {
         this.receiveMaximum = receiveMaximum;
+    }
+
+    public int getConnBytesPerSec() {
+        return connBytesPerSec;
+    }
+
+    public int getConnMessagePerSec() {
+        return connMessagePerSec;
     }
 }
