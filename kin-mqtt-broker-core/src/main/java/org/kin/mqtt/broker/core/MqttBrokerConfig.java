@@ -9,7 +9,7 @@ import org.kin.framework.utils.StringUtils;
  */
 public class MqttBrokerConfig {
     /** broker id, 会被用作client id, 比如系统topic消息, 默认是0 */
-    private int brokerId;
+    private String brokerId = "0";
     /** mqtt broker port, default 1883 */
     private int port = 1883;
     /** mqtt broker websocket port, default 0, 默认不开启 */
@@ -64,7 +64,7 @@ public class MqttBrokerConfig {
     /**
      * 定义broker唯一id
      */
-    public MqttBrokerConfig brokerId(int brokerId) {
+    public MqttBrokerConfig brokerId(String brokerId) {
         this.brokerId = brokerId;
         return this;
     }
@@ -185,11 +185,11 @@ public class MqttBrokerConfig {
     }
 
     //setter && getter
-    public int getBrokerId() {
+    public String getBrokerId() {
         return brokerId;
     }
 
-    public void setBrokerId(int brokerId) {
+    public void setBrokerId(String brokerId) {
         this.brokerId = brokerId;
     }
 
