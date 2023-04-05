@@ -34,4 +34,14 @@ public class VirtualMqttSession extends MqttSession {
     public boolean isVirtualSession() {
         return true;
     }
+
+    @Override
+    public boolean isChannelActive() {
+        return true;
+    }
+
+    @Override
+    public boolean isChannelWritable() {
+        return true;
+    }
 }

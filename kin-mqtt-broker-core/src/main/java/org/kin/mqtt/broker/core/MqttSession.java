@@ -144,7 +144,7 @@ public class MqttSession {
             //待发送的mqtt消息
             MqttMessage reply = getReplyMqttMessage(mqttMessage);
 
-            Runnable retryTask = () -> write(Mono.just(reply)).subscribe();
+            Runnable retryTask = () -> send(Mono.just(reply)).subscribe();
             Runnable cleaner = () -> ReactorNetty.safeRelease(reply);
 
             RetryService retryService = brokerContext.getRetryService();
@@ -152,11 +152,11 @@ public class MqttSession {
             long uuid = generateUuid(mqttMessageType, MqttMessageUtils.getMessageId(mqttMessage));
             retryService.execRetry(new PublishRetry(uuid, retryTask, cleaner, retryService));
 
-            return write(Mono.just(mqttMessage))
+            return send(Mono.just(mqttMessage))
                     //保证write消息过程遇到异常, 也能释放receiveNum
                     .doOnError(t -> onRecPubRespMessage());
         } else {
-            return write(Mono.just(mqttMessage));
+            return send(Mono.just(mqttMessage));
         }
     }
 
@@ -209,10 +209,8 @@ public class MqttSession {
      * @param messageMono mqtt消息
      * @return complete signal
      */
-    private Mono<Void> write(Mono<MqttMessage> messageMono) {
-        if (Objects.nonNull(connection) &&
-                this.connection.channel().isActive() &&
-                this.connection.channel().isWritable()) {
+    private Mono<Void> send(Mono<MqttMessage> messageMono) {
+        if (isChannelActive() && isChannelWritable()) {
             return connection.outbound().sendObject(messageMono).then();
         } else {
             return Mono.empty();
@@ -735,6 +733,20 @@ public class MqttSession {
                 log.warn("mqtt broker available to read mqtt client({})'s  publish message", clientId);
             }, waitTime, TimeUnit.NANOSECONDS);
         }
+    }
+
+    /**
+     * @return 底层channel是否active
+     */
+    public boolean isChannelActive() {
+        return Objects.nonNull(connection) && connection.channel().isActive();
+    }
+
+    /**
+     * @return 底层channel是否允许write bytes
+     */
+    public boolean isChannelWritable() {
+        return Objects.nonNull(connection) && connection.channel().isWritable();
     }
 
     //getter

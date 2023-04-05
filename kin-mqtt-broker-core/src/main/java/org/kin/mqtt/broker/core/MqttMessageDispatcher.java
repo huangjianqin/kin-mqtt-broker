@@ -67,8 +67,35 @@ public class MqttMessageDispatcher {
      * @param mqttSession   mqtt session
      * @param brokerContext mqtt broker context
      */
-    @SuppressWarnings("unchecked")
     public void dispatch(MqttMessageWrapper<? extends MqttMessage> wrapper, MqttSession mqttSession, MqttBrokerContext brokerContext) {
+        if (!wrapper.isFromCluster()) {
+            dispatchClientMessage(wrapper, mqttSession, brokerContext);
+        } else {
+            dispatchClusterMessage(wrapper, mqttSession, brokerContext);
+        }
+    }
+
+    /**
+     * 处理mqtt channel消息
+     */
+    private void dispatchClientMessage(MqttMessageWrapper<? extends MqttMessage> wrapper, MqttSession mqttSession, MqttBrokerContext brokerContext) {
+        String clientId = mqttSession.clientId;
+        if (!mqttSession.isChannelActive() || mqttSession.isOffline()) {
+            //session is inactive or unregister, so force close
+            log.warn("session '{}' is unregister, but still receive mqtt message, so close channel", clientId);
+            mqttSession.close().subscribe();
+            return;
+        }
+
+        //handle mqtt message
+        MqttMessage mqttMessage = wrapper.getMessage();
+        if (mqttMessage.decoderResult().isFailure()) {
+            //mqtt message decode failure, so force close
+            log.warn("mqtt message from session '{}' decode failure, {}", clientId, mqttMessage);
+            mqttSession.close().subscribe();
+            return;
+        }
+
         //interceptor handle
         //目前mqtt消息处理是全异步过程, 所以这里不打算使用递归形式的拦截器实现
         for (Interceptor interceptor : interceptors) {
@@ -78,25 +105,77 @@ public class MqttMessageDispatcher {
             }
         }
 
-        //handle mqtt message
-        MqttMessage mqttMessage = wrapper.getMessage();
-        MqttFixedHeader fixedHeader = mqttMessage.fixedHeader();
         MqttMessageReplica messageReplica = null;
         if (mqttMessage instanceof MqttPublishMessage) {
-            //先转换成可持久化的消息
+            //转换成可持久化的消息
             MqttPublishMessage publishMessage = (MqttPublishMessage) mqttMessage;
-
-            if (wrapper.isFromCluster()) {
-                //非集群广播消息
-                publishMessage = tryReplaceRealTopic(mqttSession, publishMessage);
-                //replace
-                mqttMessage = publishMessage;
-                wrapper.replaceMessage(mqttMessage);
-            }
-
-            messageReplica = MqttMessageUtils.toReplica(mqttSession.clientId, publishMessage, wrapper.getTimestamp());
+            messageReplica = MqttMessageUtils.toReplica(clientId, publishMessage, wrapper.getTimestamp());
         }
 
+        handleMqttMessage(wrapper, mqttSession, brokerContext);
+
+        //仅仅处理publish消息
+        if (Objects.nonNull(messageReplica)) {
+            //往集群广播mqtt消息
+            BrokerManager brokerManager = brokerContext.getBrokerManager();
+            brokerManager.broadcastMqttMessage(messageReplica).subscribe();
+
+            //规则匹配
+            //原则上所有节点都会同步rule, 那么集群广播的publish消息不需要再重复处理rule了
+            brokerContext.getRuleEngine().execute(brokerContext, messageReplica).subscribe();
+
+            brokerContext.broadcastEvent(new MqttPublishEvent(mqttSession, messageReplica));
+        }
+    }
+
+    /**
+     * 处理集群广播消息
+     */
+    private void dispatchClusterMessage(MqttMessageWrapper<? extends MqttMessage> wrapper, MqttSession mqttSession, MqttBrokerContext brokerContext) {
+        MqttMessage mqttMessage = wrapper.getMessage();
+        if (mqttMessage.decoderResult().isFailure()) {
+            //mqtt message decode failure
+            return;
+        }
+
+        if (!(mqttMessage instanceof MqttPublishMessage)) {
+            //集群仅会广播publish消息
+            return;
+        }
+
+        //interceptor handle
+        //目前mqtt消息处理是全异步过程, 所以这里不打算使用递归形式的拦截器实现
+        for (Interceptor interceptor : interceptors) {
+            if (interceptor.intercept(wrapper, mqttSession, brokerContext)) {
+                //intercept
+                return;
+            }
+        }
+
+        //转换成可持久化的消息
+        MqttPublishMessage publishMessage = (MqttPublishMessage) mqttMessage;
+        MqttMessageReplica messageReplica;
+        //尝试替换真实topic
+        publishMessage = tryReplaceRealTopic(mqttSession, publishMessage);
+        //replace
+        mqttMessage = publishMessage;
+        wrapper.replaceMessage(mqttMessage);
+        //副本
+        messageReplica = MqttMessageUtils.toReplica(mqttSession.clientId, publishMessage, wrapper.getTimestamp());
+
+        //处理消息
+        handleMqttMessage(wrapper, mqttSession, brokerContext);
+
+        brokerContext.broadcastEvent(new MqttPublishEvent(mqttSession, messageReplica));
+    }
+
+    /**
+     * 处理mqtt message
+     */
+    @SuppressWarnings("unchecked")
+    private void handleMqttMessage(MqttMessageWrapper<? extends MqttMessage> wrapper, MqttSession mqttSession, MqttBrokerContext brokerContext) {
+        MqttMessage mqttMessage = wrapper.getMessage();
+        MqttFixedHeader fixedHeader = mqttMessage.fixedHeader();
         MqttMessageType mqttMessageType = fixedHeader.messageType();
         log.debug("prepare to handle {} message from session {}", mqttMessageType, mqttSession);
         MqttMessageHandler<MqttMessage> messageHandler = type2handler.get(mqttMessageType);
@@ -111,22 +190,6 @@ public class MqttMessageDispatcher {
                             () -> ReactorNetty.safeRelease(internalMqttMessage.payload()));
         } else {
             throw new IllegalArgumentException(String.format("does not find handler to handle %s message", mqttMessageType));
-        }
-
-        //仅仅处理publish消息
-        if (Objects.nonNull(messageReplica)) {
-            if (!wrapper.isFromCluster()) {
-                //非集群广播消息
-                //往集群广播mqtt消息
-                BrokerManager brokerManager = brokerContext.getBrokerManager();
-                brokerManager.broadcastMqttMessage(messageReplica).subscribe();
-
-                //规则匹配
-                //原则上所有节点都会同步rule, 那么集群广播的publish消息不需要再重复处理rule了
-                brokerContext.getRuleEngine().execute(brokerContext, messageReplica).subscribe();
-            }
-
-            brokerContext.broadcastEvent(new MqttPublishEvent(mqttSession, messageReplica));
         }
     }
 
