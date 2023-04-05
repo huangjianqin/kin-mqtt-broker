@@ -12,13 +12,13 @@ import java.util.Objects;
  * @date 2023/1/1
  */
 public class MqttQos2PubMessage {
-    /** mqtt publish message wrapper */
-    private final MqttMessageWrapper<MqttPublishMessage> wrapper;
+    /** mqtt publish message context */
+    private final MqttMessageContext<MqttPublishMessage> messageContext;
     /** qos2 publish message expire task, 可能为null, 即永不过期 */
     private final Timeout expireTimeout;
 
-    public MqttQos2PubMessage(MqttMessageWrapper<MqttPublishMessage> wrapper, Timeout expireTimeout) {
-        this.wrapper = wrapper;
+    public MqttQos2PubMessage(MqttMessageContext<MqttPublishMessage> messageContext, Timeout expireTimeout) {
+        this.messageContext = messageContext;
         this.expireTimeout = expireTimeout;
     }
 
@@ -34,7 +34,7 @@ public class MqttQos2PubMessage {
     }
 
     //getter
-    public MqttMessageWrapper<MqttPublishMessage> getWrapper() {
-        return wrapper;
+    public MqttMessageContext<MqttPublishMessage> getMessageContext() {
+        return messageContext;
     }
 }

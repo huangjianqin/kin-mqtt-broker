@@ -4,10 +4,10 @@ import io.netty.handler.codec.mqtt.*;
 import org.eclipse.collections.impl.map.mutable.UnifiedMap;
 import org.kin.framework.utils.StringUtils;
 import org.kin.mqtt.broker.cluster.BrokerManager;
+import org.kin.mqtt.broker.core.message.MqttMessageContext;
 import org.kin.mqtt.broker.core.message.MqttMessageHandler;
 import org.kin.mqtt.broker.core.message.MqttMessageReplica;
 import org.kin.mqtt.broker.core.message.MqttMessageUtils;
-import org.kin.mqtt.broker.core.message.MqttMessageWrapper;
 import org.kin.mqtt.broker.core.message.handler.*;
 import org.kin.mqtt.broker.event.MqttPublishEvent;
 import org.slf4j.Logger;
@@ -63,22 +63,22 @@ public class MqttMessageDispatcher {
     /**
      * mqtt消息分派处理逻辑
      *
-     * @param wrapper       mqtt message wrapper
-     * @param mqttSession   mqtt session
-     * @param brokerContext mqtt broker context
+     * @param messageContext mqtt message messageContext
+     * @param mqttSession    mqtt session
+     * @param brokerContext  mqtt broker context
      */
-    public void dispatch(MqttMessageWrapper<? extends MqttMessage> wrapper, MqttSession mqttSession, MqttBrokerContext brokerContext) {
-        if (!wrapper.isFromCluster()) {
-            dispatchClientMessage(wrapper, mqttSession, brokerContext);
+    public void dispatch(MqttMessageContext<? extends MqttMessage> messageContext, MqttSession mqttSession, MqttBrokerContext brokerContext) {
+        if (!messageContext.isFromCluster()) {
+            dispatchClientMessage(messageContext, mqttSession, brokerContext);
         } else {
-            dispatchClusterMessage(wrapper, mqttSession, brokerContext);
+            dispatchClusterMessage(messageContext, mqttSession, brokerContext);
         }
     }
 
     /**
      * 处理mqtt channel消息
      */
-    private void dispatchClientMessage(MqttMessageWrapper<? extends MqttMessage> wrapper, MqttSession mqttSession, MqttBrokerContext brokerContext) {
+    private void dispatchClientMessage(MqttMessageContext<? extends MqttMessage> messageContext, MqttSession mqttSession, MqttBrokerContext brokerContext) {
         String clientId = mqttSession.clientId;
         if (!mqttSession.isChannelActive() || mqttSession.isOffline()) {
             //session is inactive or unregister, so force close
@@ -88,7 +88,7 @@ public class MqttMessageDispatcher {
         }
 
         //handle mqtt message
-        MqttMessage mqttMessage = wrapper.getMessage();
+        MqttMessage mqttMessage = messageContext.getMessage();
         if (mqttMessage.decoderResult().isFailure()) {
             //mqtt message decode failure, so force close
             log.warn("mqtt message from session '{}' decode failure, {}", clientId, mqttMessage);
@@ -99,7 +99,7 @@ public class MqttMessageDispatcher {
         //interceptor handle
         //目前mqtt消息处理是全异步过程, 所以这里不打算使用递归形式的拦截器实现
         for (Interceptor interceptor : interceptors) {
-            if (interceptor.intercept(wrapper, mqttSession, brokerContext)) {
+            if (interceptor.intercept(messageContext, mqttSession, brokerContext)) {
                 //intercept
                 return;
             }
@@ -109,10 +109,10 @@ public class MqttMessageDispatcher {
         if (mqttMessage instanceof MqttPublishMessage) {
             //转换成可持久化的消息
             MqttPublishMessage publishMessage = (MqttPublishMessage) mqttMessage;
-            messageReplica = MqttMessageUtils.toReplica(clientId, publishMessage, wrapper.getTimestamp());
+            messageReplica = MqttMessageUtils.toReplica(clientId, publishMessage, messageContext.getTimestamp());
         }
 
-        handleMqttMessage(wrapper, mqttSession, brokerContext);
+        handleMqttMessage(messageContext, mqttSession, brokerContext);
 
         //仅仅处理publish消息
         if (Objects.nonNull(messageReplica)) {
@@ -131,8 +131,8 @@ public class MqttMessageDispatcher {
     /**
      * 处理集群广播消息
      */
-    private void dispatchClusterMessage(MqttMessageWrapper<? extends MqttMessage> wrapper, MqttSession mqttSession, MqttBrokerContext brokerContext) {
-        MqttMessage mqttMessage = wrapper.getMessage();
+    private void dispatchClusterMessage(MqttMessageContext<? extends MqttMessage> messageContext, MqttSession mqttSession, MqttBrokerContext brokerContext) {
+        MqttMessage mqttMessage = messageContext.getMessage();
         if (mqttMessage.decoderResult().isFailure()) {
             //mqtt message decode failure
             return;
@@ -146,7 +146,7 @@ public class MqttMessageDispatcher {
         //interceptor handle
         //目前mqtt消息处理是全异步过程, 所以这里不打算使用递归形式的拦截器实现
         for (Interceptor interceptor : interceptors) {
-            if (interceptor.intercept(wrapper, mqttSession, brokerContext)) {
+            if (interceptor.intercept(messageContext, mqttSession, brokerContext)) {
                 //intercept
                 return;
             }
@@ -159,12 +159,12 @@ public class MqttMessageDispatcher {
         publishMessage = tryReplaceRealTopic(mqttSession, publishMessage);
         //replace
         mqttMessage = publishMessage;
-        wrapper.replaceMessage(mqttMessage);
+        messageContext.replaceMessage(mqttMessage);
         //副本
-        messageReplica = MqttMessageUtils.toReplica(mqttSession.clientId, publishMessage, wrapper.getTimestamp());
+        messageReplica = MqttMessageUtils.toReplica(mqttSession.clientId, publishMessage, messageContext.getTimestamp());
 
         //处理消息
-        handleMqttMessage(wrapper, mqttSession, brokerContext);
+        handleMqttMessage(messageContext, mqttSession, brokerContext);
 
         brokerContext.broadcastEvent(new MqttPublishEvent(mqttSession, messageReplica));
     }
@@ -173,15 +173,15 @@ public class MqttMessageDispatcher {
      * 处理mqtt message
      */
     @SuppressWarnings("unchecked")
-    private void handleMqttMessage(MqttMessageWrapper<? extends MqttMessage> wrapper, MqttSession mqttSession, MqttBrokerContext brokerContext) {
-        MqttMessage mqttMessage = wrapper.getMessage();
+    private void handleMqttMessage(MqttMessageContext<? extends MqttMessage> messageContext, MqttSession mqttSession, MqttBrokerContext brokerContext) {
+        MqttMessage mqttMessage = messageContext.getMessage();
         MqttFixedHeader fixedHeader = mqttMessage.fixedHeader();
         MqttMessageType mqttMessageType = fixedHeader.messageType();
         log.debug("prepare to handle {} message from session {}", mqttMessageType, mqttSession);
         MqttMessageHandler<MqttMessage> messageHandler = type2handler.get(mqttMessageType);
         if (Objects.nonNull(messageHandler)) {
             MqttMessage internalMqttMessage = mqttMessage;
-            messageHandler.handle((MqttMessageWrapper<MqttMessage>) wrapper, mqttSession, brokerContext)
+            messageHandler.handle((MqttMessageContext<MqttMessage>) messageContext, mqttSession, brokerContext)
                     .contextWrite(context -> context.putNonNull(MqttBrokerContext.class, brokerContext))
                     .subscribe(v -> {
                             },

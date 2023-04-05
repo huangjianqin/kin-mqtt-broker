@@ -4,7 +4,7 @@ import io.netty.handler.codec.mqtt.MqttMessageType;
 import io.netty.handler.codec.mqtt.MqttSubAckMessage;
 import org.kin.mqtt.broker.core.MqttBrokerContext;
 import org.kin.mqtt.broker.core.MqttSession;
-import org.kin.mqtt.broker.core.message.MqttMessageWrapper;
+import org.kin.mqtt.broker.core.message.MqttMessageContext;
 import reactor.core.publisher.Mono;
 
 import javax.annotation.Nonnull;
@@ -17,7 +17,7 @@ import javax.annotation.Nonnull;
  */
 public class SubAckHandler extends AbstractMqttMessageHandler<MqttSubAckMessage> {
     @Override
-    public Mono<Void> handle(MqttMessageWrapper<MqttSubAckMessage> wrapper, MqttSession mqttSession, MqttBrokerContext brokerContext) {
+    public Mono<Void> handle(MqttMessageContext<MqttSubAckMessage> messageContext, MqttSession mqttSession, MqttBrokerContext brokerContext) {
         //暂时do nothing
         return Mono.empty();
     }

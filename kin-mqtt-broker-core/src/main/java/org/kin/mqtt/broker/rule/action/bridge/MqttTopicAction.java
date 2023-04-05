@@ -2,9 +2,9 @@ package org.kin.mqtt.broker.rule.action.bridge;
 
 import org.kin.mqtt.broker.core.MqttBrokerContext;
 import org.kin.mqtt.broker.core.VirtualMqttSession;
+import org.kin.mqtt.broker.core.message.MqttMessageContext;
 import org.kin.mqtt.broker.core.message.MqttMessageReplica;
 import org.kin.mqtt.broker.core.message.MqttMessageUtils;
-import org.kin.mqtt.broker.core.message.MqttMessageWrapper;
 import org.kin.mqtt.broker.rule.RuleContext;
 import org.kin.mqtt.broker.rule.action.Action;
 import org.kin.mqtt.broker.rule.action.ActionDefinition;
@@ -32,7 +32,7 @@ public class MqttTopicAction implements Action {
         //script即真正topic
         //交给mqtt消息handler处理
         return Mono.fromRunnable(() -> brokerContext.getDispatcher().dispatch(
-                MqttMessageWrapper.common(MqttMessageUtils.createPublish(replica, definition.getTopic())),
+                MqttMessageContext.common(MqttMessageUtils.createPublish(replica, definition.getTopic())),
                 new VirtualMqttSession(brokerContext, replica.getClientId()),
                 brokerContext));
     }

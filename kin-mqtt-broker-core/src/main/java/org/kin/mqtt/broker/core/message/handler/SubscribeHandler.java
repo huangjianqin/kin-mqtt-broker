@@ -10,8 +10,8 @@ import org.kin.mqtt.broker.acl.AclService;
 import org.kin.mqtt.broker.cluster.event.SubscriptionsAddEvent;
 import org.kin.mqtt.broker.core.MqttBrokerContext;
 import org.kin.mqtt.broker.core.MqttSession;
+import org.kin.mqtt.broker.core.message.MqttMessageContext;
 import org.kin.mqtt.broker.core.message.MqttMessageUtils;
-import org.kin.mqtt.broker.core.message.MqttMessageWrapper;
 import org.kin.mqtt.broker.core.topic.TopicManager;
 import org.kin.mqtt.broker.core.topic.TopicSubscription;
 import org.kin.mqtt.broker.event.MqttSubscribeEvent;
@@ -33,8 +33,8 @@ public class SubscribeHandler extends AbstractMqttMessageHandler<MqttSubscribeMe
     private static final Logger log = LoggerFactory.getLogger(SubscribeHandler.class);
 
     @Override
-    public Mono<Void> handle(MqttMessageWrapper<MqttSubscribeMessage> wrapper, MqttSession mqttSession, MqttBrokerContext brokerContext) {
-        MqttSubscribeMessage message = wrapper.getMessage();
+    public Mono<Void> handle(MqttMessageContext<MqttSubscribeMessage> messageContext, MqttSession mqttSession, MqttBrokerContext brokerContext) {
+        MqttSubscribeMessage message = messageContext.getMessage();
 
         AclService aclService = brokerContext.getAclService();
         TopicManager topicManager = brokerContext.getTopicManager();

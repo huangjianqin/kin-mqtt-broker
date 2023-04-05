@@ -1,7 +1,7 @@
 package org.kin.mqtt.broker.core;
 
 import io.netty.handler.codec.mqtt.MqttMessage;
-import org.kin.mqtt.broker.core.message.MqttMessageWrapper;
+import org.kin.mqtt.broker.core.message.MqttMessageContext;
 
 /**
  * mqtt消息处理流程拦截器
@@ -13,12 +13,12 @@ public interface Interceptor {
     /**
      * mqtt消息处理逻辑
      *
-     * @param wrapper     mqtt message wrapper
-     * @param mqttSession mqtt session
-     * @param context     mqtt broker context
+     * @param messageContext mqtt message context
+     * @param mqttSession    mqtt session
+     * @param context        mqtt broker context
      * @return 是否拦截, 返回true, 后续拦截器将无法继续执行
      */
-    boolean intercept(MqttMessageWrapper<? extends MqttMessage> wrapper, MqttSession mqttSession, MqttBrokerContext context);
+    boolean intercept(MqttMessageContext<? extends MqttMessage> messageContext, MqttSession mqttSession, MqttBrokerContext context);
 
     /**
      * @return 优先级

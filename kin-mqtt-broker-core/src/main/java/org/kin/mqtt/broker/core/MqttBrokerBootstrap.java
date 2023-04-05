@@ -23,7 +23,7 @@ import org.kin.mqtt.broker.cluster.StandaloneBrokerManager;
 import org.kin.mqtt.broker.core.handler.ByteBuf2WsFrameEncoder;
 import org.kin.mqtt.broker.core.handler.MqttBrokerHandler;
 import org.kin.mqtt.broker.core.handler.WsFrame2ByteBufDecoder;
-import org.kin.mqtt.broker.core.message.MqttMessageWrapper;
+import org.kin.mqtt.broker.core.message.MqttMessageContext;
 import org.kin.mqtt.broker.core.topic.share.RandomShareSubLoadBalance;
 import org.kin.mqtt.broker.core.topic.share.ShareSubLoadBalance;
 import org.kin.mqtt.broker.rule.RuleDefinition;
@@ -358,7 +358,7 @@ public class MqttBrokerBootstrap extends ServerTransport<MqttBrokerBootstrap> {
                 })
                 .publishOn(brokerContext.getMqttBizScheduler())
                 //mqtt消息处理
-                .subscribe(mqttMessage -> brokerContext.getDispatcher().dispatch(MqttMessageWrapper.common(mqttMessage), mqttSession, brokerContext));
+                .subscribe(mqttMessage -> brokerContext.getDispatcher().dispatch(MqttMessageContext.common(mqttMessage), mqttSession, brokerContext));
     }
 
     /**
@@ -370,7 +370,7 @@ public class MqttBrokerBootstrap extends ServerTransport<MqttBrokerBootstrap> {
                         .onErrorResume(e -> Mono.empty())
                         .publishOn(brokerContext.getMqttBizScheduler())
                         .subscribe(clusterMessage -> brokerContext.getDispatcher().dispatch(
-                                        MqttMessageWrapper.fromCluster(clusterMessage),
+                                        MqttMessageContext.fromCluster(clusterMessage),
                                         new VirtualMqttSession(brokerContext, clusterMessage.getClientId()),
                                         brokerContext),
                                 t -> log.error("broker manager handle cluster message error", t))))

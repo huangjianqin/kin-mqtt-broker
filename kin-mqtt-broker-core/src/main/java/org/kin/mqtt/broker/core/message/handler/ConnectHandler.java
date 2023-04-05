@@ -5,8 +5,8 @@ import org.kin.mqtt.broker.auth.AuthService;
 import org.kin.mqtt.broker.core.MqttBrokerContext;
 import org.kin.mqtt.broker.core.MqttSession;
 import org.kin.mqtt.broker.core.MqttSessionManager;
+import org.kin.mqtt.broker.core.message.MqttMessageContext;
 import org.kin.mqtt.broker.core.message.MqttMessageUtils;
-import org.kin.mqtt.broker.core.message.MqttMessageWrapper;
 import org.kin.mqtt.broker.event.MqttClientConnEvent;
 import org.kin.mqtt.broker.store.MqttMessageStore;
 import org.slf4j.Logger;
@@ -26,12 +26,12 @@ public class ConnectHandler extends AbstractMqttMessageHandler<MqttConnectMessag
     private static final Logger log = LoggerFactory.getLogger(ConnectHandler.class);
 
     @Override
-    public Mono<Void> handle(MqttMessageWrapper<MqttConnectMessage> wrapper, MqttSession mqttSession, MqttBrokerContext brokerContext) {
-        return Mono.from(handle0(wrapper, mqttSession, brokerContext));
+    public Mono<Void> handle(MqttMessageContext<MqttConnectMessage> messageContext, MqttSession mqttSession, MqttBrokerContext brokerContext) {
+        return Mono.from(handle0(messageContext, mqttSession, brokerContext));
     }
 
-    private Mono<Void> handle0(MqttMessageWrapper<MqttConnectMessage> wrapper, MqttSession mqttSession, MqttBrokerContext brokerContext) {
-        MqttConnectMessage message = wrapper.getMessage();
+    private Mono<Void> handle0(MqttMessageContext<MqttConnectMessage> messageContext, MqttSession mqttSession, MqttBrokerContext brokerContext) {
+        MqttConnectMessage message = messageContext.getMessage();
 
         MqttConnectVariableHeader variableHeader = message.variableHeader();
         MqttConnectPayload payload = message.payload();

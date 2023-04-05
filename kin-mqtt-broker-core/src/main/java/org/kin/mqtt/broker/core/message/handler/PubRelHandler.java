@@ -7,8 +7,8 @@ import org.kin.mqtt.broker.core.MqttBrokerContext;
 import org.kin.mqtt.broker.core.MqttSession;
 import org.kin.mqtt.broker.core.Retry;
 import org.kin.mqtt.broker.core.RetryService;
+import org.kin.mqtt.broker.core.message.MqttMessageContext;
 import org.kin.mqtt.broker.core.message.MqttMessageUtils;
-import org.kin.mqtt.broker.core.message.MqttMessageWrapper;
 import org.kin.mqtt.broker.core.topic.PubTopic;
 import org.kin.mqtt.broker.core.topic.TopicManager;
 import org.kin.mqtt.broker.core.topic.TopicSubscription;
@@ -31,23 +31,23 @@ import java.util.stream.Collectors;
  */
 public class PubRelHandler extends AbstractMqttMessageHandler<MqttMessage> {
     @Override
-    public Mono<Void> handle(MqttMessageWrapper<MqttMessage> wrapper, MqttSession mqttSession, MqttBrokerContext brokerContext) {
-        MqttMessage message = wrapper.getMessage();
+    public Mono<Void> handle(MqttMessageContext<MqttMessage> messageContext, MqttSession mqttSession, MqttBrokerContext brokerContext) {
+        MqttMessage message = messageContext.getMessage();
         MqttMessageIdVariableHeader variableHeader = (MqttMessageIdVariableHeader) message.variableHeader();
         int messageId = variableHeader.messageId();
-        MqttMessageWrapper<MqttPublishMessage> pubWrapper = mqttSession.removeQos2Message(messageId);
-        if (Objects.nonNull(pubWrapper)) {
-            if (pubWrapper.isExpire()) {
+        MqttMessageContext<MqttPublishMessage> pubMessageContext = mqttSession.removeQos2Message(messageId);
+        if (Objects.nonNull(pubMessageContext)) {
+            if (pubMessageContext.isExpire()) {
                 //过期, 回复pub comp
                 return mqttSession.sendMessage(MqttMessageUtils.createPubComp(messageId), false);
             } else {
-                MqttPublishMessage qos2Message = pubWrapper.getMessage();
+                MqttPublishMessage qos2Message = pubMessageContext.getMessage();
                 PubTopic pubTopic = TopicUtils.parsePubTopic(qos2Message.variableHeader().topicName());
-                long realDelayed = pubWrapper.getTimestamp() + TimeUnit.SECONDS.toMillis(pubTopic.getDelay()) - System.currentTimeMillis();
+                long realDelayed = pubMessageContext.getTimestamp() + TimeUnit.SECONDS.toMillis(pubTopic.getDelay()) - System.currentTimeMillis();
                 if (realDelayed > 0) {
                     HashedWheelTimer bsTimer = brokerContext.getBsTimer();
                     Timeout timeout = bsTimer.newTimeout(t ->
-                                    handle0(pubWrapper, mqttSession, brokerContext, pubTopic.getName(), messageId, wrapper.getTimestamp())
+                                    handle0(pubMessageContext, mqttSession, brokerContext, pubTopic.getName(), messageId, messageContext.getTimestamp())
                                             .then(Mono.fromRunnable(() -> mqttSession.removeDelayPubTimeout(t)))
                                             .subscribe(),
                             realDelayed, TimeUnit.MILLISECONDS);
@@ -55,7 +55,7 @@ public class PubRelHandler extends AbstractMqttMessageHandler<MqttMessage> {
                     //response pub comp, 让publish流程结束
                     return mqttSession.sendMessage(MqttMessageUtils.createPubComp(messageId), false);
                 } else {
-                    return handle0(pubWrapper, mqttSession, brokerContext, pubTopic.getName(), messageId, wrapper.getTimestamp())
+                    return handle0(pubMessageContext, mqttSession, brokerContext, pubTopic.getName(), messageId, messageContext.getTimestamp())
                             //最后回复pub comp
                             .then(mqttSession.sendMessage(MqttMessageUtils.createPubComp(messageId), false));
                 }
@@ -65,9 +65,9 @@ public class PubRelHandler extends AbstractMqttMessageHandler<MqttMessage> {
         }
     }
 
-    private Mono<Void> handle0(MqttMessageWrapper<MqttPublishMessage> pubWrapper, MqttSession sender, MqttBrokerContext brokerContext,
+    private Mono<Void> handle0(MqttMessageContext<MqttPublishMessage> pubMessageContext, MqttSession sender, MqttBrokerContext brokerContext,
                                String topicName, int messageId, long timestamp) {
-        MqttPublishMessage qos2Message = pubWrapper.getMessage();
+        MqttPublishMessage qos2Message = pubMessageContext.getMessage();
         TopicManager topicManager = brokerContext.getTopicManager();
         MqttMessageStore messageStore = brokerContext.getMessageStore();
         RetryService retryService = brokerContext.getRetryService();

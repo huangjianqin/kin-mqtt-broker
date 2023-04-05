@@ -4,7 +4,7 @@ import io.netty.handler.codec.mqtt.MqttConnAckMessage;
 import io.netty.handler.codec.mqtt.MqttMessageType;
 import org.kin.mqtt.broker.core.MqttBrokerContext;
 import org.kin.mqtt.broker.core.MqttSession;
-import org.kin.mqtt.broker.core.message.MqttMessageWrapper;
+import org.kin.mqtt.broker.core.message.MqttMessageContext;
 import reactor.core.publisher.Mono;
 
 import javax.annotation.Nonnull;
@@ -17,7 +17,7 @@ import javax.annotation.Nonnull;
  */
 public class ConnAckHandler extends AbstractMqttMessageHandler<MqttConnAckMessage> {
     @Override
-    public Mono<Void> handle(MqttMessageWrapper<MqttConnAckMessage> wrapper, MqttSession mqttSession, MqttBrokerContext brokerContext) {
+    public Mono<Void> handle(MqttMessageContext<MqttConnAckMessage> messageContext, MqttSession mqttSession, MqttBrokerContext brokerContext) {
         //暂时do nothing
         return Mono.empty();
     }

@@ -14,7 +14,7 @@ import java.util.concurrent.TimeUnit;
  * @author huangjianqin
  * @date 2022/11/14
  */
-public class MqttMessageWrapper<T extends MqttMessage> {
+public class MqttMessageContext<T extends MqttMessage> {
     /** 真正mqtt消息 */
     private T message;
     /** 接受或创建mqtt消息的时间戳ms */
@@ -25,7 +25,7 @@ public class MqttMessageWrapper<T extends MqttMessage> {
     private final long expireTimeMs;
 
     @SuppressWarnings("unchecked")
-    public MqttMessageWrapper(T message, boolean fromCluster) {
+    public MqttMessageContext(T message, boolean fromCluster) {
         this.message = message;
         this.timestamp = System.currentTimeMillis();
         this.fromCluster = fromCluster;
@@ -47,21 +47,21 @@ public class MqttMessageWrapper<T extends MqttMessage> {
     }
 
     /**
-     * 从{@code wrapper}复制字段值并替换其包装的消息
+     * 从{@code messageContext}复制字段值并替换其包装的消息
      */
-    public MqttMessageWrapper(MqttMessageWrapper<T> wrapper, T message) {
+    public MqttMessageContext(MqttMessageContext<T> messageContext, T message) {
         this.message = message;
-        this.timestamp = wrapper.timestamp;
-        this.fromCluster = wrapper.fromCluster;
-        this.expireTimeMs = wrapper.expireTimeMs;
+        this.timestamp = messageContext.timestamp;
+        this.fromCluster = messageContext.fromCluster;
+        this.expireTimeMs = messageContext.expireTimeMs;
     }
 
-    public static <T extends MqttMessage> MqttMessageWrapper<T> common(T message) {
-        return new MqttMessageWrapper<>(message, false);
+    public static <T extends MqttMessage> MqttMessageContext<T> common(T message) {
+        return new MqttMessageContext<>(message, false);
     }
 
-    public static MqttMessageWrapper<MqttPublishMessage> fromCluster(MqttMessageReplica replica) {
-        return new MqttMessageWrapper<>(MqttMessageUtils.createPublish(replica), true);
+    public static MqttMessageContext<MqttPublishMessage> fromCluster(MqttMessageReplica replica) {
+        return new MqttMessageContext<>(MqttMessageUtils.createPublish(replica), true);
     }
 
     /**
@@ -71,7 +71,7 @@ public class MqttMessageWrapper<T extends MqttMessage> {
      * @return this
      */
     @SuppressWarnings("unchecked")
-    public MqttMessageWrapper<T> replaceMessage(MqttMessage message) {
+    public MqttMessageContext<T> replaceMessage(MqttMessage message) {
         this.message = (T) message;
         return this;
     }

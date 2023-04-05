@@ -6,7 +6,7 @@ import io.netty.handler.codec.mqtt.MqttMessageType;
 import org.kin.mqtt.broker.core.MqttBrokerContext;
 import org.kin.mqtt.broker.core.MqttSession;
 import org.kin.mqtt.broker.core.Retry;
-import org.kin.mqtt.broker.core.message.MqttMessageWrapper;
+import org.kin.mqtt.broker.core.message.MqttMessageContext;
 import reactor.core.publisher.Mono;
 
 import javax.annotation.Nonnull;
@@ -20,10 +20,10 @@ import java.util.Optional;
  */
 public class PubCompHandler extends AbstractMqttMessageHandler<MqttMessage> {
     @Override
-    public Mono<Void> handle(MqttMessageWrapper<MqttMessage> wrapper, MqttSession mqttSession, MqttBrokerContext brokerContext) {
+    public Mono<Void> handle(MqttMessageContext<MqttMessage> messageContext, MqttSession mqttSession, MqttBrokerContext brokerContext) {
         mqttSession.onRecPubRespMessage();
 
-        MqttMessage message = wrapper.getMessage();
+        MqttMessage message = messageContext.getMessage();
         MqttMessageIdVariableHeader variableHeader = (MqttMessageIdVariableHeader) message.variableHeader();
         int messageId = variableHeader.messageId();
         return Mono.fromRunnable(() -> Optional.ofNullable(brokerContext.getRetryService().getRetry(mqttSession.generateUuid(MqttMessageType.PUBREL, messageId))).ifPresent(Retry::cancel));

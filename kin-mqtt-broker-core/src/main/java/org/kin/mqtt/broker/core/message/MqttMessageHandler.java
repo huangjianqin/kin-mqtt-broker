@@ -18,12 +18,12 @@ public interface MqttMessageHandler<M extends MqttMessage> {
     /**
      * mqtt消息处理逻辑
      *
-     * @param wrapper       mqtt message wrapper
-     * @param mqttSession   mqtt session
-     * @param brokerContext mqtt broker brokerContext
+     * @param messageContext mqtt message context
+     * @param mqttSession    mqtt session
+     * @param brokerContext  mqtt broker brokerContext
      * @return complete signal
      */
-    Mono<Void> handle(MqttMessageWrapper<M> wrapper, MqttSession mqttSession, MqttBrokerContext brokerContext);
+    Mono<Void> handle(MqttMessageContext<M> messageContext, MqttSession mqttSession, MqttBrokerContext brokerContext);
 
     /**
      * 获取该handler能处理额mqtt消息类型

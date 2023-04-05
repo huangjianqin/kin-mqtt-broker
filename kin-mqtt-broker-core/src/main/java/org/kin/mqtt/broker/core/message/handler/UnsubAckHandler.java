@@ -4,7 +4,7 @@ import io.netty.handler.codec.mqtt.MqttMessageType;
 import io.netty.handler.codec.mqtt.MqttUnsubAckMessage;
 import org.kin.mqtt.broker.core.MqttBrokerContext;
 import org.kin.mqtt.broker.core.MqttSession;
-import org.kin.mqtt.broker.core.message.MqttMessageWrapper;
+import org.kin.mqtt.broker.core.message.MqttMessageContext;
 import reactor.core.publisher.Mono;
 
 import javax.annotation.Nonnull;
@@ -17,7 +17,7 @@ import javax.annotation.Nonnull;
  */
 public class UnsubAckHandler extends AbstractMqttMessageHandler<MqttUnsubAckMessage> {
     @Override
-    public Mono<Void> handle(MqttMessageWrapper<MqttUnsubAckMessage> wrapper, MqttSession mqttSession, MqttBrokerContext brokerContext) {
+    public Mono<Void> handle(MqttMessageContext<MqttUnsubAckMessage> messageContext, MqttSession mqttSession, MqttBrokerContext brokerContext) {
         //暂时do nothing
         return Mono.empty();
     }

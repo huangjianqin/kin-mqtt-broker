@@ -9,8 +9,8 @@ import io.netty.util.Timeout;
 import org.jctools.maps.NonBlockingHashMap;
 import org.jctools.maps.NonBlockingHashSet;
 import org.kin.mqtt.broker.cluster.event.SubscriptionsRemoveEvent;
+import org.kin.mqtt.broker.core.message.MqttMessageContext;
 import org.kin.mqtt.broker.core.message.MqttMessageUtils;
-import org.kin.mqtt.broker.core.message.MqttMessageWrapper;
 import org.kin.mqtt.broker.core.message.MqttQos2PubMessage;
 import org.kin.mqtt.broker.core.topic.TopicManager;
 import org.kin.mqtt.broker.core.topic.TopicSubscription;
@@ -252,19 +252,19 @@ public class MqttSession {
     /**
      * 缓存qos2消息
      *
-     * @param messageId 消息id
-     * @param wrapper   mqtt publish message wrapper
+     * @param messageId      消息id
+     * @param messageContext mqtt publish message context
      * @return complete signal
      */
-    public Mono<Void> cacheQos2Message(int messageId, MqttMessageWrapper<MqttPublishMessage> wrapper) {
+    public Mono<Void> cacheQos2Message(int messageId, MqttMessageContext<MqttPublishMessage> messageContext) {
         return Mono.fromRunnable(() -> {
-            long expireTimeMs = wrapper.getExpireTimeMs();
+            long expireTimeMs = messageContext.getExpireTimeMs();
             Timeout expireTimeout = null;
             if (expireTimeMs > 0) {
                 HashedWheelTimer bsTimer = brokerContext.getBsTimer();
                 expireTimeout = bsTimer.newTimeout(t -> removeQos2Message(messageId), expireTimeMs, TimeUnit.MILLISECONDS);
             }
-            qos2MessageCache.put(messageId, new MqttQos2PubMessage(wrapper, expireTimeout));
+            qos2MessageCache.put(messageId, new MqttQos2PubMessage(messageContext, expireTimeout));
         });
     }
 
@@ -285,11 +285,11 @@ public class MqttSession {
      * @return 缓存的qos2消息
      */
     @Nullable
-    public MqttMessageWrapper<MqttPublishMessage> removeQos2Message(int messageId) {
+    public MqttMessageContext<MqttPublishMessage> removeQos2Message(int messageId) {
         MqttQos2PubMessage qos2PubMessage = qos2MessageCache.remove(messageId);
         if (Objects.nonNull(qos2PubMessage)) {
             qos2PubMessage.cancelExpireTimeout();
-            return qos2PubMessage.getWrapper();
+            return qos2PubMessage.getMessageContext();
         }
         return null;
     }
