@@ -80,15 +80,17 @@ public class MqttMessageDispatcher {
      */
     private void dispatchClientMessage(MqttMessageContext<? extends MqttMessage> messageContext, MqttSession mqttSession, MqttBrokerContext brokerContext) {
         String clientId = mqttSession.clientId;
-        if (!mqttSession.isChannelActive() || mqttSession.isOffline()) {
+        //handle mqtt message
+        MqttMessage mqttMessage = messageContext.getMessage();
+        if (StringUtils.isBlank(clientId) && !(mqttMessage instanceof MqttConnectMessage)) {
             //session is inactive or unregister, so force close
-            log.warn("session '{}' is unregister, but still receive mqtt message, so close channel", clientId);
+            //非connect验证, 就发送其他mqtt消息, 直接强制close channel
+            log.warn("session '{}' is unregister, but receive non mqtt connect message, so close channel", clientId);
             mqttSession.close().subscribe();
             return;
         }
 
-        //handle mqtt message
-        MqttMessage mqttMessage = messageContext.getMessage();
+
         if (mqttMessage.decoderResult().isFailure()) {
             //mqtt message decode failure, so force close
             log.warn("mqtt message from session '{}' decode failure, {}", clientId, mqttMessage);
