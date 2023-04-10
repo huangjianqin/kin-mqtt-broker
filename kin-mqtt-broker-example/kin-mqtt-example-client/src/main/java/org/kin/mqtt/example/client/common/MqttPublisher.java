@@ -44,7 +44,7 @@ public class MqttPublisher {
                 message.setQos(qos);
                 sampleClient.publish(topic, message);
                 System.out.printf(System.currentTimeMillis() + ": message %d published\r\n", i);
-                Thread.sleep(5_000);
+                Thread.sleep(1_000);
             }
 
             sampleClient.disconnect();
