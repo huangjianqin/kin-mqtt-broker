@@ -714,7 +714,7 @@ public class MqttSession {
      * 不精准, 这里是处理publish消息时做检查, 那么还存在可能部分消息解析好但等待处理
      */
     public void checkPubMessageRate() {
-        if (Objects.isNull(messageRateLimiter) || !messageRateLimiter.tryAcquire()) {
+        if (Objects.isNull(messageRateLimiter) || messageRateLimiter.tryAcquire()) {
             return;
         }
 
