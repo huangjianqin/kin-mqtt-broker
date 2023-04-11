@@ -34,6 +34,7 @@ import org.kin.transport.netty.ServerTransport;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import reactor.core.publisher.Mono;
+import reactor.netty.Connection;
 import reactor.netty.DisposableServer;
 import reactor.netty.resources.LoopResources;
 import reactor.netty.tcp.TcpServer;
@@ -247,18 +248,10 @@ public class MqttBrokerBootstrap extends ServerTransport<MqttBrokerBootstrap> {
 //                .wiretap(false)
                 .metrics(true)
                 .runOn(loopResources)
+                .childObserve(MqttConnectionObserver.create(config))
                 .doOnConnection(connection -> {
-                    int connBytesPerSec = config.getConnBytesPerSec();
-                    if (connBytesPerSec > 0) {
-                        //流量整形
-                        connection.addHandlerLast(new ChannelTrafficShapingHandler(0, connBytesPerSec));
-                    }
-
-                    connection
-                            //mqtt decoder encoder
-                            .addHandlerLast(new MqttDecoder(config.getMessageMaxSize()))
-                            .addHandlerLast(MqttEncoder.INSTANCE)
-                            .addHandlerLast(MqttBrokerHandler.DEFAULT);
+                    initPreHandlers(connection);
+                    initPostHandlers(connection);
                     onMqttClientConnected(brokerContext, new MqttSession(brokerContext, connection));
                 });
 
@@ -290,23 +283,18 @@ public class MqttBrokerBootstrap extends ServerTransport<MqttBrokerBootstrap> {
                     .option(ChannelOption.ALLOCATOR, PooledByteBufAllocator.DEFAULT)
                     .metrics(true)
                     .runOn(loopResources)
+                    .childObserve(MqttConnectionObserver.create(config))
                     .doOnConnection(connection -> {
-                        int connBytesPerSec = config.getConnBytesPerSec();
-                        if (connBytesPerSec > 0) {
-                            //流量整形
-                            connection.addHandlerLast(new ChannelTrafficShapingHandler(0, connBytesPerSec));
-                        }
+                        initPreHandlers(connection);
 
-                        connection
-                                //websocket相关
-                                .addHandlerLast(new HttpServerCodec())
+                        //websocket相关
+                        connection.addHandlerLast(new HttpServerCodec())
                                 .addHandlerLast(new HttpObjectAggregator(65536))
                                 .addHandlerLast(new WebSocketServerProtocolHandler(config.getWsPath(), "mqtt, mqttv3.1, mqttv3.1.1"))
                                 .addHandlerLast(new WsFrame2ByteBufDecoder())
-                                .addHandlerLast(new ByteBuf2WsFrameEncoder())
-                                //mqtt decoder encoder
-                                .addHandlerLast(new MqttDecoder(config.getMessageMaxSize()))
-                                .addHandlerLast(MqttEncoder.INSTANCE);
+                                .addHandlerLast(new ByteBuf2WsFrameEncoder());
+
+                        initPostHandlers(connection);
                         onMqttClientConnected(brokerContext, new MqttSession(brokerContext, connection));
                     });
 
@@ -332,6 +320,31 @@ public class MqttBrokerBootstrap extends ServerTransport<MqttBrokerBootstrap> {
             loopResources.dispose();
             brokerContext.close();
         });
+    }
+
+    /**
+     * 初始化前置netty channel handler
+     *
+     * @param connection 连接
+     */
+    private void initPreHandlers(Connection connection) {
+        int connBytesPerSec = config.getConnBytesPerSec();
+        if (connBytesPerSec > 0) {
+            //流量整形
+            connection.addHandlerLast(new ChannelTrafficShapingHandler(0, connBytesPerSec));
+        }
+    }
+
+    /**
+     * 初始化后置netty channel handler
+     *
+     * @param connection 连接
+     */
+    private void initPostHandlers(Connection connection) {
+        //mqtt decoder encoder
+        connection.addHandlerLast(new MqttDecoder(config.getMessageMaxSize()))
+                .addHandlerLast(MqttEncoder.INSTANCE)
+                .addHandlerLast(MqttBrokerHandler.DEFAULT);
     }
 
     /**
