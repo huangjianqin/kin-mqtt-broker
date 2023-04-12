@@ -311,8 +311,8 @@ public class MqttMessageUtils {
      *
      * @return conn ack消息
      */
-    public static MqttConnAckMessage createConnAck(MqttConnectReturnCode returnCode, byte version) {
-        return createConnAck(returnCode, version, null);
+    public static MqttConnAckMessage createConnAck(MqttConnectReturnCode returnCode, byte version, boolean sessionPresent) {
+        return createConnAck(returnCode, version, sessionPresent, null);
     }
 
     /**
@@ -320,7 +320,7 @@ public class MqttMessageUtils {
      *
      * @return conn ack消息
      */
-    public static MqttConnAckMessage createConnAck(MqttConnectReturnCode returnCode, byte version, @Nullable MqttBrokerConfig brokerConfig) {
+    public static MqttConnAckMessage createConnAck(MqttConnectReturnCode returnCode, byte version, boolean sessionPresent, @Nullable MqttBrokerConfig brokerConfig) {
 
         MqttProperties properties = MqttProperties.NO_PROPERTIES;
         if (MqttVersion.MQTT_5.protocolLevel() == version) {

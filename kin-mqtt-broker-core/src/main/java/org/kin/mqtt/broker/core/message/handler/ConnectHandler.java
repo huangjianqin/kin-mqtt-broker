@@ -45,7 +45,7 @@ public class ConnectHandler extends AbstractMqttMessageHandler<MqttConnectMessag
         MqttSession oldMqttSession = sessionManager.get(clientId);
         if (oldMqttSession != null && oldMqttSession.isOnline()) {
             //已登录, 直接reject
-            return rejectConnect(mqttSession, mqttVersion, MqttConnectReturnCode.CONNECTION_REFUSED_IDENTIFIER_REJECTED);
+            return rejectConnect(mqttSession, mqttVersion, MqttConnectReturnCode.CONNECTION_REFUSED_IDENTIFIER_REJECTED, true);
         }
 
         //protocol version support
@@ -53,7 +53,7 @@ public class ConnectHandler extends AbstractMqttMessageHandler<MqttConnectMessag
                 MqttVersion.MQTT_3_1_1.protocolLevel() != mqttVersion
                 && MqttVersion.MQTT_5.protocolLevel() != mqttVersion) {
             //仅支持3.1, 3.1.1, 5
-            return rejectConnect(mqttSession, mqttVersion, MqttConnectReturnCode.CONNECTION_REFUSED_UNACCEPTABLE_PROTOCOL_VERSION);
+            return rejectConnect(mqttSession, mqttVersion, MqttConnectReturnCode.CONNECTION_REFUSED_UNACCEPTABLE_PROTOCOL_VERSION, false);
         }
 
         //auth
@@ -62,7 +62,7 @@ public class ConnectHandler extends AbstractMqttMessageHandler<MqttConnectMessag
                     if (authResult) {
                         return handle1(oldMqttSession, mqttSession, brokerContext, variableHeader, payload, clientId, mqttVersion);
                     } else {
-                        return rejectConnect(mqttSession, mqttVersion, MqttConnectReturnCode.CONNECTION_REFUSED_BAD_USER_NAME_OR_PASSWORD);
+                        return rejectConnect(mqttSession, mqttVersion, MqttConnectReturnCode.CONNECTION_REFUSED_BAD_USER_NAME_OR_PASSWORD, false);
                     }
                 });
     }
@@ -70,6 +70,7 @@ public class ConnectHandler extends AbstractMqttMessageHandler<MqttConnectMessag
     private Mono<Void> handle1(MqttSession oldMqttSession, MqttSession mqttSession, MqttBrokerContext brokerContext,
                                MqttConnectVariableHeader variableHeader, MqttConnectPayload payload,
                                String clientId, byte mqttVersion) {
+        boolean sessionPresent = false;
         if (variableHeader.isCleanSession()) {
             //客户端和服务端必须丢弃任何已存在的会话, 并开始一个新的会话
             if (Objects.nonNull(oldMqttSession)) {
@@ -84,6 +85,7 @@ public class ConnectHandler extends AbstractMqttMessageHandler<MqttConnectMessag
                 oldMqttSession.onReconnect(mqttSession, variableHeader, payload);
                 //替换
                 mqttSession = oldMqttSession;
+                sessionPresent = true;
             } else {
                 //更新mqtt session属性
                 mqttSession.onConnect(clientId, variableHeader, payload);
@@ -91,7 +93,7 @@ public class ConnectHandler extends AbstractMqttMessageHandler<MqttConnectMessag
         }
 
         MqttSession finalMqttSession = mqttSession;
-        return mqttSession.sendMessage(MqttMessageUtils.createConnAck(MqttConnectReturnCode.CONNECTION_ACCEPTED, mqttVersion), false)
+        return mqttSession.sendMessage(MqttMessageUtils.createConnAck(MqttConnectReturnCode.CONNECTION_ACCEPTED, mqttVersion, sessionPresent, brokerContext.getBrokerConfig()), false)
                 .then(sendOfflineMessage(brokerContext.getMessageStore(), mqttSession))
                 .then(Mono.fromRunnable(() -> brokerContext.broadcastEvent(new MqttClientConnEvent(finalMqttSession))));
     }
@@ -104,8 +106,8 @@ public class ConnectHandler extends AbstractMqttMessageHandler<MqttConnectMessag
      * @param mqttVersion mqtt版本
      * @return complete signal
      */
-    private Mono<Void> rejectConnect(MqttSession mqttSession, byte mqttVersion, MqttConnectReturnCode returnCode) {
-        return mqttSession.sendMessage(MqttMessageUtils.createConnAck(returnCode, mqttVersion), false).then(mqttSession.close());
+    private Mono<Void> rejectConnect(MqttSession mqttSession, byte mqttVersion, MqttConnectReturnCode returnCode, boolean sessionPresent) {
+        return mqttSession.sendMessage(MqttMessageUtils.createConnAck(returnCode, mqttVersion, sessionPresent), false).then(mqttSession.close());
     }
 
     /**

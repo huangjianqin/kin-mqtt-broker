@@ -62,7 +62,7 @@ public class MqttSession {
     private long connectTime;
     /** 连接断开时, 是否是清除会话 */
     private boolean cleanSession;
-    /** 会话过期时间(秒) */
+    /** 会话过期时间(秒), 0xFFFFFFFF即为永不过期 */
     private int sessionExpiryInterval;
     /** mqtt client user name */
     private String userName;
@@ -645,7 +645,7 @@ public class MqttSession {
      * @return session是否过期
      */
     public boolean isSessionExpiry() {
-        return isOffline() && System.currentTimeMillis() >= connectTime + TimeUnit.SECONDS.toMillis(sessionExpiryInterval);
+        return isOffline() && ((sessionExpiryInterval == 0xFFFFFFFF) || (System.currentTimeMillis() >= connectTime + TimeUnit.SECONDS.toMillis(sessionExpiryInterval)));
     }
 
     /**
