@@ -248,7 +248,7 @@ public class MqttBrokerBootstrap extends ServerTransport<MqttBrokerBootstrap> {
 //                .wiretap(false)
                 .metrics(true)
                 .runOn(loopResources)
-                .childObserve(MqttConnectionObserver.create(config))
+                .doOnChannelInit(MqttChannelInitializer.create(config))
                 .doOnConnection(connection -> {
                     initPreHandlers(connection);
                     initPostHandlers(connection);
@@ -283,7 +283,7 @@ public class MqttBrokerBootstrap extends ServerTransport<MqttBrokerBootstrap> {
                     .option(ChannelOption.ALLOCATOR, PooledByteBufAllocator.DEFAULT)
                     .metrics(true)
                     .runOn(loopResources)
-                    .childObserve(MqttConnectionObserver.create(config))
+                    .doOnChannelInit(MqttChannelInitializer.create(config))
                     .doOnConnection(connection -> {
                         initPreHandlers(connection);
 
