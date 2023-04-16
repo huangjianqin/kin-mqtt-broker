@@ -142,7 +142,7 @@ public class MqttSession {
             //待发送的mqtt消息
             MqttMessage reply = getReplyMqttMessage(mqttMessage);
 
-            Runnable retryTask = () -> send(Mono.just(reply)).subscribe();
+            Runnable retryTask = () -> sendMessage0(Mono.just(reply)).subscribe();
             Runnable cleaner = () -> ReactorNetty.safeRelease(reply);
 
             RetryService retryService = brokerContext.getRetryService();
@@ -150,11 +150,11 @@ public class MqttSession {
             long uuid = generateUuid(mqttMessageType, MqttMessageHelper.getMessageId(mqttMessage));
             retryService.execRetry(new PublishRetry(uuid, retryTask, cleaner, retryService));
 
-            return send(Mono.just(mqttMessage))
+            return sendMessage0(Mono.just(mqttMessage))
                     //保证write消息过程遇到异常, 也能释放receiveNum
                     .doOnError(t -> onRecPubRespMessage());
         } else {
-            return send(Mono.just(mqttMessage));
+            return sendMessage0(Mono.just(mqttMessage));
         }
     }
 
@@ -207,7 +207,7 @@ public class MqttSession {
      * @param messageMono mqtt消息
      * @return complete signal
      */
-    private Mono<Void> send(Mono<MqttMessage> messageMono) {
+    private Mono<Void> sendMessage0(Mono<MqttMessage> messageMono) {
         if (isChannelActive() && isChannelWritable()) {
             return connection.outbound().sendObject(messageMono).then();
         } else {

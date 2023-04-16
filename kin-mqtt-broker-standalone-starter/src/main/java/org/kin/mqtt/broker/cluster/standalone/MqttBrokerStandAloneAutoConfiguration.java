@@ -10,6 +10,7 @@ import org.kin.mqtt.broker.cluster.BrokerManager;
 import org.kin.mqtt.broker.core.Interceptor;
 import org.kin.mqtt.broker.core.MqttBroker;
 import org.kin.mqtt.broker.core.MqttBrokerBootstrap;
+import org.kin.mqtt.broker.core.MqttMessageSender;
 import org.kin.mqtt.broker.store.MqttMessageStore;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
@@ -74,5 +75,10 @@ public class MqttBrokerStandAloneAutoConfiguration {
         }
 
         return bootstrap.start();
+    }
+
+    @Bean
+    public MqttMessageSender mqttMessageSender(@Autowired MqttBroker mqttBroker) {
+        return mqttBroker.getMqttMessageSender();
     }
 }

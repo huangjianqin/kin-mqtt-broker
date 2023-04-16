@@ -15,6 +15,8 @@ import java.util.List;
 public class MqttBroker implements Closeable {
     /** mqtt broker context */
     private final MqttBrokerContext context;
+    /** mqtt message sender */
+    private final MqttMessageSender mqttMessageSender;
     /** mqtt broker disposables */
     private final List<Disposable> disposables = new LinkedList<>();
 
@@ -25,6 +27,7 @@ public class MqttBroker implements Closeable {
      */
     public MqttBroker(MqttBrokerContext context, List<Mono<DisposableServer>> disposableServerMonoList, Runnable resCleaner) {
         this.context = context;
+        this.mqttMessageSender = new MqttMessageSender(context);
         for (Mono<DisposableServer> disposableServerMono : disposableServerMonoList) {
             disposableServerMono.doOnNext(d -> {
                 synchronized (MqttBroker.this) {
@@ -48,5 +51,9 @@ public class MqttBroker implements Closeable {
     //getter
     public MqttBrokerContext getContext() {
         return context;
+    }
+
+    public MqttMessageSender getMqttMessageSender() {
+        return mqttMessageSender;
     }
 }

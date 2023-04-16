@@ -41,8 +41,13 @@ public class MqttSubscriber {
             System.out.println(broker + " connected ");
             System.out.println(broker + " start subscribe topic " + topic);
             //subscribe(String,int,IMqttMessageListener)会死循环
-            client.subscribe(new MqttSubscription[]{new MqttSubscription(topic, 2)}, new IMqttMessageListener[]{
-                    (s, mqttMessage) -> System.out.printf(System.currentTimeMillis() + ": receive from broker '%s': %d : %s : %s\r\n", broker, mqttMessage.getId(), s, new String(mqttMessage.getPayload(), StandardCharsets.UTF_8))});
+            IMqttMessageListener[] listeners = {
+                    (s, mqttMessage) -> System.out.printf(System.currentTimeMillis() + ": receive from broker '%s': %d : %s : %s\r\n",
+                            broker, mqttMessage.getId(), s, new String(mqttMessage.getPayload(), StandardCharsets.UTF_8))
+            };
+            client.subscribe(new MqttSubscription[]{new MqttSubscription(topic, 2)}, listeners);
+            client.subscribe(new MqttSubscription[]{new MqttSubscription("broker/loop", 1)}, listeners);
+
             System.out.println(broker + " subscribe success");
 
             latch.await();
