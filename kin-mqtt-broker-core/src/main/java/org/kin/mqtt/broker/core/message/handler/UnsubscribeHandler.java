@@ -5,7 +5,7 @@ import io.netty.handler.codec.mqtt.MqttUnsubscribeMessage;
 import org.kin.mqtt.broker.core.MqttBrokerContext;
 import org.kin.mqtt.broker.core.MqttSession;
 import org.kin.mqtt.broker.core.message.MqttMessageContext;
-import org.kin.mqtt.broker.core.message.MqttMessageUtils;
+import org.kin.mqtt.broker.core.message.MqttMessageHelper;
 import org.kin.mqtt.broker.core.topic.TopicManager;
 import org.kin.mqtt.broker.core.topic.TopicSubscription;
 import reactor.core.publisher.Mono;
@@ -27,7 +27,7 @@ public class UnsubscribeHandler extends AbstractMqttMessageHandler<MqttUnsubscri
                     .stream()
                     .map(topic -> TopicSubscription.forRemove(topic, mqttSession))
                     .forEach(topicManager::removeSubscription);
-        }).then(mqttSession.sendMessage(MqttMessageUtils.createUnsubAck(message.variableHeader().messageId()), false));
+        }).then(mqttSession.sendMessage(MqttMessageHelper.createUnsubAck(message.variableHeader().messageId()), false));
     }
 
     @Nonnull

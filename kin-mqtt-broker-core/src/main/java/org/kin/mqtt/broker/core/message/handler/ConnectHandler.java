@@ -6,7 +6,7 @@ import org.kin.mqtt.broker.core.MqttBrokerContext;
 import org.kin.mqtt.broker.core.MqttSession;
 import org.kin.mqtt.broker.core.MqttSessionManager;
 import org.kin.mqtt.broker.core.message.MqttMessageContext;
-import org.kin.mqtt.broker.core.message.MqttMessageUtils;
+import org.kin.mqtt.broker.core.message.MqttMessageHelper;
 import org.kin.mqtt.broker.event.MqttClientConnEvent;
 import org.kin.mqtt.broker.store.MqttMessageStore;
 import org.slf4j.Logger;
@@ -93,7 +93,7 @@ public class ConnectHandler extends AbstractMqttMessageHandler<MqttConnectMessag
         }
 
         MqttSession finalMqttSession = mqttSession;
-        return mqttSession.sendMessage(MqttMessageUtils.createConnAck(MqttConnectReturnCode.CONNECTION_ACCEPTED, mqttVersion, sessionPresent, brokerContext.getBrokerConfig()), false)
+        return mqttSession.sendMessage(MqttMessageHelper.createConnAck(MqttConnectReturnCode.CONNECTION_ACCEPTED, mqttVersion, sessionPresent, brokerContext.getBrokerConfig()), false)
                 .then(sendOfflineMessage(brokerContext.getMessageStore(), mqttSession))
                 .then(Mono.fromRunnable(() -> brokerContext.broadcastEvent(new MqttClientConnEvent(finalMqttSession))));
     }
@@ -107,7 +107,7 @@ public class ConnectHandler extends AbstractMqttMessageHandler<MqttConnectMessag
      * @return complete signal
      */
     private Mono<Void> rejectConnect(MqttSession mqttSession, byte mqttVersion, MqttConnectReturnCode returnCode, boolean sessionPresent) {
-        return mqttSession.sendMessage(MqttMessageUtils.createConnAck(returnCode, mqttVersion, sessionPresent), false).then(mqttSession.close());
+        return mqttSession.sendMessage(MqttMessageHelper.createConnAck(returnCode, mqttVersion, sessionPresent), false).then(mqttSession.close());
     }
 
     /**
@@ -123,7 +123,7 @@ public class ConnectHandler extends AbstractMqttMessageHandler<MqttConnectMessag
                     log.error("", t);
                     return Flux.empty();
                 })
-                .flatMap(replica -> mqttSession.sendMessage(MqttMessageUtils.createPublish(mqttSession, replica), replica.getQos() > 0))
+                .flatMap(replica -> mqttSession.sendMessage(MqttMessageHelper.createPublish(mqttSession, replica), replica.getQos() > 0))
                 .then();
     }
 

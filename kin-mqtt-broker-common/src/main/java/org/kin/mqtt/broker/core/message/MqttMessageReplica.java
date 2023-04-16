@@ -3,6 +3,7 @@ package org.kin.mqtt.broker.core.message;
 import com.fasterxml.jackson.annotation.JsonInclude;
 
 import java.io.Serializable;
+import java.util.Arrays;
 import java.util.Map;
 
 /**
@@ -16,6 +17,8 @@ import java.util.Map;
 public class MqttMessageReplica implements Serializable {
     private static final long serialVersionUID = 8598710380202474132L;
 
+    /** broker标识 */
+    private String brokerId;
     /** 发送该mqtt消息的mqtt client */
     private String clientId;
     /** mqtt消息topic */
@@ -26,8 +29,10 @@ public class MqttMessageReplica implements Serializable {
     private boolean retain;
     /** mqtt消息payload */
     private byte[] payload;
-    /** 接收mqtt消息时间戳 */
-    private long timestamp;
+    /** 接收mqtt消息时间戳(毫秒) */
+    private long recTime;
+    /** 过期时间(毫秒) */
+    private long expireTime;
     /** mqtt消息可变头属性 */
     private Map<String, String> properties;
 
@@ -41,6 +46,11 @@ public class MqttMessageReplica implements Serializable {
     /** builder **/
     public static class Builder {
         private final MqttMessageReplica mqttMessageReplica = new MqttMessageReplica();
+
+        public Builder brokerId(String brokerId) {
+            mqttMessageReplica.brokerId = brokerId;
+            return this;
+        }
 
         public Builder clientId(String clientId) {
             mqttMessageReplica.clientId = clientId;
@@ -67,13 +77,18 @@ public class MqttMessageReplica implements Serializable {
             return this;
         }
 
-        public Builder timestamp(long timestamp) {
-            mqttMessageReplica.timestamp = timestamp;
+        public Builder recTime(long recTime) {
+            mqttMessageReplica.recTime = recTime;
             return this;
         }
 
         public Builder properties(Map<String, String> properties) {
             mqttMessageReplica.properties = properties;
+            return this;
+        }
+
+        public Builder expireTime(long expireTime) {
+            mqttMessageReplica.expireTime = expireTime;
             return this;
         }
 
@@ -83,6 +98,14 @@ public class MqttMessageReplica implements Serializable {
     }
 
     //setter && getter
+    public String getBrokerId() {
+        return brokerId;
+    }
+
+    public void setBrokerId(String brokerId) {
+        this.brokerId = brokerId;
+    }
+
     public String getClientId() {
         return clientId;
     }
@@ -123,12 +146,12 @@ public class MqttMessageReplica implements Serializable {
         this.payload = payload;
     }
 
-    public long getTimestamp() {
-        return timestamp;
+    public long getRecTime() {
+        return recTime;
     }
 
-    public void setTimestamp(long timestamp) {
-        this.timestamp = timestamp;
+    public void setRecTime(long recTime) {
+        this.recTime = recTime;
     }
 
     public Map<String, String> getProperties() {
@@ -139,14 +162,25 @@ public class MqttMessageReplica implements Serializable {
         this.properties = properties;
     }
 
+    public long getExpireTime() {
+        return expireTime;
+    }
+
+    public void setExpireTime(long expireTime) {
+        this.expireTime = expireTime;
+    }
+
     @Override
     public String toString() {
         return "MqttMessageReplica{" +
+                "brokerId='" + brokerId + '\'' +
                 "clientId='" + clientId + '\'' +
                 ", topic='" + topic + '\'' +
                 ", qos=" + qos +
                 ", retain=" + retain +
-                ", timestamp=" + timestamp +
+                ", payload=" + Arrays.toString(payload) +
+                ", timestamp=" + recTime +
+                ", expireTime=" + expireTime +
                 ", properties=" + properties +
                 '}';
     }

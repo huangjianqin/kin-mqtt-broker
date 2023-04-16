@@ -6,9 +6,8 @@ import io.netty.handler.codec.mqtt.MqttPublishMessage;
 import io.netty.handler.codec.mqtt.MqttQoS;
 import org.kin.framework.utils.JSON;
 import org.kin.mqtt.broker.core.MqttBrokerContext;
-import org.kin.mqtt.broker.core.VirtualMqttSession;
 import org.kin.mqtt.broker.core.message.MqttMessageContext;
-import org.kin.mqtt.broker.core.message.MqttMessageUtils;
+import org.kin.mqtt.broker.core.message.MqttMessageHelper;
 
 import java.util.Map;
 
@@ -28,11 +27,10 @@ public abstract class AbstractSysTopicPublisher {
     protected void publishSysMessage(MqttBrokerContext brokerContext, String topic, Map<String, Object> data) {
         ByteBuf buffer = PooledByteBufAllocator.DEFAULT.buffer();
         buffer.writeBytes(JSON.writeBytes(data));
-        MqttPublishMessage message = MqttMessageUtils.createPublish(false, MqttQoS.AT_MOST_ONCE,
+        MqttPublishMessage message = MqttMessageHelper.createPublish(false, MqttQoS.AT_MOST_ONCE,
                 true, 0,
                 topic,
                 buffer);
-        brokerContext.getDispatcher().dispatch(MqttMessageContext.common(message),
-                new VirtualMqttSession(brokerContext, brokerContext.getBrokerClientId()), brokerContext);
+        brokerContext.getDispatcher().dispatch(MqttMessageContext.common(message, brokerContext.getBrokerId(), brokerContext.getBrokerClientId()), brokerContext);
     }
 }

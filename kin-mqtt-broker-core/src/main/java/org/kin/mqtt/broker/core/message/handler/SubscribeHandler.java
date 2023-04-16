@@ -11,7 +11,7 @@ import org.kin.mqtt.broker.cluster.event.SubscriptionsAddEvent;
 import org.kin.mqtt.broker.core.MqttBrokerContext;
 import org.kin.mqtt.broker.core.MqttSession;
 import org.kin.mqtt.broker.core.message.MqttMessageContext;
-import org.kin.mqtt.broker.core.message.MqttMessageUtils;
+import org.kin.mqtt.broker.core.message.MqttMessageHelper;
 import org.kin.mqtt.broker.core.topic.TopicManager;
 import org.kin.mqtt.broker.core.topic.TopicSubscription;
 import org.kin.mqtt.broker.event.MqttSubscribeEvent;
@@ -72,7 +72,7 @@ public class SubscribeHandler extends AbstractMqttMessageHandler<MqttSubscribeMe
                     Flux<Void> sendRetainFlux = Flux.fromIterable(topic2RawTs.entrySet())
                             .flatMap(entry -> sendRetainMessage(messageStore, mqttSession, finalFilteredTopics, entry.getKey(), entry.getValue()));
                     //response sub ack
-                    return Mono.from(mqttSession.sendMessage(MqttMessageUtils.createSubAck(messageId, respQosList), false))
+                    return Mono.from(mqttSession.sendMessage(MqttMessageHelper.createSubAck(messageId, respQosList), false))
                             //send retain message
                             .thenEmpty(sendRetainFlux)
                             //broadcast mqtt event
@@ -133,7 +133,7 @@ public class SubscribeHandler extends AbstractMqttMessageHandler<MqttSubscribeMe
                     log.error("", t);
                     return Flux.empty();
                 })
-                .flatMap(retainMessage -> mqttSession.sendMessage(MqttMessageUtils.createPublish(mqttSession, retainMessage), retainMessage.getQos() > 0));
+                .flatMap(retainMessage -> mqttSession.sendMessage(MqttMessageHelper.createPublish(mqttSession, retainMessage), retainMessage.getQos() > 0));
     }
 
     @Nonnull

@@ -24,7 +24,7 @@ public class MqttDelaySubscriber {
         });
 
         Thread.sleep(30_000);
-        latch.await();
+        latch.countDown();
         Thread.sleep(1_000);
     }
 }

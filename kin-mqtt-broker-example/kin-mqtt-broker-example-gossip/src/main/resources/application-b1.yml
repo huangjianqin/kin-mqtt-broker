@@ -31,3 +31,7 @@ management:
   trace:
     http:
       enabled: false
+
+spring:
+  netty:
+    leak-detection: paranoid

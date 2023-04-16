@@ -10,7 +10,7 @@ import org.jctools.maps.NonBlockingHashMap;
 import org.jctools.maps.NonBlockingHashSet;
 import org.kin.mqtt.broker.cluster.event.SubscriptionsRemoveEvent;
 import org.kin.mqtt.broker.core.message.MqttMessageContext;
-import org.kin.mqtt.broker.core.message.MqttMessageUtils;
+import org.kin.mqtt.broker.core.message.MqttMessageHelper;
 import org.kin.mqtt.broker.core.message.MqttQos2PubMessage;
 import org.kin.mqtt.broker.core.topic.TopicManager;
 import org.kin.mqtt.broker.core.topic.TopicSubscription;
@@ -90,8 +90,6 @@ public class MqttSession {
     private Disposable delayHandleWillDisposable;
     /** key -> topic别名alias, value -> 真实topic */
     private NonBlockingHashMap<Integer, String> alias2TopicName;
-    /** 延迟发布publish消息的{@link Timeout} */
-    private NonBlockingHashSet<Timeout> delayPubTimeouts;
     /** 单个连接消息速率整型 */
     private RateLimiter messageRateLimiter;
 
@@ -149,7 +147,7 @@ public class MqttSession {
 
             RetryService retryService = brokerContext.getRetryService();
             //开启retry task, 最大重试次数为5, 间隔3s
-            long uuid = generateUuid(mqttMessageType, MqttMessageUtils.getMessageId(mqttMessage));
+            long uuid = generateUuid(mqttMessageType, MqttMessageHelper.getMessageId(mqttMessage));
             retryService.execRetry(new PublishRetry(uuid, retryTask, cleaner, retryService));
 
             return send(Mono.just(mqttMessage))
@@ -258,7 +256,7 @@ public class MqttSession {
      */
     public Mono<Void> cacheQos2Message(int messageId, MqttMessageContext<MqttPublishMessage> messageContext) {
         return Mono.fromRunnable(() -> {
-            long expireTimeMs = messageContext.getExpireTimeMs();
+            long expireTimeMs = messageContext.getExpireTime();
             Timeout expireTimeout = null;
             if (expireTimeMs > 0) {
                 HashedWheelTimer bsTimer = brokerContext.getBsTimer();
@@ -306,13 +304,6 @@ public class MqttSession {
      */
     public boolean isOffline() {
         return status == SessionStatus.OFFLINE;
-    }
-
-    /**
-     * @return 是否是虚拟mqtt session实例, 即来自于集群, 规则引擎触发的mqtt消息处理
-     */
-    public boolean isVirtualSession() {
-        return false;
     }
 
     /**
@@ -369,9 +360,8 @@ public class MqttSession {
         messageIdGenerator = new AtomicInteger();
         qos2MessageCache = new NonBlockingHashMap<>();
         alias2TopicName = new NonBlockingHashMap<>();
-        delayPubTimeouts = new NonBlockingHashSet<>();
         int connMessagePerSec = brokerContext.getBrokerConfig().getConnMessagePerSec();
-        if (!isVirtualSession() && connMessagePerSec > 0) {
+        if (connMessagePerSec > 0) {
             messageRateLimiter = RateLimiter.create(connMessagePerSec);
         }
 
@@ -540,11 +530,6 @@ public class MqttSession {
         //取消订阅
         //!!会清空MqttSession.subscriptions
         brokerContext.getTopicManager().removeAllSubscriptions(this);
-        //取消延迟发布publish消息的task
-        for (Timeout delayPubTimeout : delayPubTimeouts) {
-            delayPubTimeout.cancel();
-        }
-        delayPubTimeouts.clear();
     }
 
     /**
@@ -602,7 +587,7 @@ public class MqttSession {
                     //此时不为null
                     ByteBuf byteBuf = connection.channel().alloc().directBuffer();
                     byteBuf.writeBytes(will.getMessage());
-                    sendMessage(MqttMessageUtils.createPublish(false,
+                    sendMessage(MqttMessageHelper.createPublish(false,
                                     subscription.getQoS(),
                                     will.isRetain(),
                                     subscription.getQoS() == MqttQoS.AT_MOST_ONCE ? 0 : session.nextMessageId(),
@@ -693,20 +678,6 @@ public class MqttSession {
         }
 
         return new HashSet<>(topic2qos.values());
-    }
-
-    /**
-     * 缓存延迟发布publish消息的task
-     */
-    public void addDelayPubTimeout(Timeout timeout) {
-        delayPubTimeouts.add(timeout);
-    }
-
-    /**
-     * 移除延迟发布publish消息的task缓存
-     */
-    public void removeDelayPubTimeout(Timeout timeout) {
-        delayPubTimeouts.remove(timeout);
     }
 
     /**

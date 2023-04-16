@@ -17,8 +17,8 @@ import static io.netty.handler.codec.mqtt.MqttConnectReturnCode.*;
  * @author huangjianqin
  * @date 2022/11/14
  */
-public class MqttMessageUtils {
-    private MqttMessageUtils() {
+public class MqttMessageHelper {
+    private MqttMessageHelper() {
     }
 
     /**
@@ -211,7 +211,7 @@ public class MqttMessageUtils {
      * @return publish消息
      */
     public static MqttPublishMessage createPublish(MqttMessageReplica replica) {
-        return MqttMessageUtils.createPublish(false,
+        return MqttMessageHelper.createPublish(false,
                 MqttQoS.valueOf(replica.getQos()),
                 0,
                 replica.getTopic(),
@@ -225,7 +225,7 @@ public class MqttMessageUtils {
      * @return publish消息
      */
     public static MqttPublishMessage createPublish(MqttMessageReplica replica, String realTopic) {
-        return MqttMessageUtils.createPublish(false,
+        return MqttMessageHelper.createPublish(false,
                 MqttQoS.valueOf(replica.getQos()),
                 0,
                 replica.getTopic(),
@@ -396,17 +396,20 @@ public class MqttMessageUtils {
     /**
      * 将{@link MqttPublishMessage}转换成{@link MqttMessageReplica}
      */
-    public static MqttMessageReplica toReplica(String clientId, MqttPublishMessage message, long timestamp) {
+    public static MqttMessageReplica toReplica(MqttMessageContext<MqttPublishMessage> messageContext) {
+        MqttPublishMessage message = messageContext.getMessage();
         MqttPublishVariableHeader variableHeader = message.variableHeader();
         MqttFixedHeader fixedHeader = message.fixedHeader();
         return MqttMessageReplica.builder()
-                .timestamp(timestamp)
-                .clientId(clientId)
+                .brokerId(messageContext.getBrokerId())
+                .clientId(messageContext.getClientId())
                 .topic(variableHeader.topicName())
                 .setRetain(fixedHeader.isRetain())
                 .qos(fixedHeader.qosLevel().value())
-                .properties(MqttMessageUtils.toStringProperties(variableHeader.properties()))
-                .payload(MqttMessageUtils.copyPublishPayload(message))
+                .properties(MqttMessageHelper.toStringProperties(variableHeader.properties()))
+                .payload(MqttMessageHelper.copyPublishPayload(message))
+                .recTime(messageContext.getRecTime())
+                .expireTime(messageContext.getExpireTime())
                 .build();
     }
 }

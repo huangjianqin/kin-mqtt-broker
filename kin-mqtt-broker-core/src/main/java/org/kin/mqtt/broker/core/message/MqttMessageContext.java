@@ -16,19 +16,34 @@ import java.util.concurrent.TimeUnit;
  */
 public class MqttMessageContext<T extends MqttMessage> {
     /** 真正mqtt消息 */
-    private T message;
-    /** 接受或创建mqtt消息的时间戳ms */
-    private final long timestamp;
+    private final T message;
+    /** 接受或创建mqtt消息的时间戳(毫秒) */
+    private final long recTime;
     /** 是否来自于集群 */
     private final boolean fromCluster;
-    /** 过期时间 */
-    private final long expireTimeMs;
+    /** 过期时间(毫秒) */
+    private final long expireTime;
+    /** 来自于哪个broker */
+    private final String brokerId;
+    /** 发送该mqtt消息的client id */
+    private final String clientId;
+
+    private MqttMessageContext(T message, long recTime, boolean fromCluster, long expireTime, String brokerId, String clientId) {
+        this.message = message;
+        this.recTime = recTime;
+        this.fromCluster = fromCluster;
+        this.expireTime = expireTime;
+        this.brokerId = brokerId;
+        this.clientId = clientId;
+    }
 
     @SuppressWarnings("unchecked")
-    public MqttMessageContext(T message, boolean fromCluster) {
+    private MqttMessageContext(T message, boolean fromCluster, String brokerId, String clientId) {
         this.message = message;
-        this.timestamp = System.currentTimeMillis();
+        this.recTime = System.currentTimeMillis();
         this.fromCluster = fromCluster;
+        this.brokerId = brokerId;
+        this.clientId = clientId;
 
         if (message instanceof MqttPublishMessage) {
             MqttPublishMessage pubMessage = (MqttPublishMessage) message;
@@ -37,50 +52,42 @@ public class MqttMessageContext<T extends MqttMessage> {
             MqttProperties.MqttProperty<Integer> pubExpiryIntervalProp = mqttProperties.getProperty(MqttProperties.MqttPropertyType.PUBLICATION_EXPIRY_INTERVAL.value());
             if (Objects.nonNull(pubExpiryIntervalProp)) {
                 //已过期
-                expireTimeMs = timestamp + TimeUnit.SECONDS.toMillis(pubExpiryIntervalProp.value());
+                expireTime = recTime + TimeUnit.SECONDS.toMillis(pubExpiryIntervalProp.value());
             } else {
-                expireTimeMs = 0;
+                expireTime = 0;
             }
         } else {
-            expireTimeMs = 0;
+            expireTime = 0;
         }
+    }
+
+    public static <T extends MqttMessage> MqttMessageContext<T> common(T message, String brokerId, String clientId) {
+        return new MqttMessageContext<>(message, false, brokerId, clientId);
     }
 
     /**
      * 从{@code messageContext}复制字段值并替换其包装的消息
      */
-    public MqttMessageContext(MqttMessageContext<T> messageContext, T message) {
-        this.message = message;
-        this.timestamp = messageContext.timestamp;
-        this.fromCluster = messageContext.fromCluster;
-        this.expireTimeMs = messageContext.expireTimeMs;
-    }
-
-    public static <T extends MqttMessage> MqttMessageContext<T> common(T message) {
-        return new MqttMessageContext<>(message, false);
-    }
-
-    public static MqttMessageContext<MqttPublishMessage> fromCluster(MqttMessageReplica replica) {
-        return new MqttMessageContext<>(MqttMessageUtils.createPublish(replica), true);
+    @SuppressWarnings("unchecked")
+    public static <T extends MqttMessage> MqttMessageContext<T> common(MqttMessageContext<T> messageContext, MqttMessage message) {
+        return new MqttMessageContext<>((T) message, messageContext.recTime,
+                messageContext.fromCluster, messageContext.expireTime,
+                messageContext.brokerId, messageContext.clientId);
     }
 
     /**
-     * 替换绑定mqtt消息
-     *
-     * @param message mqtt消息
-     * @return this
+     * 将集群广播的mqtt message包装成{@link MqttMessageContext}实例
      */
-    @SuppressWarnings("unchecked")
-    public MqttMessageContext<T> replaceMessage(MqttMessage message) {
-        this.message = (T) message;
-        return this;
+    public static MqttMessageContext<MqttPublishMessage> fromCluster(MqttMessageReplica replica) {
+        return new MqttMessageContext<>(MqttMessageHelper.createPublish(replica), true,
+                replica.getBrokerId(), replica.getClientId());
     }
 
     /**
      * 消息是否过期, 仅仅针对publish消息
      */
     public boolean isExpire() {
-        return expireTimeMs > 0 && System.currentTimeMillis() >= expireTimeMs;
+        return expireTime > 0 && System.currentTimeMillis() >= expireTime;
     }
 
     //getter
@@ -88,15 +95,23 @@ public class MqttMessageContext<T extends MqttMessage> {
         return message;
     }
 
-    public long getTimestamp() {
-        return timestamp;
+    public long getRecTime() {
+        return recTime;
     }
 
     public boolean isFromCluster() {
         return fromCluster;
     }
 
-    public long getExpireTimeMs() {
-        return expireTimeMs;
+    public long getExpireTime() {
+        return expireTime;
+    }
+
+    public String getBrokerId() {
+        return brokerId;
+    }
+
+    public String getClientId() {
+        return clientId;
     }
 }

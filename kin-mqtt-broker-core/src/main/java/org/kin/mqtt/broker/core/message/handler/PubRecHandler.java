@@ -7,7 +7,7 @@ import org.kin.mqtt.broker.core.MqttBrokerContext;
 import org.kin.mqtt.broker.core.MqttSession;
 import org.kin.mqtt.broker.core.Retry;
 import org.kin.mqtt.broker.core.message.MqttMessageContext;
-import org.kin.mqtt.broker.core.message.MqttMessageUtils;
+import org.kin.mqtt.broker.core.message.MqttMessageHelper;
 import reactor.core.publisher.Mono;
 
 import javax.annotation.Nonnull;
@@ -31,7 +31,7 @@ public class PubRecHandler extends AbstractMqttMessageHandler<MqttMessage> {
         long uuid = mqttSession.generateUuid(MqttMessageType.PUBLISH, messageId);
         //停止retry, 然后响应pub rel消息
         return Mono.fromRunnable(() -> Optional.ofNullable(brokerContext.getRetryService().getRetry(uuid)).ifPresent(Retry::cancel))
-                .then(mqttSession.sendMessage(MqttMessageUtils.createPubRel(messageId), true));
+                .then(mqttSession.sendMessage(MqttMessageHelper.createPubRel(messageId), true));
     }
 
     @Nonnull

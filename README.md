@@ -4,7 +4,7 @@
 
 * 支持集群广播mqtt消息
 * 支持规则引擎
-* 支持延迟发布
+* 支持延迟发布(未实现持久化, broker重启后会丢失)
 * 支持系统topic
 * 支持retain和session离线消息存储
 
@@ -66,6 +66,8 @@
 * topic retain消息
 
 ## 展望
+
+* 延迟发布消息未实现持久化, broker重启后会丢失
 * 持久化session信息, 需外部系统协助, 如redis
 * 补充更多broker系统内置topic和内置event
 * coap网关

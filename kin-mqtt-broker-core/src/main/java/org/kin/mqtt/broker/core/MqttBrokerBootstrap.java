@@ -371,7 +371,8 @@ public class MqttBrokerBootstrap extends ServerTransport<MqttBrokerBootstrap> {
                 })
                 .publishOn(brokerContext.getMqttBizScheduler())
                 //mqtt消息处理
-                .subscribe(mqttMessage -> brokerContext.getDispatcher().dispatch(MqttMessageContext.common(mqttMessage), mqttSession, brokerContext));
+                .subscribe(mqttMessage -> brokerContext.getDispatcher().dispatch(MqttMessageContext.common(mqttMessage, brokerContext.getBrokerId(), mqttSession.getClientId()),
+                        mqttSession, brokerContext));
     }
 
     /**
@@ -382,9 +383,8 @@ public class MqttBrokerBootstrap extends ServerTransport<MqttBrokerBootstrap> {
                 .then(Mono.fromRunnable(() -> brokerManager.clusterMqttMessages()
                         .onErrorResume(e -> Mono.empty())
                         .publishOn(brokerContext.getMqttBizScheduler())
-                        .subscribe(clusterMessage -> brokerContext.getDispatcher().dispatch(
-                                        MqttMessageContext.fromCluster(clusterMessage),
-                                        new VirtualMqttSession(brokerContext, clusterMessage.getClientId()),
+                        .subscribe(mqttMessageReplica -> brokerContext.getDispatcher().dispatch(
+                                        MqttMessageContext.fromCluster(mqttMessageReplica),
                                         brokerContext),
                                 t -> log.error("broker manager handle cluster message error", t))))
                 .subscribe();

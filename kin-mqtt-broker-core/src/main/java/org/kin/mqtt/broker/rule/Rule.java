@@ -45,7 +45,7 @@ public class Rule implements Disposable {
             map.put(RuleCtxAttrNames.MQTT_MSG_PAYLOAD, str);
         }
 
-        map.put(RuleCtxAttrNames.MQTT_MSG_TIMESTAMP, message.getTimestamp());
+        map.put(RuleCtxAttrNames.MQTT_MSG_TIMESTAMP, message.getRecTime());
         map.put(RuleCtxAttrNames.MQTT_MSG_PROPERTIES, message.getProperties());
         return map;
     };
