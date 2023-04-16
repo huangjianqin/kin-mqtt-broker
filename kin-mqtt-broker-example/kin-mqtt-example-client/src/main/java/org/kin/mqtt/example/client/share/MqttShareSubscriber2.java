@@ -1,5 +1,6 @@
 package org.kin.mqtt.example.client.share;
 
+import org.kin.mqtt.broker.example.Topics;
 import org.kin.mqtt.example.client.common.MqttSubscriber;
 
 import java.util.concurrent.CountDownLatch;
@@ -13,7 +14,7 @@ public class MqttShareSubscriber2 {
     public static void main(String[] args) throws InterruptedException {
         CountDownLatch latch = new CountDownLatch(1);
         MqttSubscriber subscriber = new MqttSubscriber("ShareSubscriber2");
-        String topic = "$share/g1/example";
+        String topic = "$share/g1/" + Topics.EXAMPLE;
 
         ForkJoinPool.commonPool().execute(() -> {
             try {

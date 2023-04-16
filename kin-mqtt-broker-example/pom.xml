@@ -17,6 +17,7 @@
         <module>kin-mqtt-broker-example-gossip</module>
         <module>kin-mqtt-example-client</module>
         <module>kin-mqtt-example-web</module>
+        <module>kin-mqtt-broker-example-api</module>
     </modules>
 
 </project>

@@ -6,6 +6,7 @@ import org.eclipse.paho.mqttv5.client.MqttConnectionOptions;
 import org.eclipse.paho.mqttv5.client.persist.MemoryPersistence;
 import org.eclipse.paho.mqttv5.common.MqttException;
 import org.eclipse.paho.mqttv5.common.MqttMessage;
+import org.kin.mqtt.broker.example.Topics;
 
 import java.nio.charset.StandardCharsets;
 import java.util.Objects;
@@ -74,7 +75,7 @@ public class MqttPublisher {
         //0 at most
         //1 at least
         //2 exactly
-        publisher.publish("tcp://127.0.0.1:1883", "example", "Sample Message", 2);
+        publisher.publish("tcp://127.0.0.1:1883", Topics.EXAMPLE, "Sample Message", 2);
 
     }
 }

@@ -7,6 +7,7 @@ import io.netty.handler.codec.mqtt.MqttQoS;
 import org.kin.mqtt.broker.cluster.standalone.EnableMqttBroker;
 import org.kin.mqtt.broker.core.MqttMessageSender;
 import org.kin.mqtt.broker.core.message.MqttMessageHelper;
+import org.kin.mqtt.broker.example.Topics;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.boot.SpringApplication;
@@ -44,7 +45,7 @@ public class MqttBrokerApplication {
                 MqttPublishMessage pubMessage = MqttMessageHelper.createPublish(false,
                         MqttQoS.AT_LEAST_ONCE,
                         messageId++,
-                        "broker/loop",
+                        Topics.BROKER_LOOP,
                         byteBuf);
                 mqttMessageSender.sendMessage("Subscriber", pubMessage).subscribe();
             }
