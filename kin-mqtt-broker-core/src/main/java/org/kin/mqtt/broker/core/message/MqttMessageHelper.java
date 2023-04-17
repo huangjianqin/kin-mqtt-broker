@@ -199,7 +199,7 @@ public class MqttMessageHelper {
 
         //new message header
         MqttFixedHeader newFixedHeader = new MqttFixedHeader(fixedHeader.messageType(), false, subscription.getQoS(),
-                subscription.isRetainAsPublished() && fixedHeader.isRetain(), fixedHeader.remainingLength());
+                subscription.isRetainAsPublished() || fixedHeader.isRetain(), fixedHeader.remainingLength());
         MqttPublishVariableHeader newVariableHeader = new MqttPublishVariableHeader(topicName, messageId, variableHeader.properties());
         // TODO: 2022/11/14 copy
         return new MqttPublishMessage(newFixedHeader, newVariableHeader, message.payload().copy());
