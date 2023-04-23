@@ -59,9 +59,9 @@ public class PublishHandler extends AbstractMqttMessageHandler<MqttPublishMessag
 
         switch (qos) {
             case AT_MOST_ONCE:
-                return MqttPublishMessageHelper.broadcastAndSaveIfRetain(brokerContext, mqttSession, pubTopic, messageContext);
+                return MqttPublishMessageHelper.broadcastAndSaveIfRetain(brokerContext, pubTopic, messageContext);
             case AT_LEAST_ONCE:
-                return MqttPublishMessageHelper.broadcast(brokerContext, mqttSession, pubTopic, messageContext)
+                return MqttPublishMessageHelper.broadcast(brokerContext, pubTopic, messageContext)
                         .then(mqttSession.sendMessage(MqttMessageHelper.createPubAck(packetId), false))
                         .then(MqttPublishMessageHelper.trySaveRetainMessage(messageStore, messageContext));
             case EXACTLY_ONCE:

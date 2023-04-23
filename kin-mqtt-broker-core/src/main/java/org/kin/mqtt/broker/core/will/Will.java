@@ -14,11 +14,13 @@ public class Will {
     /** will topic */
     private String topic;
     /** will topic qos */
-    private MqttQoS qoS;
+    private MqttQoS qos;
     /** will message bytes */
     private byte[] message;
     /** 延迟发布will消息, 单位是秒, 0表示无延迟 */
     private int delay;
+    /** will消息过期时间(毫秒) */
+    private long expiryInterval = -1;
 
     public static Builder builder() {
         return new Builder();
@@ -38,8 +40,8 @@ public class Will {
             return this;
         }
 
-        public Builder qoS(MqttQoS qoS) {
-            will.qoS = qoS;
+        public Builder qos(MqttQoS qos) {
+            will.qos = qos;
             return this;
         }
 
@@ -50,6 +52,11 @@ public class Will {
 
         public Builder delay(int delay) {
             will.delay = delay;
+            return this;
+        }
+
+        public Builder expiryInterval(long expiryInterval) {
+            will.expiryInterval = expiryInterval;
             return this;
         }
 
@@ -75,12 +82,12 @@ public class Will {
         this.topic = topic;
     }
 
-    public MqttQoS getQoS() {
-        return qoS;
+    public MqttQoS getQos() {
+        return qos;
     }
 
-    public void setQoS(MqttQoS qoS) {
-        this.qoS = qoS;
+    public void setQos(MqttQoS qos) {
+        this.qos = qos;
     }
 
     public byte[] getMessage() {
@@ -99,13 +106,22 @@ public class Will {
         this.delay = delay;
     }
 
+    public long getExpiryInterval() {
+        return expiryInterval;
+    }
+
+    public void setExpiryInterval(long expiryInterval) {
+        this.expiryInterval = expiryInterval;
+    }
+
     @Override
     public String toString() {
         return "Will{" +
                 "retain=" + retain +
                 ", topic='" + topic + '\'' +
-                ", qoS=" + qoS +
+                ", qos=" + qos +
                 ", delay=" + delay +
+                ", expiryInterval=" + expiryInterval +
                 '}';
     }
 }

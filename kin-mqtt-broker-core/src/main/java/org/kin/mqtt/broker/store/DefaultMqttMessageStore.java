@@ -13,12 +13,12 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.stream.Collectors;
 
 /**
- * 基于内存存储
+ * 基于内存存储mqtt message
  *
  * @author huangjianqin
  * @date 2022/11/16
  */
-public class MemoryMessageStore extends AbstractMessageStore {
+public class DefaultMqttMessageStore extends AbstractMqttMessageStore {
     /** key -> client id, value -> 离线接收的mqtt消息 */
     private final Map<String, List<MqttMessageReplica>> offlineMessages = new NonBlockingHashMap<>();
     /** key -> topic, value -> 该topic的retain消息 */

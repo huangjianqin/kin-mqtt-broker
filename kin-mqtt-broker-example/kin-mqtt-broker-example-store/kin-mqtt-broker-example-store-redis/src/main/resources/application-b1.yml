@@ -1,0 +1,41 @@
+org:
+  kin:
+    mqtt:
+      broker:
+        gossip:
+          port: 5001
+          alias: 'MQTTBroker1883'
+          seeds: 'localhost:5001;localhost:5003'
+          namespace: mqtt-broker
+        port: 1883
+        auth:
+          users:
+            java: '12345'
+        broker-id: B1
+server:
+  port: 8001
+
+# management
+management:
+  server:
+    port: ${server.port}
+  endpoints:
+    web:
+      exposure:
+        include: "*"
+  metrics:
+    enable:
+      http: false
+    export:
+      prometheus:
+        enabled: true
+  trace:
+    http:
+      enabled: false
+
+spring:
+  netty:
+    leak-detection: paranoid
+  redis:
+    host: localhost
+    port: 6379

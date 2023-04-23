@@ -240,6 +240,7 @@ public class GossipBrokerManager implements BrokerManager {
             log.debug("mqtt broker('{}') remove subscriptions '{}'", address, subscriptionRegexs);
 
             GossipNode node = clusterBrokers.get(address);
+            // TODO: 2023/4/22 node为null
             node.removeSubscriptions(subscriptionRegexs);
         }
     }

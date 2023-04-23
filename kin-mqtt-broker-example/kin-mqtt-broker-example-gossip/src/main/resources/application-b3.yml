@@ -11,6 +11,7 @@ org:
         auth:
           users:
             java: '12345'
+        broker-id: B3
 server:
   port: 8003
 

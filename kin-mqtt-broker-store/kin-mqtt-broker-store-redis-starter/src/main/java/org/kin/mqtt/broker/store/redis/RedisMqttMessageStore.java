@@ -1,7 +1,8 @@
 package org.kin.mqtt.broker.store.redis;
 
+import org.kin.framework.utils.JSON;
 import org.kin.mqtt.broker.core.message.MqttMessageReplica;
-import org.kin.mqtt.broker.store.AbstractMessageStore;
+import org.kin.mqtt.broker.store.AbstractMqttMessageStore;
 import org.kin.mqtt.broker.utils.TopicUtils;
 import org.springframework.data.redis.core.ReactiveRedisTemplate;
 import reactor.core.publisher.Flux;
@@ -15,30 +16,30 @@ import java.util.Objects;
  * @author huangjianqin
  * @date 2022/11/20
  */
-public class RedisMessageStore extends AbstractMessageStore {
+public class RedisMqttMessageStore extends AbstractMqttMessageStore {
     /** redis中保存离线消息的key */
     private static final String OFFLINE_MESSAGE_KEY_PREFIX = "KinMQTTBroker:offline:message:";
     /** redis中保存retain消息的key */
     private static final String RETAIN_MESSAGE_KEY_PREFIX = "KinMQTTBroker:retain:message:";
 
     /** redis client */
-    private final ReactiveRedisTemplate<String, Object> template;
+    private final ReactiveRedisTemplate<String, String> template;
 
-    public RedisMessageStore(ReactiveRedisTemplate<String, Object> template) {
+    public RedisMqttMessageStore(ReactiveRedisTemplate<String, String> template) {
         this.template = template;
     }
 
     /**
      * 获取保存离线消息的redis key
      */
-    private String getOfflineMessageKey(String clientId) {
+    private static String getOfflineMessageKey(String clientId) {
         return OFFLINE_MESSAGE_KEY_PREFIX + clientId;
     }
 
     @Override
     public void saveOfflineMessage(MqttMessageReplica replica) {
         String clientId = replica.getClientId();
-        template.opsForList().rightPush(getOfflineMessageKey(clientId), replica).subscribe();
+        template.opsForList().rightPush(getOfflineMessageKey(clientId), JSON.write(replica)).subscribe();
     }
 
     @Nonnull
@@ -48,7 +49,7 @@ public class RedisMessageStore extends AbstractMessageStore {
         return template.opsForList()
                 //取所有元素
                 .range(key, 0, -1)
-                .cast(MqttMessageReplica.class)
+                .map(v -> (MqttMessageReplica) JSON.read(v.toString(), MqttMessageReplica.class))
                 .collectList()
                 .flatMapMany(list -> template.opsForList().trim(key, 0, list.size() - 1)
                         .thenMany(Flux.fromIterable(list)));
@@ -57,7 +58,7 @@ public class RedisMessageStore extends AbstractMessageStore {
     /**
      * 获取保存retain消息的redis key
      */
-    private String getRetainMessageKey(String topic) {
+    private static String getRetainMessageKey(String topic) {
         return OFFLINE_MESSAGE_KEY_PREFIX + topic;
     }
 
@@ -71,7 +72,7 @@ public class RedisMessageStore extends AbstractMessageStore {
             template.opsForValue().delete(key).subscribe();
         } else {
             //替换retain消息
-            template.opsForValue().set(key, replica).subscribe();
+            template.opsForValue().set(key, JSON.write(replica)).subscribe();
         }
     }
 
@@ -86,6 +87,6 @@ public class RedisMessageStore extends AbstractMessageStore {
                 //redis get对应topic的retain消息
                 .flatMap(tp -> template.opsForValue()
                         .get(getRetainMessageKey(tp))
-                        .cast(MqttMessageReplica.class));
+                        .map(v -> JSON.read(v.toString(), MqttMessageReplica.class)));
     }
 }

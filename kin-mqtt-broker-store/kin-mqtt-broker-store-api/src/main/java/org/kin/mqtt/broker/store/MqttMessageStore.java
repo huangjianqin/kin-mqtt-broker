@@ -44,4 +44,20 @@ public interface MqttMessageStore extends Closeable {
      */
     @Nonnull
     Flux<MqttMessageReplica> getRetainMessage(String topic);
+
+//    /**
+//     * 保留mqtt session inflight消息
+//     *
+//     * @param replica mqtt消息副本
+//     */
+//    void saveInflightMessage(MqttMessageReplica replica);
+//
+//    /**
+//     * 获取mqtt session inflight消息
+//     *
+//     * @param topic topic
+//     * @return mqtt inflight消息
+//     */
+//    @Nonnull
+//    Flux<MqttMessageReplica> getInflightMessage(String topic);
 }

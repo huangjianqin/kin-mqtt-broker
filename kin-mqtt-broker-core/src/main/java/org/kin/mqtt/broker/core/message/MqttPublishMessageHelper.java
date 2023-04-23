@@ -11,7 +11,6 @@ import org.kin.mqtt.broker.core.topic.TopicSubscription;
 import org.kin.mqtt.broker.store.MqttMessageStore;
 import reactor.core.publisher.Mono;
 
-import javax.annotation.Nullable;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -50,29 +49,13 @@ public final class MqttPublishMessageHelper {
      * @param brokerContext  broker context
      * @param pubTopic       解析publish消息的topic name
      * @param messageContext 接收到的mqtt message context
-     * @param sender         mqtt message sender
      * @return complete signal
      */
     public static Mono<Void> broadcastAndSaveIfRetain(MqttBrokerContext brokerContext,
-                                                      MqttSession sender,
                                                       PubTopic pubTopic,
                                                       MqttMessageContext<MqttPublishMessage> messageContext) {
-        return broadcast(brokerContext, sender, pubTopic, messageContext)
+        return broadcast(brokerContext, pubTopic, messageContext)
                 .then(trySaveRetainMessage(brokerContext.getMessageStore(), messageContext));
-    }
-
-    /**
-     * 广播publish消息
-     *
-     * @param brokerContext  broker context
-     * @param pubTopic       解析publish消息的topic name
-     * @param messageContext 接收到的mqtt message context
-     * @return complete signal
-     */
-    public static Mono<Void> broadcast(MqttBrokerContext brokerContext,
-                                       PubTopic pubTopic,
-                                       MqttMessageContext<MqttPublishMessage> messageContext) {
-        return broadcast(brokerContext, null, pubTopic, messageContext);
     }
 
     /**
@@ -85,7 +68,6 @@ public final class MqttPublishMessageHelper {
      * @return complete signal
      */
     public static Mono<Void> broadcast(MqttBrokerContext brokerContext,
-                                       @Nullable MqttSession sender,
                                        PubTopic pubTopic,
                                        MqttMessageContext<MqttPublishMessage> messageContext) {
         if (messageContext.isExpire()) {
@@ -96,7 +78,7 @@ public final class MqttPublishMessageHelper {
         if (delay > 0) {
             return brokerContext.getDispatcher().handleDelayedPublishMessage(brokerContext, pubTopic, messageContext);
         } else {
-            return broadcast0(brokerContext, sender, pubTopic, messageContext);
+            return broadcast0(brokerContext, pubTopic, messageContext);
         }
     }
 
@@ -106,17 +88,15 @@ public final class MqttPublishMessageHelper {
      * @param brokerContext  broker context
      * @param pubTopic       解析publish消息的topic name
      * @param messageContext 接收到的mqtt message context
-     * @param sender         mqtt message sender, 如果broker发布的消息, 则为null
      * @return complete signal
      */
     private static Mono<Void> broadcast0(MqttBrokerContext brokerContext,
-                                         @Nullable MqttSession sender,
                                          PubTopic pubTopic,
                                          MqttMessageContext<MqttPublishMessage> messageContext) {
         MqttFixedHeader fixedHeader = messageContext.getMessage().fixedHeader();
         MqttQoS qos = fixedHeader.qosLevel();
 
-        Set<TopicSubscription> subscriptions = brokerContext.getTopicManager().getSubscriptions(pubTopic.getName(), qos, sender);
+        Set<TopicSubscription> subscriptions = brokerContext.getTopicManager().getSubscriptions(pubTopic.getName(), qos);
 
         return Mono.when(subscriptions.stream()
                 .map(subscription -> {
@@ -132,7 +112,7 @@ public final class MqttPublishMessageHelper {
                 .map(t2 -> {
                     TopicSubscription subscription = t2.first();
                     MqttSession mqttSession = subscription.getMqttSession();
-                    return mqttSession.sendMessage(t2.second().getMessage(), subscription.getQoS().value() > 0);
+                    return mqttSession.sendMessage(t2.second().getMessage(), subscription.getQos().value() > 0);
                 })
                 .collect(Collectors.toList()));
     }

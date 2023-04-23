@@ -1,2 +1,2 @@
 org.springframework.boot.autoconfigure.EnableAutoConfiguration=\
-org.kin.mqtt.broker.store.redis.RedisMessageStoreAutoConfiguration
+org.kin.mqtt.broker.store.redis.RedisStoreAutoConfiguration

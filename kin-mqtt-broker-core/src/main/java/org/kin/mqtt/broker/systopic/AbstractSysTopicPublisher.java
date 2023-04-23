@@ -31,6 +31,8 @@ public abstract class AbstractSysTopicPublisher {
                 true, 0,
                 topic,
                 buffer);
-        brokerContext.getDispatcher().dispatch(MqttMessageContext.common(message, brokerContext.getBrokerId(), brokerContext.getBrokerClientId()), brokerContext);
+        brokerContext.getDispatcher()
+                .dispatch(MqttMessageContext.common(message, brokerContext.getBrokerId(), brokerContext.getBrokerClientId()), brokerContext)
+                .subscribe();
     }
 }

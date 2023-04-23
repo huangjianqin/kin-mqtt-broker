@@ -42,6 +42,11 @@ public class InflightMessageQueue {
             return 0;
         }
 
+        if (message.fixedHeader().qosLevel().value() < 1) {
+            //不考虑at most once
+            return 0;
+        }
+
         synchronized (this) {
             if (quota > 0) {
                 quota--;

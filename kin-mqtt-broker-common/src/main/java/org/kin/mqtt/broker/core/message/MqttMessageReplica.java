@@ -1,9 +1,8 @@
 package org.kin.mqtt.broker.core.message;
 
-import com.fasterxml.jackson.annotation.JsonInclude;
-
 import java.io.Serializable;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.Map;
 
 /**
@@ -13,7 +12,6 @@ import java.util.Map;
  * @author huangjianqin
  * @date 2022/11/15
  */
-@JsonInclude(JsonInclude.Include.NON_EMPTY)
 public class MqttMessageReplica implements Serializable {
     private static final long serialVersionUID = 8598710380202474132L;
 
@@ -34,7 +32,7 @@ public class MqttMessageReplica implements Serializable {
     /** 过期时间(毫秒) */
     private long expireTime;
     /** mqtt消息可变头属性 */
-    private Map<String, String> properties;
+    private Map<String, String> properties = Collections.emptyMap();
 
     private MqttMessageReplica() {
     }

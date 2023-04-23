@@ -3,6 +3,7 @@ package org.kin.mqtt.example.client.rate;
 import org.eclipse.paho.mqttv5.client.MqttClient;
 import org.eclipse.paho.mqttv5.client.MqttConnectionOptions;
 import org.eclipse.paho.mqttv5.client.persist.MemoryPersistence;
+import org.kin.mqtt.broker.example.Brokers;
 
 import java.nio.charset.StandardCharsets;
 import java.util.Objects;
@@ -16,7 +17,7 @@ import java.util.concurrent.Executors;
 public class ConnectPerSecTest {
     public static void main(String[] args) throws InterruptedException {
         ExecutorService executors = Executors.newCachedThreadPool();
-        String broker = "tcp://127.0.0.1:1883";
+        String broker = Brokers.B1;
         String clientId = "ConnectPerSecTest";
         for (int i = 0; i < 20; i++) {
             int finalI = i;

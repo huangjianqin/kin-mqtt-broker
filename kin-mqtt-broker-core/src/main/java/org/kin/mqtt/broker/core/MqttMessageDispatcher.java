@@ -71,8 +71,8 @@ public class MqttMessageDispatcher {
      * @param messageContext mqtt message messageContext
      * @param brokerContext  mqtt broker context
      */
-    public void dispatch(MqttMessageContext<? extends MqttMessage> messageContext, MqttBrokerContext brokerContext) {
-        dispatch(messageContext, null, brokerContext);
+    public Mono<Void> dispatch(MqttMessageContext<? extends MqttMessage> messageContext, MqttBrokerContext brokerContext) {
+        return dispatch(messageContext, null, brokerContext);
     }
 
     /**
@@ -82,12 +82,12 @@ public class MqttMessageDispatcher {
      * @param mqttSession    mqtt session, 当处理来自于集群广播的mqtt 消息时为null
      * @param brokerContext  mqtt broker context
      */
-    public void dispatch(MqttMessageContext<? extends MqttMessage> messageContext, @Nullable MqttSession mqttSession, MqttBrokerContext brokerContext) {
+    public Mono<Void> dispatch(MqttMessageContext<? extends MqttMessage> messageContext, @Nullable MqttSession mqttSession, MqttBrokerContext brokerContext) {
         if (!messageContext.isFromCluster()) {
             //mqtt session必定不为null
-            dispatchClientMessage(messageContext, Objects.requireNonNull(mqttSession), brokerContext);
+            return dispatchClientMessage(messageContext, Objects.requireNonNull(mqttSession), brokerContext);
         } else {
-            dispatchClusterMessage(messageContext, brokerContext);
+            return Mono.fromRunnable(() -> dispatchClusterMessage(messageContext, brokerContext));
         }
     }
 
@@ -95,24 +95,21 @@ public class MqttMessageDispatcher {
      * 处理mqtt channel消息
      */
     @SuppressWarnings("unchecked")
-    private void dispatchClientMessage(MqttMessageContext<? extends MqttMessage> messageContext, MqttSession mqttSession, MqttBrokerContext brokerContext) {
-        String clientId = mqttSession.clientId;
+    private Mono<Void> dispatchClientMessage(MqttMessageContext<? extends MqttMessage> messageContext, MqttSession mqttSession, MqttBrokerContext brokerContext) {
+        String clientId = mqttSession.getClientId();
         //handle mqtt message
         MqttMessage mqttMessage = messageContext.getMessage();
         if (StringUtils.isBlank(clientId) && !(mqttMessage instanceof MqttConnectMessage)) {
             //session is inactive or unregister, so force close
             //非connect验证, 就发送其他mqtt消息, 直接强制close channel
             log.warn("session '{}' is unregister, but receive non mqtt connect message, so close channel", clientId);
-            mqttSession.close().subscribe();
-            return;
+            return mqttSession.close();
         }
-
 
         if (mqttMessage.decoderResult().isFailure()) {
             //mqtt message decode failure, so force close
             log.warn("mqtt message from session '{}' decode failure, {}", clientId, mqttMessage);
-            mqttSession.close().subscribe();
-            return;
+            return mqttSession.close();
         }
 
         //mqtt消息预处理
@@ -136,24 +133,29 @@ public class MqttMessageDispatcher {
         for (Interceptor interceptor : interceptors) {
             if (interceptor.intercept(messageContext, mqttSession, brokerContext)) {
                 //intercept
-                return;
+                return Mono.error(new MqttException(String.format("mqtt message from session '%s' intercepted by %s, %s",
+                        clientId,
+                        interceptor.getClass().getName(),
+                        mqttMessage)));
             }
         }
 
-        handleMqttMessage(messageContext, mqttSession, brokerContext);
+        MqttMessageReplica finalMessageReplica = messageReplica;
+        return handleMqttMessage(messageContext, mqttSession, brokerContext)
+                .then(Mono.fromRunnable(() -> {
+                    //仅仅处理publish消息
+                    if (Objects.nonNull(finalMessageReplica)) {
+                        //往集群广播mqtt消息
+                        BrokerManager brokerManager = brokerContext.getBrokerManager();
+                        brokerManager.broadcastMqttMessage(finalMessageReplica).subscribe();
 
-        //仅仅处理publish消息
-        if (Objects.nonNull(messageReplica)) {
-            //往集群广播mqtt消息
-            BrokerManager brokerManager = brokerContext.getBrokerManager();
-            brokerManager.broadcastMqttMessage(messageReplica).subscribe();
+                        //规则匹配
+                        //原则上所有节点都会同步rule, 那么集群广播的publish消息不需要再重复处理rule了
+                        brokerContext.getRuleEngine().execute(brokerContext, finalMessageReplica).subscribe();
 
-            //规则匹配
-            //原则上所有节点都会同步rule, 那么集群广播的publish消息不需要再重复处理rule了
-            brokerContext.getRuleEngine().execute(brokerContext, messageReplica).subscribe();
-
-            brokerContext.broadcastEvent(new MqttPublishEvent(mqttSession, messageReplica));
-        }
+                        brokerContext.broadcastEvent(new MqttPublishEvent(mqttSession, finalMessageReplica));
+                    }
+                }));
     }
 
     /**
@@ -204,22 +206,21 @@ public class MqttMessageDispatcher {
      * 处理mqtt message
      */
     @SuppressWarnings("unchecked")
-    private void handleMqttMessage(MqttMessageContext<? extends MqttMessage> messageContext, MqttSession mqttSession, MqttBrokerContext brokerContext) {
+    private Mono<Void> handleMqttMessage(MqttMessageContext<? extends MqttMessage> messageContext, MqttSession mqttSession, MqttBrokerContext brokerContext) {
         MqttMessage mqttMessage = messageContext.getMessage();
         MqttFixedHeader fixedHeader = mqttMessage.fixedHeader();
         MqttMessageType mqttMessageType = fixedHeader.messageType();
         log.debug("prepare to handle {} message from session {}", mqttMessageType, mqttSession);
         MqttMessageHandler<MqttMessage> messageHandler = type2handler.get(mqttMessageType);
         if (Objects.nonNull(messageHandler)) {
-            messageHandler.handle((MqttMessageContext<MqttMessage>) messageContext, mqttSession, brokerContext)
+            return messageHandler.handle((MqttMessageContext<MqttMessage>) messageContext, mqttSession, brokerContext)
                     .contextWrite(context -> context.putNonNull(MqttBrokerContext.class, brokerContext))
-                    .subscribe(v -> {
-                            },
-                            error -> log.error("handle {} message from session {} error", mqttMessageType, mqttSession, error),
-                            //释放onMqttClientConnected里面的retain(), 还有initBrokerManager的MqttMessageReplica.fromCluster(....)
-                            () -> ReactorNetty.safeRelease(mqttMessage.payload()));
+                    .doOnError(error -> log.error("handle {} message from session {} error", mqttMessageType, mqttSession, error))
+                    //释放onMqttClientConnected里面的retain(), 还有initBrokerManager的MqttMessageReplica.fromCluster(....)
+                    .doOnSuccess(v -> ReactorNetty.safeRelease(mqttMessage.payload()));
         } else {
-            throw new IllegalArgumentException(String.format("does not find handler to handle %s message", mqttMessageType));
+            ReactorNetty.safeRelease(mqttMessage.payload());
+            return Mono.error(new IllegalArgumentException(String.format("does not find handler to handle %s message", mqttMessageType)));
         }
     }
 

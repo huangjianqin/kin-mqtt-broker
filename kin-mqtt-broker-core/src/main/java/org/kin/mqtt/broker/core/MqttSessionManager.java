@@ -3,8 +3,8 @@ package org.kin.mqtt.broker.core;
 import java.util.Collection;
 
 /**
- * mqtt session管理
- * todo 持久化session支持存库和集群共享
+ * 在线mqtt session管理
+ * todo 设计优化
  *
  * @author huangjianqin
  * @date 2022/11/15

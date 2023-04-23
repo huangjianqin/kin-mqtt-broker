@@ -27,8 +27,10 @@ import org.kin.mqtt.broker.core.message.MqttMessageContext;
 import org.kin.mqtt.broker.core.topic.share.RandomShareSubLoadBalance;
 import org.kin.mqtt.broker.core.topic.share.ShareSubLoadBalance;
 import org.kin.mqtt.broker.rule.RuleDefinition;
-import org.kin.mqtt.broker.store.MemoryMessageStore;
+import org.kin.mqtt.broker.store.DefaultMqttMessageStore;
+import org.kin.mqtt.broker.store.DefaultMqttSessionStore;
 import org.kin.mqtt.broker.store.MqttMessageStore;
+import org.kin.mqtt.broker.store.MqttSessionStore;
 import org.kin.mqtt.broker.systopic.TotalClientNumPublisher;
 import org.kin.transport.netty.ServerTransport;
 import org.slf4j.Logger;
@@ -58,7 +60,9 @@ public class MqttBrokerBootstrap extends ServerTransport<MqttBrokerBootstrap> {
     /** mqtt broker集群管理. 默认单节点模式 */
     private BrokerManager brokerManager = StandaloneBrokerManager.INSTANCE;
     /** mqtt消息外部存储, 默认存储在jvm内存 */
-    private MqttMessageStore messageStore = new MemoryMessageStore();
+    private MqttMessageStore messageStore = new DefaultMqttMessageStore();
+    /** mqtt session外部存储, 默认存储在jvm内存 */
+    private MqttSessionStore sessionStore = DefaultMqttSessionStore.INSTANCE;
     /** 规则链定义 */
     private List<RuleDefinition> ruleDefinitions = new LinkedList<>();
     /** 数据桥接实现 */
@@ -128,6 +132,14 @@ public class MqttBrokerBootstrap extends ServerTransport<MqttBrokerBootstrap> {
      */
     public MqttBrokerBootstrap messageStore(MqttMessageStore messageStore) {
         this.messageStore = messageStore;
+        return this;
+    }
+
+    /**
+     * mqtt session外部存储
+     */
+    public MqttBrokerBootstrap sessionStore(MqttSessionStore sessionStore) {
+        this.sessionStore = sessionStore;
         return this;
     }
 
@@ -227,9 +239,8 @@ public class MqttBrokerBootstrap extends ServerTransport<MqttBrokerBootstrap> {
 
         int port = config.getPort();
         MqttBrokerContext brokerContext = new MqttBrokerContext(config, new MqttMessageDispatcher(interceptors),
-                authService, brokerManager, messageStore,
-                ruleDefinitions,
-                aclService);
+                authService, brokerManager, messageStore, sessionStore,
+                ruleDefinitions, aclService, shareSubLoadBalance);
 
         //启动mqtt broker
         LoopResources loopResources = LoopResources.create("kin-mqtt-server-" + port, 2, SysUtils.DOUBLE_CPU, false);
@@ -371,8 +382,11 @@ public class MqttBrokerBootstrap extends ServerTransport<MqttBrokerBootstrap> {
                 })
                 .publishOn(brokerContext.getMqttBizScheduler())
                 //mqtt消息处理
-                .subscribe(mqttMessage -> brokerContext.getDispatcher().dispatch(MqttMessageContext.common(mqttMessage, brokerContext.getBrokerId(), mqttSession.getClientId()),
-                        mqttSession, brokerContext));
+                .flatMap(mqttMessage -> brokerContext.getDispatcher()
+                        .dispatch(MqttMessageContext.common(mqttMessage, brokerContext.getBrokerId(),
+                                mqttSession.getClientId()), mqttSession, brokerContext))
+                .subscribe(mqttMessage -> {
+                });
     }
 
     /**
@@ -383,9 +397,10 @@ public class MqttBrokerBootstrap extends ServerTransport<MqttBrokerBootstrap> {
                 .then(Mono.fromRunnable(() -> brokerManager.clusterMqttMessages()
                         .onErrorResume(e -> Mono.empty())
                         .publishOn(brokerContext.getMqttBizScheduler())
-                        .subscribe(mqttMessageReplica -> brokerContext.getDispatcher().dispatch(
-                                        MqttMessageContext.fromCluster(mqttMessageReplica),
-                                        brokerContext),
+                        .flatMap(mqttMessageReplica -> brokerContext.getDispatcher()
+                                .dispatch(MqttMessageContext.fromCluster(mqttMessageReplica), brokerContext))
+                        .subscribe((mqttMessageReplica) -> {
+                                },
                                 t -> log.error("broker manager handle cluster message error", t))))
                 .subscribe();
     }

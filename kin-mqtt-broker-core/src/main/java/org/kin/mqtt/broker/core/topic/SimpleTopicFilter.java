@@ -25,12 +25,12 @@ public class SimpleTopicFilter implements TopicFilter {
     private final LongAdder counter = new LongAdder();
 
     @Override
-    public Set<TopicSubscription> getSubscriptions(String topic, MqttQoS qoS) {
+    public Set<TopicSubscription> getSubscriptions(String topic, MqttQoS qos) {
         NonBlockingHashSet<TopicSubscription> subscriptions = topic2Subscriptions.get(topic);
         if (CollectionUtils.isEmpty(subscriptions)) {
             return Collections.emptySet();
         }
-        return subscriptions.stream().map(s -> s.convert(qoS)).collect(Collectors.toSet());
+        return subscriptions.stream().map(s -> s.convert(qos)).collect(Collectors.toSet());
     }
 
     @Override

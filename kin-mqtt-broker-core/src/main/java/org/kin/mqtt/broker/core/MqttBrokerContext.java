@@ -10,12 +10,15 @@ import org.kin.mqtt.broker.auth.AuthService;
 import org.kin.mqtt.broker.bridge.BridgeManager;
 import org.kin.mqtt.broker.cluster.BrokerManager;
 import org.kin.mqtt.broker.cluster.event.MqttClusterEvent;
+import org.kin.mqtt.broker.core.retry.RetryService;
 import org.kin.mqtt.broker.core.topic.TopicManager;
+import org.kin.mqtt.broker.core.topic.share.ShareSubLoadBalance;
 import org.kin.mqtt.broker.event.MqttEvent;
 import org.kin.mqtt.broker.rule.RuleDefinition;
 import org.kin.mqtt.broker.rule.RuleEngine;
 import org.kin.mqtt.broker.rule.RuleManager;
 import org.kin.mqtt.broker.store.MqttMessageStore;
+import org.kin.mqtt.broker.store.MqttSessionStore;
 import reactor.core.scheduler.Scheduler;
 import reactor.core.scheduler.Schedulers;
 
@@ -35,7 +38,7 @@ public class MqttBrokerContext implements Closeable {
     /** retry task管理 */
     private final RetryService retryService = new DefaultRetryService();
     /** topic管理 */
-    private final TopicManager topicManager = new DefaultTopicManager();
+    private final TopicManager topicManager;
     /** session管理 */
     private final MqttSessionManager sessionManager = new DefaultMqttSessionManager();
     /** mqtt消息处理实现 */
@@ -46,6 +49,8 @@ public class MqttBrokerContext implements Closeable {
     private final BrokerManager brokerManager;
     /** mqtt消息外部存储 */
     private final MqttMessageStore messageStore;
+    /** mqtt session外部存储 */
+    private final MqttSessionStore sessionStore;
     /** 规则链管理 */
     private final RuleManager ruleManager = new RuleManager(this);
     /** 规则链执行 */
@@ -59,16 +64,19 @@ public class MqttBrokerContext implements Closeable {
     /** 业务相关定时器 */
     private final HashedWheelTimer bsTimer = new HashedWheelTimer(100, TimeUnit.MILLISECONDS, 10);
 
-    public MqttBrokerContext(MqttBrokerConfig brokerConfig, MqttMessageDispatcher dispatcher, AuthService authService,
-                             BrokerManager brokerManager, MqttMessageStore messageStore,
-                             List<RuleDefinition> ruleDefinitions,
-                             AclService aclService) {
+    public MqttBrokerContext(MqttBrokerConfig brokerConfig, MqttMessageDispatcher dispatcher,
+                             AuthService authService, BrokerManager brokerManager,
+                             MqttMessageStore messageStore, MqttSessionStore sessionStore,
+                             List<RuleDefinition> ruleDefinitions, AclService aclService,
+                             ShareSubLoadBalance shareSubLoadBalance) {
         this.brokerConfig = brokerConfig;
         this.mqttBizScheduler = Schedulers.newBoundedElastic(SysUtils.CPU_NUM * 10, Integer.MAX_VALUE, "kin-mqtt-broker-bs-" + brokerConfig.getPort(), 60);
+        this.topicManager = new DefaultTopicManager(shareSubLoadBalance);
         this.dispatcher = dispatcher;
         this.authService = authService;
         this.brokerManager = brokerManager;
         this.messageStore = messageStore;
+        this.sessionStore = sessionStore;
         this.ruleManager.addRules(ruleDefinitions);
         this.aclService = aclService;
         this.eventBus = new DefaultReactorEventBus(true, mqttBizScheduler);
@@ -133,6 +141,10 @@ public class MqttBrokerContext implements Closeable {
 
     public MqttMessageStore getMessageStore() {
         return messageStore;
+    }
+
+    public MqttSessionStore getSessionStore() {
+        return sessionStore;
     }
 
     public MqttSessionManager getSessionManager() {

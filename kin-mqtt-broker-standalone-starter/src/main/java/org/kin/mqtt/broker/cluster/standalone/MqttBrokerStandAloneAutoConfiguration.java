@@ -12,6 +12,7 @@ import org.kin.mqtt.broker.core.MqttBroker;
 import org.kin.mqtt.broker.core.MqttBrokerBootstrap;
 import org.kin.mqtt.broker.core.MqttMessageSender;
 import org.kin.mqtt.broker.store.MqttMessageStore;
+import org.kin.mqtt.broker.store.MqttSessionStore;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
@@ -40,6 +41,7 @@ public class MqttBrokerStandAloneAutoConfiguration {
                                  @Autowired(required = false) AuthService authService,
                                  @Autowired(required = false) BrokerManager brokerManager,
                                  @Autowired(required = false) MqttMessageStore messageStore,
+                                 @Autowired(required = false) MqttSessionStore sessionStore,
                                  @Autowired(required = false) List<Bridge> bridges,
                                  @Autowired(required = false) AclService aclService) {
         MqttBrokerBootstrap bootstrap = MqttBrokerBootstrap.create(mqttBrokerProperties);
@@ -58,6 +60,10 @@ public class MqttBrokerStandAloneAutoConfiguration {
 
         if (Objects.nonNull(messageStore)) {
             bootstrap.messageStore(messageStore);
+        }
+
+        if (Objects.nonNull(sessionStore)) {
+            bootstrap.sessionStore(sessionStore);
         }
 
         if (CollectionUtils.isNonEmpty(bridges)) {

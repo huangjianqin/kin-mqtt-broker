@@ -1,5 +1,6 @@
 package org.kin.mqtt.example.client.delay;
 
+import org.kin.mqtt.broker.example.Brokers;
 import org.kin.mqtt.broker.example.Topics;
 import org.kin.mqtt.example.client.common.MqttSubscriber;
 
@@ -17,7 +18,7 @@ public class MqttDelaySubscriber {
 
         ForkJoinPool.commonPool().execute(() -> {
             try {
-                subscriber.subscribe("tcp://127.0.0.1:1883", Topics.EXAMPLE, latch);
+                subscriber.subscribe(Brokers.B1, Topics.EXAMPLE, latch);
             } catch (InterruptedException e) {
                 throw new RuntimeException(e);
             }

@@ -3,6 +3,7 @@
 简易mqtt broker实现
 
 * 支持集群广播mqtt消息
+* 支持session持久化及集群共享(即HA)
 * 支持规则引擎
 * 支持延迟发布(未实现持久化, broker重启后会丢失)
 * 支持系统topic
@@ -61,14 +62,22 @@
 * 期待的框架: 读写分离, 几个节点负责维护写, 不承载mqtt流量; 其余节点负责读(还有本地缓存), 承载mqtt流量;
 
 目前需要存储的数据类型:
+
 * 规则
 * mqtt client session
 * topic retain消息
 
+### session持久化思考
+
+一般适用于mqtt client因网络波动等原因, 短暂离线后与broker重连的场景. session持久化及集群共享可以减少重连过程耗时,
+具体减少了mqtt client重新恢复之前session状态的耗时, 比如恢复订阅关系
+
+注意此时mqtt client进程还在, 如果mqtt client进程挂了, 重新拉起, 该场景还是需要重新走一遍正常的流程. 还有mqtt
+client有且仅能同时连接一个broker, 如果同时连接多个broker, 后续的链接会被broker强行断开
+
 ## 展望
 
 * 延迟发布消息未实现持久化, broker重启后会丢失
-* 持久化session信息, 需外部系统协助, 如redis
 * 补充更多broker系统内置topic和内置event
 * coap网关
 * 自动订阅, 检查配置, connect时根据配置给指定client id自动注册订阅, 是否需要支持后台操作, 然后配置是否是持久化

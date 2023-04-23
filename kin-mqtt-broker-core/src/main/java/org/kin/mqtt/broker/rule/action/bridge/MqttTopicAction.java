@@ -30,10 +30,11 @@ public class MqttTopicAction implements Action {
         MqttMessageReplica replica = context.getMessage();
         //script即真正topic
         //交给mqtt消息handler处理
-        return Mono.fromRunnable(() -> brokerContext.getDispatcher().dispatch(
-                MqttMessageContext.common(MqttMessageHelper.createPublish(replica, definition.getTopic()), brokerContext.getBrokerId(), replica.getClientId()),
-                null,
-                brokerContext));
+        return brokerContext.getDispatcher()
+                .dispatch(MqttMessageContext.common(MqttMessageHelper.createPublish(replica, definition.getTopic()),
+                                brokerContext.getBrokerId(), replica.getClientId()),
+                        null,
+                        brokerContext);
     }
 
     @Override

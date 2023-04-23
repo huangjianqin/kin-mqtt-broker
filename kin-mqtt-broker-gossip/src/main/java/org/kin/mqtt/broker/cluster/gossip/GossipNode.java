@@ -1,6 +1,7 @@
 package org.kin.mqtt.broker.cluster.gossip;
 
 import org.jctools.maps.NonBlockingHashSet;
+import org.kin.framework.utils.CollectionUtils;
 import org.kin.mqtt.broker.cluster.MqttBrokerNode;
 
 import java.util.Collection;
@@ -53,6 +54,9 @@ public class GossipNode implements MqttBrokerNode {
      * @param subscriptions mqtt topic
      */
     public void removeSubscriptions(Collection<String> subscriptions) {
+        if (CollectionUtils.isEmpty(subscriptions)) {
+            return;
+        }
         subscriptionTopicRegex.removeAll(subscriptions);
     }
 

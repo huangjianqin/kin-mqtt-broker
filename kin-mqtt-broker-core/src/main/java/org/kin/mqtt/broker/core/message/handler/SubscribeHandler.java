@@ -63,10 +63,13 @@ public class SubscribeHandler extends AbstractMqttMessageHandler<MqttSubscribeMe
                         topicManager.addSubscriptions(filteredTopicSubscriptions);
                     }
 
+                    //持久化session
+                    mqttSession.tryPersist();
+
                     MqttMessageStore messageStore = brokerContext.getMessageStore();
                     int messageId = message.variableHeader().messageId();
                     //响应subscribe的qos list
-                    List<Integer> respQosList = subscriptions.stream().map(s -> s.getQoS().value()).collect(Collectors.toList());
+                    List<Integer> respQosList = subscriptions.stream().map(s -> s.getQos().value()).collect(Collectors.toList());
                     //发送retain消息
                     Set<String> finalFilteredTopics = filteredTopics;
                     Flux<Void> sendRetainFlux = Flux.fromIterable(topic2RawTs.entrySet())

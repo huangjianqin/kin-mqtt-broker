@@ -74,8 +74,8 @@ public class MqttMessageHelper {
      *
      * @return publish消息
      */
-    public static MqttPublishMessage createPublish(boolean isDup, MqttQoS qoS, int messageId, String topic, ByteBuf message, MqttProperties properties) {
-        return createPublish(isDup, qoS, false, messageId, topic, message, properties);
+    public static MqttPublishMessage createPublish(boolean isDup, MqttQoS qos, int messageId, String topic, ByteBuf message, MqttProperties properties) {
+        return createPublish(isDup, qos, false, messageId, topic, message, properties);
     }
 
     /**
@@ -83,8 +83,8 @@ public class MqttMessageHelper {
      *
      * @return publish消息
      */
-    public static MqttPublishMessage createPublish(boolean isDup, MqttQoS qoS, int messageId, String topic, ByteBuf message, Map<String, String> userPropertiesMap) {
-        return createPublish(isDup, qoS, false, messageId, topic, message, genMqttProperties(userPropertiesMap));
+    public static MqttPublishMessage createPublish(boolean isDup, MqttQoS qos, int messageId, String topic, ByteBuf message, Map<String, String> userPropertiesMap) {
+        return createPublish(isDup, qos, false, messageId, topic, message, genMqttProperties(userPropertiesMap));
     }
 
     /**
@@ -92,8 +92,8 @@ public class MqttMessageHelper {
      *
      * @return publish消息
      */
-    public static MqttPublishMessage createPublish(boolean isDup, MqttQoS qoS, int messageId, String topic, ByteBuf message) {
-        return createPublish(isDup, qoS, false, messageId, topic, message, MqttProperties.NO_PROPERTIES);
+    public static MqttPublishMessage createPublish(boolean isDup, MqttQoS qos, int messageId, String topic, ByteBuf message) {
+        return createPublish(isDup, qos, false, messageId, topic, message, MqttProperties.NO_PROPERTIES);
     }
 
     /**
@@ -101,8 +101,8 @@ public class MqttMessageHelper {
      *
      * @return publish消息
      */
-    public static MqttPublishMessage createPublish(boolean isDup, MqttQoS qoS, boolean isRetain, int messageId, String topic, ByteBuf message) {
-        return createPublish(isDup, qoS, isRetain, messageId, topic, message, MqttProperties.NO_PROPERTIES);
+    public static MqttPublishMessage createPublish(boolean isDup, MqttQoS qos, boolean isRetain, int messageId, String topic, ByteBuf message) {
+        return createPublish(isDup, qos, isRetain, messageId, topic, message, MqttProperties.NO_PROPERTIES);
     }
 
     /**
@@ -110,8 +110,8 @@ public class MqttMessageHelper {
      *
      * @return publish消息
      */
-    public static MqttPublishMessage createPublish(boolean isDup, MqttQoS qoS, boolean isRetain, int messageId, String topic, ByteBuf message, boolean keepRetainFlag) {
-        return createPublish(isDup, qoS, isRetain, messageId, topic, message, MqttProperties.NO_PROPERTIES, keepRetainFlag);
+    public static MqttPublishMessage createPublish(boolean isDup, MqttQoS qos, boolean isRetain, int messageId, String topic, ByteBuf message, boolean keepRetainFlag) {
+        return createPublish(isDup, qos, isRetain, messageId, topic, message, MqttProperties.NO_PROPERTIES, keepRetainFlag);
     }
 
     /**
@@ -119,8 +119,8 @@ public class MqttMessageHelper {
      *
      * @return publish消息
      */
-    public static MqttPublishMessage createPublish(boolean isDup, MqttQoS qoS, boolean isRetain, int messageId, String topic, ByteBuf message, MqttProperties properties) {
-        MqttFixedHeader mqttFixedHeader = new MqttFixedHeader(MqttMessageType.PUBLISH, isDup, qoS, isRetain, 0);
+    public static MqttPublishMessage createPublish(boolean isDup, MqttQoS qos, boolean isRetain, int messageId, String topic, ByteBuf message, MqttProperties properties) {
+        MqttFixedHeader mqttFixedHeader = new MqttFixedHeader(MqttMessageType.PUBLISH, isDup, qos, isRetain, 0);
         MqttPublishVariableHeader mqttPublishVariableHeader = new MqttPublishVariableHeader(topic, messageId, properties);
         return new MqttPublishMessage(mqttFixedHeader, mqttPublishVariableHeader, message);
     }
@@ -130,8 +130,8 @@ public class MqttMessageHelper {
      *
      * @return publish消息
      */
-    public static MqttPublishMessage createPublish(boolean isDup, MqttQoS qoS, boolean isRetain, int messageId, String topic, ByteBuf message, MqttProperties properties, boolean keepRetainFlag) {
-        MqttFixedHeader mqttFixedHeader = new MqttFixedHeader(MqttMessageType.PUBLISH, isDup, qoS, keepRetainFlag && isRetain, 0);
+    public static MqttPublishMessage createPublish(boolean isDup, MqttQoS qos, boolean isRetain, int messageId, String topic, ByteBuf message, MqttProperties properties, boolean keepRetainFlag) {
+        MqttFixedHeader mqttFixedHeader = new MqttFixedHeader(MqttMessageType.PUBLISH, isDup, qos, keepRetainFlag && isRetain, 0);
         MqttPublishVariableHeader mqttPublishVariableHeader = new MqttPublishVariableHeader(topic, messageId, properties);
         return new MqttPublishMessage(mqttFixedHeader, mqttPublishVariableHeader, message);
     }
@@ -198,7 +198,7 @@ public class MqttMessageHelper {
         MqttFixedHeader fixedHeader = message.fixedHeader();
 
         //new message header
-        MqttFixedHeader newFixedHeader = new MqttFixedHeader(fixedHeader.messageType(), false, subscription.getQoS(),
+        MqttFixedHeader newFixedHeader = new MqttFixedHeader(fixedHeader.messageType(), false, subscription.getQos(),
                 subscription.isRetainAsPublished() || fixedHeader.isRetain(), fixedHeader.remainingLength());
         MqttPublishVariableHeader newVariableHeader = new MqttPublishVariableHeader(topicName, messageId, variableHeader.properties());
         // TODO: 2022/11/14 copy
@@ -356,7 +356,7 @@ public class MqttMessageHelper {
             }
         }
 
-        MqttConnAckVariableHeader mqttConnAckVariableHeader = new MqttConnAckVariableHeader(returnCode, false, properties);
+        MqttConnAckVariableHeader mqttConnAckVariableHeader = new MqttConnAckVariableHeader(returnCode, sessionPresent, properties);
         MqttFixedHeader mqttFixedHeader = new MqttFixedHeader(MqttMessageType.CONNACK, false, MqttQoS.AT_MOST_ONCE, false, 0X02);
         return new MqttConnAckMessage(mqttFixedHeader, mqttConnAckVariableHeader);
     }

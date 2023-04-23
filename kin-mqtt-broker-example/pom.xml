@@ -18,6 +18,7 @@
         <module>kin-mqtt-example-client</module>
         <module>kin-mqtt-example-web</module>
         <module>kin-mqtt-broker-example-api</module>
+        <module>kin-mqtt-broker-example-store</module>
     </modules>
 
 </project>

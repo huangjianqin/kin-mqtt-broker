@@ -54,10 +54,10 @@ public class MqttMessageContext<T extends MqttMessage> {
                 //已过期
                 expireTime = recTime + TimeUnit.SECONDS.toMillis(pubExpiryIntervalProp.value());
             } else {
-                expireTime = 0;
+                expireTime = -1;
             }
         } else {
-            expireTime = 0;
+            expireTime = -1;
         }
     }
 
@@ -81,6 +81,14 @@ public class MqttMessageContext<T extends MqttMessage> {
     public static MqttMessageContext<MqttPublishMessage> fromCluster(MqttMessageReplica replica) {
         return new MqttMessageContext<>(MqttMessageHelper.createPublish(replica), true,
                 replica.getBrokerId(), replica.getClientId());
+    }
+
+    /**
+     * 将{@link MqttMessageContext<MqttPublishMessage>}转换成{@link MqttMessageReplica}
+     */
+    @SuppressWarnings("unchecked")
+    public MqttMessageReplica toReplica() {
+        return MqttMessageHelper.toReplica((MqttMessageContext<MqttPublishMessage>) this);
     }
 
     /**

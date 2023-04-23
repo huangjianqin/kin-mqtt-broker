@@ -27,9 +27,12 @@ public class DisconnectHandler extends AbstractMqttMessageHandler<MqttMessage> {
         MqttReasonCodeAndPropertiesVariableHeader headers = (MqttReasonCodeAndPropertiesVariableHeader) disconnectMessage.variableHeader();
         MqttProperties properties = headers.properties();
         MqttProperties.MqttProperty<Integer> sessionExpiryIntervalProp = properties.getProperty(MqttProperties.MqttPropertyType.SESSION_EXPIRY_INTERVAL.value());
+        int sessionExpiryInterval = 0;
         if (Objects.nonNull(sessionExpiryIntervalProp)) {
-            mqttSession.updateSessionExpiryInterval(sessionExpiryIntervalProp.value());
+            sessionExpiryInterval = sessionExpiryIntervalProp.value();
         }
+        mqttSession.onDisconnect(sessionExpiryInterval);
+
         return mqttSession.close();
     }
 

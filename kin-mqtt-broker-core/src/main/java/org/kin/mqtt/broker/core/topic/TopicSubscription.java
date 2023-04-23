@@ -1,7 +1,6 @@
 package org.kin.mqtt.broker.core.topic;
 
 import io.netty.handler.codec.mqtt.MqttQoS;
-import io.netty.handler.codec.mqtt.MqttSubscriptionOption;
 import io.netty.handler.codec.mqtt.MqttTopicSubscription;
 import org.kin.framework.utils.StringUtils;
 import org.kin.mqtt.broker.TopicNames;
@@ -23,7 +22,7 @@ public class TopicSubscription {
     /** 发起订阅的mqtt连接 */
     private MqttSession mqttSession;
     /** 订阅qos */
-    private MqttQoS qoS;
+    private MqttQoS qos;
     /** 共享topic用到, 用于共享topic区分组, 默认null */
     private String group;
     /** 如果mqtt client订阅了自己的publish的topic, 将noLocal设置为true, 则mqtt client不会收到该topic自己publish的消息 */
@@ -39,8 +38,23 @@ public class TopicSubscription {
     }
 
     public TopicSubscription(MqttTopicSubscription rawSubscription, MqttSession mqttSession) {
-        this.rawTopic = rawSubscription.topicName();
-        this.qoS = rawSubscription.qualityOfService();
+        this(mqttSession,
+                rawSubscription.topicName(), rawSubscription.qualityOfService(),
+                rawSubscription.option().isNoLocal(), rawSubscription.option().isRetainAsPublished());
+    }
+
+    public TopicSubscription(TopicSubscriptionReplica replica, MqttSession mqttSession) {
+        this(mqttSession, replica.getTopic(), MqttQoS.valueOf(replica.getQos()),
+                replica.isNoLocal(), replica.isRetainAsPublished());
+    }
+
+    private TopicSubscription(MqttSession mqttSession,
+                              String rawTopic,
+                              MqttQoS qos,
+                              boolean noLocal,
+                              boolean retainAsPublished) {
+        this.rawTopic = rawTopic;
+        this.qos = qos;
         this.mqttSession = mqttSession;
         if (TopicNames.isShareTopic(rawTopic)) {
             //共享topic
@@ -51,9 +65,8 @@ public class TopicSubscription {
             //普通topic
             this.topic = this.rawTopic;
         }
-        MqttSubscriptionOption option = rawSubscription.option();
-        this.noLocal = option.isNoLocal();
-        this.retainAsPublished = option.isRetainAsPublished();
+        this.noLocal = noLocal;
+        this.retainAsPublished = retainAsPublished;
     }
 
     /**
@@ -68,11 +81,11 @@ public class TopicSubscription {
     /**
      * 用于内部topic subscription复制
      */
-    private TopicSubscription(String rawTopic, String topic, MqttSession mqttSession, MqttQoS qoS, String group) {
+    private TopicSubscription(String rawTopic, String topic, MqttSession mqttSession, MqttQoS qos, String group) {
         this.rawTopic = rawTopic;
         this.topic = topic;
         this.mqttSession = mqttSession;
-        this.qoS = qoS;
+        this.qos = qos;
         this.group = group;
     }
 
@@ -85,7 +98,7 @@ public class TopicSubscription {
      */
     public TopicSubscription convert(MqttQoS mqttQoS) {
         return new TopicSubscription(rawTopic, topic, mqttSession,
-                MqttQoS.valueOf(Math.min(mqttQoS.value(), qoS.value())), group);
+                MqttQoS.valueOf(Math.min(mqttQoS.value(), qos.value())), group);
     }
 
     /**
@@ -112,8 +125,20 @@ public class TopicSubscription {
     /**
      * 更新qos
      */
-    public void setQoS(MqttQoS qoS) {
-        this.qoS = qoS;
+    public void setQos(MqttQoS qos) {
+        this.qos = qos;
+    }
+
+    /**
+     * 将{@link TopicSubscription}转换成{@link TopicSubscriptionReplica}
+     */
+    public TopicSubscriptionReplica toReplica() {
+        TopicSubscriptionReplica replica = new TopicSubscriptionReplica();
+        replica.setTopic(rawTopic);
+        replica.setQos(qos.value());
+        replica.setNoLocal(noLocal);
+        replica.setRetainAsPublished(retainAsPublished);
+        return replica;
     }
 
     //getter
@@ -125,8 +150,8 @@ public class TopicSubscription {
         return topic;
     }
 
-    public MqttQoS getQoS() {
-        return qoS;
+    public MqttQoS getQos() {
+        return qos;
     }
 
     public MqttSession getMqttSession() {
@@ -168,7 +193,7 @@ public class TopicSubscription {
                 "rawTopic='" + rawTopic + '\'' +
                 ", topic='" + topic + '\'' +
                 ", mqttSession=" + mqttSession +
-                ", qoS=" + qoS +
+                ", qos=" + qos +
                 ", group='" + group + '\'' +
                 ", noLocal='" + noLocal + '\'' +
                 ", retainAsPublished='" + retainAsPublished + '\'' +

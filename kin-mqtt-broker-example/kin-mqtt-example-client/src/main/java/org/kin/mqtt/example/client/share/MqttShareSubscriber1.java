@@ -1,5 +1,6 @@
 package org.kin.mqtt.example.client.share;
 
+import org.kin.mqtt.broker.example.Brokers;
 import org.kin.mqtt.broker.example.Topics;
 import org.kin.mqtt.example.client.common.MqttSubscriber;
 
@@ -18,7 +19,7 @@ public class MqttShareSubscriber1 {
 
         ForkJoinPool.commonPool().execute(() -> {
             try {
-                subscriber.subscribe("tcp://127.0.0.1:1883", topic, latch);
+                subscriber.subscribe(Brokers.B1, topic, latch);
             } catch (InterruptedException e) {
                 throw new RuntimeException(e);
             }

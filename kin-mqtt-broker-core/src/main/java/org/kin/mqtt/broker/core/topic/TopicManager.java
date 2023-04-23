@@ -4,6 +4,7 @@ import io.netty.handler.codec.mqtt.MqttQoS;
 import org.kin.mqtt.broker.core.MqttSession;
 
 import javax.annotation.Nullable;
+import java.util.Collection;
 import java.util.Map;
 import java.util.Set;
 
@@ -42,7 +43,7 @@ public interface TopicManager extends TopicFilter {
      *
      * @param subscriptions 订阅信息
      */
-    void addSubscriptions(Set<TopicSubscription> subscriptions);
+    void addSubscriptions(Collection<TopicSubscription> subscriptions);
 
     /**
      * 获取所有topic信息

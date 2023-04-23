@@ -112,7 +112,7 @@ public class DefaultTopicManager implements TopicManager {
     }
 
     @Override
-    public void addSubscriptions(Set<TopicSubscription> subscriptions) {
+    public void addSubscriptions(Collection<TopicSubscription> subscriptions) {
         for (TopicSubscription subscription : subscriptions) {
             addSubscription(subscription);
         }

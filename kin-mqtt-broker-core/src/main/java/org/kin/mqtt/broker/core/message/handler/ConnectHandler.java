@@ -7,14 +7,17 @@ import org.kin.mqtt.broker.core.MqttSession;
 import org.kin.mqtt.broker.core.MqttSessionManager;
 import org.kin.mqtt.broker.core.message.MqttMessageContext;
 import org.kin.mqtt.broker.core.message.MqttMessageHelper;
+import org.kin.mqtt.broker.core.session.MqttSessionReplica;
 import org.kin.mqtt.broker.event.MqttClientConnEvent;
 import org.kin.mqtt.broker.store.MqttMessageStore;
+import org.kin.mqtt.broker.store.MqttSessionStore;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import java.nio.charset.StandardCharsets;
 import java.util.Objects;
 
@@ -27,10 +30,7 @@ public class ConnectHandler extends AbstractMqttMessageHandler<MqttConnectMessag
 
     @Override
     public Mono<Void> handle(MqttMessageContext<MqttConnectMessage> messageContext, MqttSession mqttSession, MqttBrokerContext brokerContext) {
-        return Mono.from(handle0(messageContext, mqttSession, brokerContext));
-    }
-
-    private Mono<Void> handle0(MqttMessageContext<MqttConnectMessage> messageContext, MqttSession mqttSession, MqttBrokerContext brokerContext) {
+        // TODO: 2023/4/23 MqttConnectReturnCode#CONNECTION_REFUSED_CONNECTION_RATE_EXCEEDED 是否此处拦截connection rate更合适
         MqttConnectMessage message = messageContext.getMessage();
 
         MqttConnectVariableHeader variableHeader = message.variableHeader();
@@ -38,7 +38,6 @@ public class ConnectHandler extends AbstractMqttMessageHandler<MqttConnectMessag
         String clientId = payload.clientIdentifier();
 
         MqttSessionManager sessionManager = brokerContext.getSessionManager();
-        AuthService authService = brokerContext.getAuthService();
 
         byte mqttVersion = (byte) variableHeader.version();
 
@@ -56,48 +55,91 @@ public class ConnectHandler extends AbstractMqttMessageHandler<MqttConnectMessag
             return rejectConnect(mqttSession, mqttVersion, MqttConnectReturnCode.CONNECTION_REFUSED_UNACCEPTABLE_PROTOCOL_VERSION, false);
         }
 
+        MqttSessionStore sessionStore = brokerContext.getSessionStore();
+        return sessionStore
+                .get(clientId)
+                //存在持久化session
+                .flatMap(sessionReplica -> {
+                    if (!brokerContext.getBrokerId().equals(sessionReplica.getBrokerId()) &&
+                            sessionReplica.isConnected()) {
+                        //mqtt client已经连接到其他broker, 相当于已登录
+                        return rejectConnect(mqttSession, mqttVersion, MqttConnectReturnCode.CONNECTION_REFUSED_IDENTIFIER_REJECTED, true)
+                                .then(mqttSession.close())
+                                .thenReturn(false);
+                    } else {
+                        return connect(messageContext, mqttSession, brokerContext, sessionReplica)
+                                .thenReturn(true);
+                    }
+                })
+                .onErrorResume(e -> {
+                    log.error("get session(clientId={}) from {} error", clientId, sessionStore.getClass().getSimpleName(), e);
+                    return rejectConnect(mqttSession, mqttVersion, MqttConnectReturnCode.CONNECTION_REFUSED_UNSPECIFIED_ERROR, false)
+                            .then(mqttSession.close())
+                            .thenReturn(false);
+                })
+                //合法性校验通过 or 不存在持久化session or 异常
+                .switchIfEmpty(connect(messageContext, mqttSession, brokerContext, null)
+                        .thenReturn(true))
+                .then();
+    }
+
+    /**
+     * 连接逻辑处理
+     */
+    private Mono<Void> connect(MqttMessageContext<MqttConnectMessage> messageContext,
+                               MqttSession mqttSession,
+                               MqttBrokerContext brokerContext,
+                               @Nullable MqttSessionReplica sessionReplica) {
+        MqttConnectMessage message = messageContext.getMessage();
+
+        MqttConnectVariableHeader variableHeader = message.variableHeader();
+        MqttConnectPayload payload = message.payload();
+        String clientId = payload.clientIdentifier();
+
+        AuthService authService = brokerContext.getAuthService();
+
+        byte mqttVersion = (byte) variableHeader.version();
+
         //auth
         return authService.auth(payload.userName(), new String(payload.passwordInBytes(), StandardCharsets.UTF_8))
                 .flatMap(authResult -> {
                     if (authResult) {
-                        return handle1(oldMqttSession, mqttSession, brokerContext, variableHeader, payload, clientId, mqttVersion);
+                        return initSession(mqttSession, variableHeader, payload, clientId, sessionReplica)
+                                //resp connect ack
+                                .flatMap(s -> s.sendMessage(MqttMessageHelper.createConnAck(MqttConnectReturnCode.CONNECTION_ACCEPTED,
+                                                mqttVersion, s.isSessionPresent(), brokerContext.getBrokerConfig()), false)
+                                        .then(sendOfflineMessage(brokerContext.getMessageStore(), mqttSession))
+                                        .then(Mono.fromRunnable(() -> brokerContext.broadcastEvent(new MqttClientConnEvent(s)))));
                     } else {
                         return rejectConnect(mqttSession, mqttVersion, MqttConnectReturnCode.CONNECTION_REFUSED_BAD_USER_NAME_OR_PASSWORD, false);
                     }
                 });
     }
 
-    private Mono<Void> handle1(MqttSession oldMqttSession, MqttSession mqttSession, MqttBrokerContext brokerContext,
-                               MqttConnectVariableHeader variableHeader, MqttConnectPayload payload,
-                               String clientId, byte mqttVersion) {
-        boolean sessionPresent = false;
-        if (variableHeader.isCleanSession()) {
-            //客户端和服务端必须丢弃任何已存在的会话, 并开始一个新的会话
-            if (Objects.nonNull(oldMqttSession)) {
-                //持久化session重新上线才会走进这里
-                oldMqttSession.cleanSession(true);
-            }
-            //更新mqtt session属性
-            mqttSession.onConnect(clientId, variableHeader, payload);
+    /**
+     * 初始化mqtt session
+     */
+    private Mono<MqttSession> initSession(MqttSession mqttSession,
+                                          MqttConnectVariableHeader variableHeader,
+                                          MqttConnectPayload payload,
+                                          String clientId,
+                                          @Nullable MqttSessionReplica sessionReplica) {
+        //持久化session是否有效
+        boolean sessionReplicaValid = Objects.nonNull(sessionReplica) && sessionReplica.isValid();
+        Mono<MqttSession> sessionMono;
+        if (!variableHeader.isCleanSession() && sessionReplicaValid) {
+            //存在一个关联此客户端标识符的会话, 服务端必须基于此会话的状态恢复与客户端的通信. 如果不存在任何关联此客户端标识符的会话, 服务端必须创建一个新的会话
+            sessionMono = Mono.just(mqttSession.onConnect(clientId, variableHeader, payload, sessionReplica));
         } else {
-            if (Objects.nonNull(oldMqttSession) && !oldMqttSession.isSessionExpiry()) {
-                //存在一个关联此客户端标识符的会话, 服务端必须基于此会话的状态恢复与客户端的通信. 如果不存在任何关联此客户端标识符的会话, 服务端必须创建一个新的会话
-                oldMqttSession.onReconnect(mqttSession, variableHeader, payload);
-                //替换
-                mqttSession = oldMqttSession;
-                sessionPresent = true;
-            } else {
-                //更新mqtt session属性
-                mqttSession.onConnect(clientId, variableHeader, payload);
-            }
+            //客户端和服务端必须丢弃任何已存在的会话, 并开始一个新的会话
+            //持久化session已过期
+            sessionMono = Mono.just(mqttSession.onConnect(clientId, variableHeader, payload));
         }
 
-        MqttSession finalMqttSession = mqttSession;
-        return mqttSession.sendMessage(MqttMessageHelper.createConnAck(MqttConnectReturnCode.CONNECTION_ACCEPTED, mqttVersion, sessionPresent, brokerContext.getBrokerConfig()), false)
-                .then(sendOfflineMessage(brokerContext.getMessageStore(), mqttSession))
-                .then(Mono.fromRunnable(() -> brokerContext.broadcastEvent(new MqttClientConnEvent(finalMqttSession))));
+        return sessionMono
+                //持久化
+                .doOnNext(MqttSession::tryPersist);
     }
-
 
     /**
      * 拒绝连接统一入口

@@ -4,7 +4,7 @@ import io.r2dbc.spi.*;
 import org.kin.framework.utils.JSON;
 import org.kin.framework.utils.StringUtils;
 import org.kin.mqtt.broker.core.message.MqttMessageReplica;
-import org.kin.mqtt.broker.store.AbstractMessageStore;
+import org.kin.mqtt.broker.store.AbstractMqttMessageStore;
 import org.kin.mqtt.broker.utils.TopicUtils;
 import org.reactivestreams.Publisher;
 import org.slf4j.Logger;
@@ -23,12 +23,12 @@ import java.util.stream.Collectors;
  * @author huangjianqin
  * @date 2022/11/20
  */
-public class DBMessageStore extends AbstractMessageStore {
-    private static final Logger log = LoggerFactory.getLogger(DBMessageStore.class);
+public class DBMqttMessageStore extends AbstractMqttMessageStore {
+    private static final Logger log = LoggerFactory.getLogger(DBMqttMessageStore.class);
     /** r2dbc连接池 */
     private final ConnectionFactory connectionFactory;
 
-    public DBMessageStore(ConnectionFactory connectionFactory) {
+    public DBMqttMessageStore(ConnectionFactory connectionFactory) {
         this.connectionFactory = connectionFactory;
     }
 

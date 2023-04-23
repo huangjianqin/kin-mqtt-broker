@@ -1,11 +1,13 @@
 package org.kin.mqtt.example.client.common;
 
 import org.eclipse.paho.mqttv5.client.IMqttMessageListener;
+import org.eclipse.paho.mqttv5.client.IMqttToken;
 import org.eclipse.paho.mqttv5.client.MqttClient;
 import org.eclipse.paho.mqttv5.client.MqttConnectionOptions;
 import org.eclipse.paho.mqttv5.client.persist.MemoryPersistence;
 import org.eclipse.paho.mqttv5.common.MqttException;
 import org.eclipse.paho.mqttv5.common.MqttSubscription;
+import org.kin.mqtt.broker.example.Brokers;
 import org.kin.mqtt.broker.example.Topics;
 
 import java.nio.charset.StandardCharsets;
@@ -38,18 +40,19 @@ public class MqttSubscriber {
             connOpts.setUserName("java");
             connOpts.setPassword("12345".getBytes(StandardCharsets.UTF_8));
             System.out.println("connecting to broker: " + broker);
-            client.connect(connOpts);
+            IMqttToken connAck = client.connectWithResult(connOpts);
             System.out.println(broker + " connected ");
-            System.out.println(broker + " start subscribe topic " + topic);
-            //subscribe(String,int,IMqttMessageListener)会死循环
-            IMqttMessageListener[] listeners = {
-                    (s, mqttMessage) -> System.out.printf(System.currentTimeMillis() + ": receive from broker '%s': %d : %s : %s\r\n",
-                            broker, mqttMessage.getId(), s, new String(mqttMessage.getPayload(), StandardCharsets.UTF_8))
-            };
-            client.subscribe(new MqttSubscription[]{new MqttSubscription(topic, 2)}, listeners);
-            client.subscribe(new MqttSubscription[]{new MqttSubscription(Topics.BROKER_LOOP, 1)}, listeners);
+            if (!connAck.getSessionPresent()) {
+                System.out.println(broker + " start subscribe topic " + topic);
+                IMqttMessageListener[] listeners = {
+                        (s, mqttMessage) -> System.out.printf(System.currentTimeMillis() + ": receive from broker '%s': %d : %s : %s\r\n",
+                                broker, mqttMessage.getId(), s, new String(mqttMessage.getPayload(), StandardCharsets.UTF_8))
+                };
+                client.subscribe(new MqttSubscription[]{new MqttSubscription(topic, 2)}, listeners);
+                client.subscribe(new MqttSubscription[]{new MqttSubscription(Topics.BROKER_LOOP, 1)}, listeners);
 
-            System.out.println(broker + " subscribe success");
+                System.out.println(broker + " subscribe success");
+            }
 
             latch.await();
 
@@ -80,17 +83,9 @@ public class MqttSubscriber {
 
         MqttSubscriber subscriber = new MqttSubscriber("Subscriber");
 
-//        ForkJoinPool.commonPool().execute(() -> {
-//            try {
-//                subscriber.subscribe("tcp://127.0.0.1:1883", topic, latch);
-//            } catch (InterruptedException e) {
-//                throw new RuntimeException(e);
-//            }
-//        });
-
         ForkJoinPool.commonPool().execute(() -> {
             try {
-                subscriber.subscribe("tcp://127.0.0.1:1883", Topics.EXAMPLE, latch);
+                subscriber.subscribe(Brokers.B1, Topics.EXAMPLE, latch);
             } catch (InterruptedException e) {
                 throw new RuntimeException(e);
             }
