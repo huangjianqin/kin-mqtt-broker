@@ -8,9 +8,11 @@ import org.kin.mqtt.broker.core.message.MqttMessageContext;
 import org.kin.mqtt.broker.core.message.MqttMessageHelper;
 import org.kin.mqtt.broker.core.topic.TopicManager;
 import org.kin.mqtt.broker.core.topic.TopicSubscription;
+import org.kin.mqtt.broker.event.MqttUnsubscribeEvent;
 import reactor.core.publisher.Mono;
 
 import javax.annotation.Nonnull;
+import java.util.List;
 
 /**
  * @author huangjianqin
@@ -20,17 +22,19 @@ public class UnsubscribeHandler extends AbstractMqttMessageHandler<MqttUnsubscri
     @Override
     public Mono<Void> handle(MqttMessageContext<MqttUnsubscribeMessage> messageContext, MqttSession mqttSession, MqttBrokerContext brokerContext) {
         MqttUnsubscribeMessage message = messageContext.getMessage();
+        List<String> topics = message.payload().topics();
         return Mono.fromRunnable(() -> {
-            TopicManager topicManager = brokerContext.getTopicManager();
-            message.payload()
-                    .topics()
-                    .stream()
-                    .map(topic -> TopicSubscription.forRemove(topic, mqttSession))
-                    .forEach(topicManager::removeSubscription);
+                    TopicManager topicManager = brokerContext.getTopicManager();
 
-            //持久化session
-            mqttSession.tryPersist();
-        }).then(mqttSession.sendMessage(MqttMessageHelper.createUnsubAck(message.variableHeader().messageId()), false));
+                    topics.stream()
+                            .map(topic -> TopicSubscription.forRemove(topic, mqttSession))
+                            .forEach(topicManager::removeSubscription);
+
+                    //持久化session
+                    mqttSession.tryPersist();
+                }).then(mqttSession.sendMessage(MqttMessageHelper.createUnsubAck(message.variableHeader().messageId()), false))
+                //broadcast mqtt event
+                .then(Mono.fromRunnable(() -> brokerContext.broadcastEvent(new MqttUnsubscribeEvent(mqttSession, topics))));
     }
 
     @Nonnull

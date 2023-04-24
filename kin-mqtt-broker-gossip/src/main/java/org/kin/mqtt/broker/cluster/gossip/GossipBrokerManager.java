@@ -11,7 +11,6 @@ import io.scalecube.net.Address;
 import io.scalecube.reactor.RetryNonSerializedEmitFailureHandler;
 import io.scalecube.transport.netty.tcp.TcpTransportFactory;
 import org.jctools.maps.NonBlockingHashMap;
-import org.kin.framework.reactor.event.EventConsumer;
 import org.kin.framework.reactor.event.ReactorEventBus;
 import org.kin.framework.utils.ClassUtils;
 import org.kin.framework.utils.JSON;
@@ -23,6 +22,7 @@ import org.kin.mqtt.broker.cluster.event.SubscriptionsAddEvent;
 import org.kin.mqtt.broker.cluster.event.SubscriptionsRemoveEvent;
 import org.kin.mqtt.broker.core.MqttBrokerContext;
 import org.kin.mqtt.broker.core.message.MqttMessageReplica;
+import org.kin.mqtt.broker.event.MqttEventConsumer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import reactor.core.publisher.Flux;
@@ -141,12 +141,15 @@ public class GossipBrokerManager implements BrokerManager {
     }
 
     @Override
+    public MqttBrokerNode getNode(String address) {
+        return clusterBrokers.get(address);
+    }
+
+    @Override
     public Mono<Void> shutdown() {
-        return Mono.fromRunnable(() -> {
-            clusterMono.subscribe(Cluster::shutdown);
-            //close sink
-            clusterMqttMessageSink.emitComplete(RetryNonSerializedEmitFailureHandler.RETRY_NON_SERIALIZED);
-        });
+        return clusterMono.flatMap(cluster -> Mono.fromRunnable(cluster::shutdown))
+                //close sink
+                .then(Mono.fromRunnable(() -> clusterMqttMessageSink.emitComplete(RetryNonSerializedEmitFailureHandler.RETRY_NON_SERIALIZED)));
     }
 
     //------------------------------------------------------------------------------------------------------------------------
@@ -215,7 +218,7 @@ public class GossipBrokerManager implements BrokerManager {
     /**
      * 注册订阅消费
      */
-    private class SubscriptionsAddEventConsumer implements EventConsumer<SubscriptionsAddEvent> {
+    private class SubscriptionsAddEventConsumer implements MqttEventConsumer<SubscriptionsAddEvent> {
 
         @Override
         public void consume(ReactorEventBus eventBus, SubscriptionsAddEvent event) {
@@ -231,7 +234,7 @@ public class GossipBrokerManager implements BrokerManager {
     /**
      * 取消注册订阅消费
      */
-    private class SubscriptionsRemoveEventConsumer implements EventConsumer<SubscriptionsRemoveEvent> {
+    private class SubscriptionsRemoveEventConsumer implements MqttEventConsumer<SubscriptionsRemoveEvent> {
 
         @Override
         public void consume(ReactorEventBus eventBus, SubscriptionsRemoveEvent event) {

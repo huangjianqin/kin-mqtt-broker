@@ -7,7 +7,6 @@ import io.netty.handler.codec.mqtt.MqttTopicSubscription;
 import org.kin.framework.utils.CollectionUtils;
 import org.kin.mqtt.broker.acl.AclAction;
 import org.kin.mqtt.broker.acl.AclService;
-import org.kin.mqtt.broker.cluster.event.SubscriptionsAddEvent;
 import org.kin.mqtt.broker.core.MqttBrokerContext;
 import org.kin.mqtt.broker.core.MqttSession;
 import org.kin.mqtt.broker.core.message.MqttMessageContext;
@@ -79,9 +78,7 @@ public class SubscribeHandler extends AbstractMqttMessageHandler<MqttSubscribeMe
                             //send retain message
                             .thenEmpty(sendRetainFlux)
                             //broadcast mqtt event
-                            .then(Mono.fromRunnable(() -> brokerContext.broadcastEvent(new MqttSubscribeEvent(mqttSession, subscriptions))))
-                            .then(Mono.fromRunnable(() -> brokerContext.broadcastClusterEvent(
-                                    SubscriptionsAddEvent.of(subscriptions.stream().map(TopicSubscription::getTopic).collect(Collectors.toList())))));
+                            .then(Mono.fromRunnable(() -> brokerContext.broadcastEvent(new MqttSubscribeEvent(mqttSession, subscriptions))));
                 });
     }
 

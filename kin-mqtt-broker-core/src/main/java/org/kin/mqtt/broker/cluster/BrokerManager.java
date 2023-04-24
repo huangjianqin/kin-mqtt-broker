@@ -6,6 +6,8 @@ import org.kin.mqtt.broker.core.message.MqttMessageReplica;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
+import javax.annotation.Nullable;
+
 /**
  * mqtt集群broker管理
  * 目前支持
@@ -59,6 +61,15 @@ public interface BrokerManager {
      * @return broadcast complete signal
      */
     Mono<Void> broadcastEvent(MqttClusterEvent event);
+
+    /**
+     * 根据节点address获取{@link MqttBrokerNode}实例
+     *
+     * @param address 节点address
+     * @return {@link MqttBrokerNode}实例
+     */
+    @Nullable
+    MqttBrokerNode getNode(String address);
 
     /**
      * shutdown

@@ -45,6 +45,11 @@ public class StandaloneBrokerManager implements BrokerManager {
     }
 
     @Override
+    public MqttBrokerNode getNode(String address) {
+        return null;
+    }
+
+    @Override
     public Mono<Void> shutdown() {
         return Mono.empty();
     }
