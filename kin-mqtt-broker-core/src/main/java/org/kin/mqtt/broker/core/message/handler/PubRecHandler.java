@@ -26,7 +26,7 @@ public class PubRecHandler extends AbstractMqttMessageHandler<MqttMessage> {
         MqttMessageIdVariableHeader variableHeader = (MqttMessageIdVariableHeader) message.variableHeader();
         //publish消息id
         int messageId = variableHeader.messageId();
-        long uuid = mqttSession.genUuid(MqttMessageType.PUBLISH, messageId);
+        long uuid = mqttSession.genMqttMessageRetryId(MqttMessageType.PUBLISH, messageId);
         //停止retry, 然后响应pub rel消息
         return Mono.fromRunnable(() -> Optional.ofNullable(brokerContext.getRetryService().getRetry(uuid)).ifPresent(Retry::cancel))
                 .then(mqttSession.sendMessage(MqttMessageHelper.createPubRel(messageId), true));

@@ -154,7 +154,7 @@ public class MqttSession {
 
             RetryService retryService = brokerContext.getRetryService();
             //开启retry task, 最大重试次数为5, 间隔3s
-            long uuid = genUuid(mqttMessageType, MqttMessageHelper.getMessageId(mqttMessage));
+            long uuid = genMqttMessageRetryId(mqttMessageType, MqttMessageHelper.getMessageId(mqttMessage));
             retryService.execRetry(new PublishRetry(uuid, retryTask, cleaner, retryService));
 
             return sendMessage0(Mono.just(mqttMessage))
@@ -229,7 +229,7 @@ public class MqttSession {
      * @param messageId mqtt消息package id
      * @return 唯一ID, 即32位connection hashcode + 28位mqtt消息类型 + 4位mqtt消息package id
      */
-    public long genUuid(MqttMessageType type, Integer messageId) {
+    public long genMqttMessageRetryId(MqttMessageType type, Integer messageId) {
         return RetryService.genMqttMessageRetryId(this, type, messageId);
     }
 

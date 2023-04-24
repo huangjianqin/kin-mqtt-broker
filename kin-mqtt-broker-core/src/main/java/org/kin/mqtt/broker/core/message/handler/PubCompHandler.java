@@ -27,7 +27,7 @@ public class PubCompHandler extends AbstractMqttMessageHandler<MqttMessage> {
         MqttMessageIdVariableHeader variableHeader = (MqttMessageIdVariableHeader) message.variableHeader();
         int messageId = variableHeader.messageId();
         return Mono.fromRunnable(() ->
-                Optional.ofNullable(brokerContext.getRetryService().getRetry(mqttSession.genUuid(MqttMessageType.PUBREL, messageId)))
+                Optional.ofNullable(brokerContext.getRetryService().getRetry(mqttSession.genMqttMessageRetryId(MqttMessageType.PUBREL, messageId)))
                         .ifPresent(Retry::cancel));
     }
 

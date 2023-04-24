@@ -28,7 +28,7 @@ public class PubAckHandler extends AbstractMqttMessageHandler<MqttPubAckMessage>
             MqttMessage message = messageContext.getMessage();
             MqttMessageIdVariableHeader variableHeader = (MqttMessageIdVariableHeader) message.variableHeader();
             int messageId = variableHeader.messageId();
-            Optional.ofNullable(brokerContext.getRetryService().getRetry(mqttSession.genUuid(MqttMessageType.PUBLISH, messageId))).ifPresent(Retry::cancel);
+            Optional.ofNullable(brokerContext.getRetryService().getRetry(mqttSession.genMqttMessageRetryId(MqttMessageType.PUBLISH, messageId))).ifPresent(Retry::cancel);
         });
     }
 
