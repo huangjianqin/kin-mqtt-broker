@@ -18,6 +18,9 @@ import static io.netty.handler.codec.mqtt.MqttConnectReturnCode.*;
  * @date 2022/11/14
  */
 public class MqttMessageHelper {
+    /** 最大mqtt消息id */
+    public static final int MAX_MESSAGE_ID = 65535;
+
     private MqttMessageHelper() {
     }
 

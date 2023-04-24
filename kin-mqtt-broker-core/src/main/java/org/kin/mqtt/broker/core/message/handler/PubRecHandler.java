@@ -22,13 +22,11 @@ import java.util.Optional;
 public class PubRecHandler extends AbstractMqttMessageHandler<MqttMessage> {
     @Override
     public Mono<Void> handle(MqttMessageContext<MqttMessage> messageContext, MqttSession mqttSession, MqttBrokerContext brokerContext) {
-        mqttSession.onRecPubRespMessage();
-
         MqttMessage message = messageContext.getMessage();
         MqttMessageIdVariableHeader variableHeader = (MqttMessageIdVariableHeader) message.variableHeader();
         //publish消息id
         int messageId = variableHeader.messageId();
-        long uuid = mqttSession.generateUuid(MqttMessageType.PUBLISH, messageId);
+        long uuid = mqttSession.genUuid(MqttMessageType.PUBLISH, messageId);
         //停止retry, 然后响应pub rel消息
         return Mono.fromRunnable(() -> Optional.ofNullable(brokerContext.getRetryService().getRetry(uuid)).ifPresent(Retry::cancel))
                 .then(mqttSession.sendMessage(MqttMessageHelper.createPubRel(messageId), true));

@@ -66,12 +66,11 @@ public class PublishHandler extends AbstractMqttMessageHandler<MqttPublishMessag
                         .then(MqttPublishMessageHelper.trySaveRetainMessage(messageStore, messageContext));
             case EXACTLY_ONCE:
                 if (!mqttSession.existQos2Message(packetId)) {
-                    //Mqtt client -> broker: publish
-                    //Mqtt client <- broker: pub rec
-                    //Mqtt client -> broker: pub rel
-                    //Mqtt client <- broker: publish
-                    //...
-                    //Mqtt client <- broker: pub comp
+                    //mqtt publisher     ->     broker: publish
+                    //mqtt publisher     <-     broker: pub rec
+                    //mqtt publisher     ->     broker: pub rel
+                    //mqtt subscriber... <-     broker: publish
+                    //mqtt publisher     <-     broker: pub comp
                     return mqttSession
                             .cacheQos2Message(packetId,
                                     //暂不移除topic中delayed相关信息, pub rel时再移除

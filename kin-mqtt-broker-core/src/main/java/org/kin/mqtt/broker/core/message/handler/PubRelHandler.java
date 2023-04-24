@@ -58,7 +58,7 @@ public class PubRelHandler extends AbstractMqttMessageHandler<MqttMessage> {
 
             //移除retry task
             return mono
-                    .then(Mono.fromRunnable(() -> Optional.ofNullable(retryService.getRetry(mqttSession.generateUuid(MqttMessageType.PUBREC, messageId))).ifPresent(Retry::cancel)));
+                    .then(Mono.fromRunnable(() -> Optional.ofNullable(retryService.getRetry(mqttSession.genUuid(MqttMessageType.PUBREC, messageId))).ifPresent(Retry::cancel)));
         } else {
             return mqttSession.sendMessage(MqttMessageHelper.createPubComp(messageId), false);
         }

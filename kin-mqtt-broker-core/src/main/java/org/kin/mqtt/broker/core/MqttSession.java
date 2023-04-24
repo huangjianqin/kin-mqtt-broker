@@ -154,7 +154,7 @@ public class MqttSession {
 
             RetryService retryService = brokerContext.getRetryService();
             //开启retry task, 最大重试次数为5, 间隔3s
-            long uuid = generateUuid(mqttMessageType, MqttMessageHelper.getMessageId(mqttMessage));
+            long uuid = genUuid(mqttMessageType, MqttMessageHelper.getMessageId(mqttMessage));
             retryService.execRetry(new PublishRetry(uuid, retryTask, cleaner, retryService));
 
             return sendMessage0(Mono.just(mqttMessage))
@@ -229,8 +229,8 @@ public class MqttSession {
      * @param messageId mqtt消息package id
      * @return 唯一ID, 即32位connection hashcode + 28位mqtt消息类型 + 4位mqtt消息package id
      */
-    public long generateUuid(MqttMessageType type, Integer messageId) {
-        return (long) channelHashCode << 32 | (long) type.value() << 28 | messageId << 4 >>> 4;
+    public long genUuid(MqttMessageType type, Integer messageId) {
+        return RetryService.genMqttMessageRetryId(this, type, messageId);
     }
 
     /**
@@ -239,11 +239,11 @@ public class MqttSession {
     public int nextMessageId() {
         int value;
         while (qos2MessageCache.containsKey(value = messageIdGenerator.incrementAndGet())) {
-            if (value >= 65535) {
+            if (value >= MqttMessageHelper.MAX_MESSAGE_ID) {
                 //消息id有最大限制
                 synchronized (this) {
                     value = messageIdGenerator.incrementAndGet();
-                    if (value >= 65535) {
+                    if (value >= MqttMessageHelper.MAX_MESSAGE_ID) {
                         messageIdGenerator.set(0);
                     } else {
                         break;
@@ -738,6 +738,10 @@ public class MqttSession {
 
     public long getDisConnectTime() {
         return disConnectTime;
+    }
+
+    public int getChannelHashCode() {
+        return channelHashCode;
     }
 
     @Override

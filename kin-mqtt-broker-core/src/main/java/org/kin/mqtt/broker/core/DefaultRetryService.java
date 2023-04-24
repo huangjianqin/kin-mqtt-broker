@@ -29,7 +29,7 @@ final class DefaultRetryService extends HashedWheelTimer implements RetryService
     public void execRetry(Retry retry) {
         Retry curRetry = id2Retry.computeIfAbsent(retry.getId(), k -> retry);
         if (curRetry != retry) {
-            throw new IllegalStateException("retry for id=%s has been executed");
+            throw new IllegalStateException(String.format("retry for id=%s has been executed", retry.getId()));
         }
 
         newTimeout(retry, retry.getDelay(), retry.getUnit());
