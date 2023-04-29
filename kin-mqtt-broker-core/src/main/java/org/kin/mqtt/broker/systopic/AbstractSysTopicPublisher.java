@@ -18,13 +18,20 @@ import java.util.Map;
  * @date 2022/11/27
  */
 public abstract class AbstractSysTopicPublisher {
+    /** mqtt broker context */
+    protected final MqttBrokerContext brokerContext;
+
+    protected AbstractSysTopicPublisher(MqttBrokerContext brokerContext) {
+        this.brokerContext = brokerContext;
+    }
+
     /**
      * publish 系统级别消息
      *
-     * @param brokerContext mqtt broker context
-     * @param data          消息数据
+     * @param topic sys topic
+     * @param data  消息数据
      */
-    protected void publishSysMessage(MqttBrokerContext brokerContext, String topic, Map<String, Object> data) {
+    protected void publishSysMessage(String topic, Map<String, Object> data) {
         ByteBuf buffer = PooledByteBufAllocator.DEFAULT.buffer();
         buffer.writeBytes(JSON.writeBytes(data));
         MqttPublishMessage message = MqttMessageHelper.createPublish(false, MqttQoS.AT_MOST_ONCE,

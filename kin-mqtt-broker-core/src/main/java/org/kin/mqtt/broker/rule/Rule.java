@@ -58,7 +58,7 @@ public class Rule implements Disposable {
     /** 规则定义 */
     private final RuleDefinition definition;
     /** 匹配的mqtt topic */
-    private final String topicRegex;
+    private final String regexTopic;
     /** 消费队列 */
     private final Sinks.Many<RuleContext> sink = Sinks.many().unicast().onBackpressureBuffer();
     /** 动作实现 */
@@ -75,7 +75,7 @@ public class Rule implements Disposable {
         if (Objects.isNull(table)) {
             throw new IllegalStateException(String.format("can not find topic from sql, '%s'", sql));
         }
-        this.topicRegex = TopicUtils.toRegexTopic(table);
+        this.regexTopic = TopicUtils.toRegexTopic(table);
         //创建action
         Set<ActionDefinition> actionDefs = definition.getActionDefs();
         List<Action> actions = new CopyOnWriteArrayList<>();
@@ -139,7 +139,7 @@ public class Rule implements Disposable {
      * @param topic mqtt topic
      */
     public boolean match(String topic) {
-        return topic.matches(topicRegex);
+        return topic.matches(regexTopic);
     }
 
     /**

@@ -10,7 +10,6 @@ import io.netty.handler.codec.mqtt.MqttEncoder;
 import io.netty.handler.codec.mqtt.MqttMessage;
 import io.netty.handler.codec.mqtt.MqttPublishMessage;
 import io.netty.handler.traffic.ChannelTrafficShapingHandler;
-import org.kin.framework.event.EventListener;
 import org.kin.framework.reactor.event.EventConsumer;
 import org.kin.framework.utils.SysUtils;
 import org.kin.mqtt.broker.acl.AclService;
@@ -26,12 +25,13 @@ import org.kin.mqtt.broker.core.handler.WsFrame2ByteBufDecoder;
 import org.kin.mqtt.broker.core.message.MqttMessageContext;
 import org.kin.mqtt.broker.core.topic.share.RandomShareSubLoadBalance;
 import org.kin.mqtt.broker.core.topic.share.ShareSubLoadBalance;
+import org.kin.mqtt.broker.event.MqttEventConsumer;
 import org.kin.mqtt.broker.rule.RuleDefinition;
 import org.kin.mqtt.broker.store.DefaultMqttMessageStore;
 import org.kin.mqtt.broker.store.DefaultMqttSessionStore;
 import org.kin.mqtt.broker.store.MqttMessageStore;
 import org.kin.mqtt.broker.store.MqttSessionStore;
-import org.kin.mqtt.broker.systopic.TotalClientNumPublisher;
+import org.kin.mqtt.broker.systopic.impl.OnlineClientNumPublisher;
 import org.kin.transport.netty.ServerTransport;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -70,7 +70,8 @@ public class MqttBrokerBootstrap extends ServerTransport<MqttBrokerBootstrap> {
     /** 访问控制权限管理 */
     private AclService aclService = NoneAclService.INSTANCE;
     /** 事件consumer */
-    private final List<Object> eventConsumers = new LinkedList<>();
+    @SuppressWarnings("rawtypes")
+    private final List<MqttEventConsumer> eventConsumers = new LinkedList<>();
     /** 共享订阅负载均衡实现 */
     private ShareSubLoadBalance shareSubLoadBalance = RandomShareSubLoadBalance.INSTANCE;
 
@@ -186,7 +187,8 @@ public class MqttBrokerBootstrap extends ServerTransport<MqttBrokerBootstrap> {
     /**
      * 事件consumer
      */
-    public MqttBrokerBootstrap eventConsumers(EventConsumer<?>... consumers) {
+    @SuppressWarnings("rawtypes")
+    public MqttBrokerBootstrap eventConsumers(MqttEventConsumer... consumers) {
         this.eventConsumers.addAll(Arrays.asList(consumers));
         return this;
     }
@@ -196,22 +198,9 @@ public class MqttBrokerBootstrap extends ServerTransport<MqttBrokerBootstrap> {
      * 1. {@link EventConsumer}实现类
      * 2. 带{@link org.kin.framework.event.EventFunction}的实例
      */
-    public MqttBrokerBootstrap eventConsumers(Collection<EventConsumer<?>> consumers) {
+    @SuppressWarnings("rawtypes")
+    public MqttBrokerBootstrap eventConsumers(Collection<MqttEventConsumer> consumers) {
         this.eventConsumers.addAll(consumers);
-        return this;
-    }
-
-    /**
-     * 事件consumer
-     * 带{@link org.kin.framework.event.EventFunction}的实例
-     */
-    public MqttBrokerBootstrap eventConsumers(Object... consumers) {
-        for (Object consumer : consumers) {
-            if (!consumer.getClass().isAnnotationPresent(EventListener.class)) {
-                throw new IllegalArgumentException(String.format("%s must be annotated with @%s", consumer.getClass(), EventListener.class.getSimpleName()));
-            }
-        }
-        this.eventConsumers.addAll(Arrays.asList(consumers));
         return this;
     }
 
@@ -232,15 +221,10 @@ public class MqttBrokerBootstrap extends ServerTransport<MqttBrokerBootstrap> {
         config.selfCheck();
         checkRequire();
 
-        //系统topic配置
-        if (config.isEnableSysTopic()) {
-            configSysTopic();
-        }
-
         int port = config.getPort();
         MqttBrokerContext brokerContext = new MqttBrokerContext(config, new MqttMessageDispatcher(interceptors),
                 authService, brokerManager, messageStore, sessionStore,
-                ruleDefinitions, aclService, shareSubLoadBalance);
+                ruleDefinitions, aclService, shareSubLoadBalance, eventConsumers);
 
         //启动mqtt broker
         LoopResources loopResources = LoopResources.create("kin-mqtt-server-" + port, 2, SysUtils.DOUBLE_CPU, false);
@@ -322,6 +306,10 @@ public class MqttBrokerBootstrap extends ServerTransport<MqttBrokerBootstrap> {
             disposableServerMonoList.add(disposableServerMono);
         }
 
+        //初始化sys topic publisher
+        if (config.isEnableSysTopic()) {
+            initSysTopicPublisher(brokerContext);
+        }
         //集群初始化
         initBrokerManager(brokerContext);
         //init bridge manager
@@ -406,10 +394,10 @@ public class MqttBrokerBootstrap extends ServerTransport<MqttBrokerBootstrap> {
     }
 
     /**
-     * 系统topic配置
+     * 初始化 sys topic publisher
      */
-    private void configSysTopic() {
-        eventConsumers(new TotalClientNumPublisher());
+    private void initSysTopicPublisher(MqttBrokerContext brokerContext) {
+        new OnlineClientNumPublisher(brokerContext);
     }
 
     /**

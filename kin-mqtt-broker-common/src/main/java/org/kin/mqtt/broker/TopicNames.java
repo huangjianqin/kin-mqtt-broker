@@ -16,8 +16,8 @@ public interface TopicNames {
     //----------------------------------------------------系统topic------------------------------------------------------------------------------
     /** broker级别内置topic */
     String SYS_TOPIC = "$SYS$";
-    /** broker级别内置topic, 当前broker已注册的client数, 在线+离线(持久化会话) */
-    String SYS_TOPIC_CLIENTS_TOTAL = SYS_TOPIC + "/broker/clients/total";
+    /** broker级别内置topic, 当前broker在线client数 */
+    String SYS_ONLINE_CLIENTS_TOTAL = SYS_TOPIC + "/broker/clients/online";
 
     /**
      * 判断指定topic是否是系统内置topic

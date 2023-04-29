@@ -1,11 +1,8 @@
 package org.kin.mqtt.broker.cluster.gossip;
 
-import org.jctools.maps.NonBlockingHashSet;
-import org.kin.framework.utils.CollectionUtils;
 import org.kin.mqtt.broker.cluster.MqttBrokerNode;
 
-import java.util.Collection;
-import java.util.Set;
+import java.util.List;
 
 /**
  * 基于gossip的mqtt broker集群节点实现
@@ -22,8 +19,8 @@ public class GossipNode implements MqttBrokerNode {
     private Integer port;
     /** 命名空间 */
     private String namespace;
-    /** 该节点订阅topic的正则表达式 */
-    private final Set<String> subscriptionTopicRegex = new NonBlockingHashSet<>();
+    /** 该broker节点订阅管理 */
+    private final RemoteTopicSubscriptionManager subscriptionManager = new RemoteTopicSubscriptionManager();
 
     /**
      * 该mqtt broker节点是否有订阅{@code topic}的mqtt client
@@ -31,34 +28,18 @@ public class GossipNode implements MqttBrokerNode {
      * @param topic mqtt topic
      */
     public boolean hasSubscription(String topic) {
-        for (String topicRegex : subscriptionTopicRegex) {
-            if (topic.matches(topicRegex)) {
-                return true;
-            }
-        }
-        return false;
+        return subscriptionManager.hasSubscription(topic);
     }
 
     /**
-     * 新增订阅topic
+     * remote mqtt broker订阅变化时, 维护该节点的订阅信息
      *
      * @param subscriptions mqtt topic
      */
-    public void addSubscriptions(Collection<String> subscriptions) {
-        subscriptionTopicRegex.addAll(subscriptions);
+    public void onSubscriptionChanged(List<RemoteTopicSubscription> changedSubscriptions) {
+        subscriptionManager.onSubscriptionChanged(changedSubscriptions);
     }
 
-    /**
-     * 移除订阅topic
-     *
-     * @param subscriptions mqtt topic
-     */
-    public void removeSubscriptions(Collection<String> subscriptions) {
-        if (CollectionUtils.isEmpty(subscriptions)) {
-            return;
-        }
-        subscriptionTopicRegex.removeAll(subscriptions);
-    }
 
     //--------------------------------------------------------------------------------------------------------------
     public static Builder builder() {
@@ -113,5 +94,16 @@ public class GossipNode implements MqttBrokerNode {
     @Override
     public String getNamespace() {
         return namespace;
+    }
+
+    @Override
+    public String toString() {
+        return "GossipNode{" +
+                "name='" + name + '\'' +
+                ", host='" + host + '\'' +
+                ", port=" + port +
+                ", namespace='" + namespace + '\'' +
+                ", subscriptionManager=" + subscriptionManager +
+                '}';
     }
 }

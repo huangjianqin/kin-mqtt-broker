@@ -3,7 +3,7 @@ package org.kin.mqtt.broker.event;
 import org.kin.mqtt.broker.core.MqttSession;
 import org.kin.mqtt.broker.core.topic.TopicSubscription;
 
-import java.util.Set;
+import java.util.Collection;
 
 /**
  * subscribe消息事件
@@ -15,9 +15,9 @@ public class MqttSubscribeEvent implements MqttEvent {
     /** mqtt client信息 */
     private final MqttSession mqttSession;
     /** 该client的订阅 */
-    private final Set<TopicSubscription> subscriptions;
+    private final Collection<TopicSubscription> subscriptions;
 
-    public MqttSubscribeEvent(MqttSession mqttSession, Set<TopicSubscription> subscriptions) {
+    public MqttSubscribeEvent(MqttSession mqttSession, Collection<TopicSubscription> subscriptions) {
         this.mqttSession = mqttSession;
         this.subscriptions = subscriptions;
     }
@@ -27,7 +27,7 @@ public class MqttSubscribeEvent implements MqttEvent {
         return mqttSession;
     }
 
-    public Set<TopicSubscription> getSubscriptions() {
+    public Collection<TopicSubscription> getSubscriptions() {
         return subscriptions;
     }
 }

@@ -47,7 +47,7 @@
 默认都是retain.
 目前支持的系统topic name都定义在`TopicNames`. 具体有
 
-* `$SYS$/broker/clients/total`: 当前broker已注册的client数, 在线+离线(持久化会话)
+* `$SYS$/broker/clients/total`: broker在线client数
 
 ### 数据存储思考
 

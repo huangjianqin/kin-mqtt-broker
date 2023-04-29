@@ -8,7 +8,6 @@ import io.netty.util.Timeout;
 import org.jctools.maps.NonBlockingHashMap;
 import org.jctools.maps.NonBlockingHashSet;
 import org.kin.framework.utils.CollectionUtils;
-import org.kin.mqtt.broker.cluster.event.SubscriptionsRemoveEvent;
 import org.kin.mqtt.broker.core.message.MqttMessageContext;
 import org.kin.mqtt.broker.core.message.MqttMessageHelper;
 import org.kin.mqtt.broker.core.message.MqttQos2PubMessage;
@@ -20,9 +19,7 @@ import org.kin.mqtt.broker.core.topic.TopicSubscriptionReplica;
 import org.kin.mqtt.broker.core.will.Will;
 import org.kin.mqtt.broker.core.will.WillDelayTask;
 import org.kin.mqtt.broker.domain.InflightMessageQueue;
-import org.kin.mqtt.broker.event.MqttClientDisConnEvent;
-import org.kin.mqtt.broker.event.MqttClientRegisterEvent;
-import org.kin.mqtt.broker.event.MqttClientUnregisterEvent;
+import org.kin.mqtt.broker.event.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import reactor.core.Disposable;
@@ -227,7 +224,7 @@ public class MqttSession {
      *
      * @param type      mqtt消息类型
      * @param messageId mqtt消息package id
-     * @return 唯一ID, 即32位connection hashcode + 28位mqtt消息类型 + 4位mqtt消息package id
+     * @return retry唯一ID
      */
     public long genMqttMessageRetryId(MqttMessageType type, Integer messageId) {
         return RetryService.genMqttMessageRetryId(this, type, messageId);
@@ -432,6 +429,7 @@ public class MqttSession {
         //register session
         if (brokerContext.getSessionManager().register(clientId, this)) {
             brokerContext.broadcastEvent(new MqttClientRegisterEvent(this));
+            brokerContext.broadcastEvent(new OnlineClientNumEvent(brokerContext.getSessionManager().size()));
         }
 
         return this;
@@ -450,9 +448,11 @@ public class MqttSession {
             //恢复订阅关系
             List<TopicSubscription> subscriptions = replica.getSubscriptions()
                     .stream()
-                    .map(mtsr -> new TopicSubscription(mtsr, this))
+                    .map(ts -> new TopicSubscription(ts, this))
                     .collect(Collectors.toList());
             brokerContext.getTopicManager().addSubscriptions(subscriptions);
+
+            brokerContext.broadcastEvent(new MqttSubscribeEvent(this, subscriptions));
         }
     }
 
@@ -485,7 +485,7 @@ public class MqttSession {
         tryPersist();
 
         //先获取订阅消息
-        SubscriptionsRemoveEvent subscriptionsRemoveEvent = SubscriptionsRemoveEvent.of(subscriptions.stream().map(TopicSubscription::getTopic).collect(Collectors.toList()));
+        List<String> unsubscribeTopics = subscriptions.stream().map(TopicSubscription::getTopic).collect(Collectors.toList());
 
         //取消session注册
         brokerContext.getSessionManager().remove(clientId);
@@ -494,9 +494,9 @@ public class MqttSession {
         brokerContext.getTopicManager().removeAllSubscriptions(this);
 
         brokerContext.broadcastEvent(new MqttClientUnregisterEvent(this));
+        brokerContext.broadcastEvent(new OnlineClientNumEvent(brokerContext.getSessionManager().size()));
         brokerContext.broadcastEvent(new MqttClientDisConnEvent(this));
-        //无论session是否持久化, 都集群广播topic订阅移除事件
-        brokerContext.broadcastClusterEvent(subscriptionsRemoveEvent);
+        brokerContext.broadcastEvent(new MqttUnsubscribeEvent(this, unsubscribeTopics));
     }
 
     /**

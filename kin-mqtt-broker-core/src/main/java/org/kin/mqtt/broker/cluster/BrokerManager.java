@@ -69,7 +69,7 @@ public interface BrokerManager {
      * @return {@link MqttBrokerNode}实例
      */
     @Nullable
-    MqttBrokerNode getNode(String address);
+    <T extends MqttBrokerNode> T getNode(String address);
 
     /**
      * shutdown

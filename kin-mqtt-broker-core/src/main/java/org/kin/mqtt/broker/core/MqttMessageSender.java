@@ -54,7 +54,7 @@ public class MqttMessageSender {
                     }
 
                     if (sessions.isEmpty()) {
-                        throw new MqttException("can not find any online mqtt session");
+                        throw new MqttBrokerException("can not find any online mqtt session");
                     }
 
                     return sessions;

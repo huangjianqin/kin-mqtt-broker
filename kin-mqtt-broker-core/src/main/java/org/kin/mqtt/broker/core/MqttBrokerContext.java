@@ -14,6 +14,7 @@ import org.kin.mqtt.broker.core.retry.RetryService;
 import org.kin.mqtt.broker.core.topic.TopicManager;
 import org.kin.mqtt.broker.core.topic.share.ShareSubLoadBalance;
 import org.kin.mqtt.broker.event.MqttEvent;
+import org.kin.mqtt.broker.event.MqttEventConsumer;
 import org.kin.mqtt.broker.rule.RuleDefinition;
 import org.kin.mqtt.broker.rule.RuleEngine;
 import org.kin.mqtt.broker.rule.RuleManager;
@@ -22,6 +23,7 @@ import org.kin.mqtt.broker.store.MqttSessionStore;
 import reactor.core.scheduler.Scheduler;
 import reactor.core.scheduler.Schedulers;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
@@ -64,11 +66,12 @@ public class MqttBrokerContext implements Closeable {
     /** 业务相关定时器 */
     private final HashedWheelTimer bsTimer = new HashedWheelTimer(100, TimeUnit.MILLISECONDS, 10);
 
+    @SuppressWarnings("rawtypes")
     public MqttBrokerContext(MqttBrokerConfig brokerConfig, MqttMessageDispatcher dispatcher,
                              AuthService authService, BrokerManager brokerManager,
                              MqttMessageStore messageStore, MqttSessionStore sessionStore,
                              List<RuleDefinition> ruleDefinitions, AclService aclService,
-                             ShareSubLoadBalance shareSubLoadBalance) {
+                             ShareSubLoadBalance shareSubLoadBalance, Collection<MqttEventConsumer> eventConsumers) {
         this.brokerConfig = brokerConfig;
         this.mqttBizScheduler = Schedulers.newBoundedElastic(SysUtils.CPU_NUM * 10, Integer.MAX_VALUE, "kin-mqtt-broker-bs-" + brokerConfig.getPort(), 60);
         this.topicManager = new DefaultTopicManager(shareSubLoadBalance);
@@ -80,6 +83,9 @@ public class MqttBrokerContext implements Closeable {
         this.ruleManager.addRules(ruleDefinitions);
         this.aclService = aclService;
         this.eventBus = new DefaultReactorEventBus(true, mqttBizScheduler);
+        for (Object eventConsumer : eventConsumers) {
+            this.eventBus.register(eventConsumer);
+        }
 
         //init
         bridgeManager.initBrokerContext(this);

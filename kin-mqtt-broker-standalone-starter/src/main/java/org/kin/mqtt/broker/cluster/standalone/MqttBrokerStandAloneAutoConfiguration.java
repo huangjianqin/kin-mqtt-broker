@@ -1,7 +1,5 @@
 package org.kin.mqtt.broker.cluster.standalone;
 
-import org.kin.framework.event.EventListener;
-import org.kin.framework.reactor.event.EventConsumer;
 import org.kin.framework.utils.CollectionUtils;
 import org.kin.mqtt.broker.acl.AclService;
 import org.kin.mqtt.broker.auth.AuthService;
@@ -11,6 +9,7 @@ import org.kin.mqtt.broker.core.Interceptor;
 import org.kin.mqtt.broker.core.MqttBroker;
 import org.kin.mqtt.broker.core.MqttBrokerBootstrap;
 import org.kin.mqtt.broker.core.MqttMessageSender;
+import org.kin.mqtt.broker.event.MqttEventConsumer;
 import org.kin.mqtt.broker.store.MqttMessageStore;
 import org.kin.mqtt.broker.store.MqttSessionStore;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -20,7 +19,7 @@ import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
-import java.util.LinkedList;
+import java.util.Collection;
 import java.util.List;
 import java.util.Objects;
 
@@ -74,8 +73,8 @@ public class MqttBrokerStandAloneAutoConfiguration {
             bootstrap.aclService(aclService);
         }
 
-        List<Object> consumers = new LinkedList<>(context.getBeansOfType(EventConsumer.class).values());
-        consumers.addAll(context.getBeansWithAnnotation(EventListener.class).values());
+        @SuppressWarnings("rawtypes")
+        Collection<MqttEventConsumer> consumers = context.getBeansOfType(MqttEventConsumer.class).values();
         if (CollectionUtils.isNonEmpty(consumers)) {
             bootstrap.eventConsumers(consumers);
         }

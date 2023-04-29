@@ -90,6 +90,9 @@ public class TopicSubscription {
     }
 
     /**
+     * publisher与broker的传输语义取决于发送的mqtt消息的qos
+     * subscriber与broker的传输语义取决于接收到的mqtt消息的topic对应订阅时定义的qos
+     * <p>
      * 当publish消息时, 需根据实际订阅qos和该消息qos来解决最后给该mqtt client publish的消息的qos.
      * 这里面取min, 保证了同时满足实际订阅qos和该消息qos
      *

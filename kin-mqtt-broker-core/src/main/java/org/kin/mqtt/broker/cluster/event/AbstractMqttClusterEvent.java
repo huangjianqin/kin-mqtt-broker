@@ -10,7 +10,7 @@ public abstract class AbstractMqttClusterEvent implements MqttClusterEvent {
     private static final long serialVersionUID = -5580537486030777665L;
 
     /** lazy init, 由mqtt broker节点广播时才赋值 */
-    private String address;
+    protected String address;
 
     //setter && getter
     public String getAddress() {

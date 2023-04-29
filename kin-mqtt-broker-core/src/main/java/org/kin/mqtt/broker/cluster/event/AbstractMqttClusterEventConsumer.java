@@ -3,11 +3,11 @@ package org.kin.mqtt.broker.cluster.event;
 import org.kin.framework.reactor.event.ReactorEventBus;
 import org.kin.mqtt.broker.cluster.BrokerManager;
 import org.kin.mqtt.broker.cluster.MqttBrokerNode;
-import org.kin.mqtt.broker.core.MqttException;
+import org.kin.mqtt.broker.core.MqttBrokerException;
+import org.kin.mqtt.broker.event.MqttEventConsumer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.annotation.Nullable;
 import java.util.Objects;
 
 /**
@@ -16,7 +16,7 @@ import java.util.Objects;
  * @author huangjianqin
  * @date 2023/4/24
  */
-public abstract class AbstractMqttClusterEventConsumer<E extends AbstractMqttClusterEvent> implements MqttClusterEventConsumer<E> {
+public abstract class AbstractMqttClusterEventConsumer<E extends AbstractMqttClusterEvent, N extends MqttBrokerNode> implements MqttEventConsumer<E> {
     private static final Logger log = LoggerFactory.getLogger(AbstractMqttClusterEventConsumer.class);
 
     /** 集群节点管理 */
@@ -29,9 +29,9 @@ public abstract class AbstractMqttClusterEventConsumer<E extends AbstractMqttClu
     @Override
     public final void consume(ReactorEventBus eventBus, E event) {
         String address = event.getAddress();
-        MqttBrokerNode node = brokerManager.getNode(address);
+        N node = brokerManager.getNode(address);
         if (Objects.isNull(node)) {
-            throw new MqttException(String.format("receive cluster event from node '%s' which is not in cluster", address));
+            throw new MqttBrokerException(String.format("receive cluster event from node '%s' which is not in cluster", address));
         }
         consume(eventBus, node, event);
     }
@@ -43,5 +43,5 @@ public abstract class AbstractMqttClusterEventConsumer<E extends AbstractMqttClu
      * @param node     发送event broker节点
      * @param event    事件
      */
-    protected abstract void consume(ReactorEventBus eventBus, @Nullable MqttBrokerNode node, MqttClusterEvent event);
+    protected abstract void consume(ReactorEventBus eventBus, N node, E event);
 }

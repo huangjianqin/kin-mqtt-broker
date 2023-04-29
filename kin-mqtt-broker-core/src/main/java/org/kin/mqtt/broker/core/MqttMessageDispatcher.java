@@ -133,7 +133,7 @@ public class MqttMessageDispatcher {
         for (Interceptor interceptor : interceptors) {
             if (interceptor.intercept(messageContext, mqttSession, brokerContext)) {
                 //intercept
-                return Mono.error(new MqttException(String.format("mqtt message from session '%s' intercepted by %s, %s",
+                return Mono.error(new MqttBrokerException(String.format("mqtt message from session '%s' intercepted by %s, %s",
                         clientId,
                         interceptor.getClass().getName(),
                         mqttMessage)));

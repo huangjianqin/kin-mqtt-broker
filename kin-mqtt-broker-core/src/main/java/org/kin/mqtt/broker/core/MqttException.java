@@ -4,10 +4,10 @@ package org.kin.mqtt.broker.core;
  * mqtt相关异常
  *
  * @author huangjianqin
- * @date 2023/4/16
+ * @date 2023/4/25
  */
 public class MqttException extends RuntimeException {
-    private static final long serialVersionUID = 4300617163388896045L;
+    private static final long serialVersionUID = -1104874739544607942L;
 
     public MqttException() {
     }
