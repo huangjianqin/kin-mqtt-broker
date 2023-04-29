@@ -84,7 +84,7 @@ public class MqttSession {
     private Disposable deferCloseWithoutConnMsgDisposable;
     /** mqtt client 订阅 */
     private Set<TopicSubscription> subscriptions;
-    /** mqtt response 消息id */
+    /** 发送mqtt消息id */
     private AtomicInteger messageIdGenerator;
     /**
      * exactly once消息缓存
@@ -444,6 +444,7 @@ public class MqttSession {
         }
 
         this.firstConnectTime = replica.getFirstConnectTime();
+        this.messageIdGenerator.set(replica.getMessageId());
         if (CollectionUtils.isNonEmpty(replica.getSubscriptions())) {
             //恢复订阅关系
             List<TopicSubscription> subscriptions = replica.getSubscriptions()
@@ -479,6 +480,7 @@ public class MqttSession {
         log.info("mqtt session closed, {}", this);
 
         //更新状态
+        offline();
         onDisconnect(expiryInternal);
 
         //持久化session
@@ -509,6 +511,7 @@ public class MqttSession {
             if (isOffline()) {
                 return;
             }
+
             if (!connection.isDisposed()) {
                 connection.dispose();
             }
@@ -662,6 +665,7 @@ public class MqttSession {
             subscriptionReplicas.add(subscription.toReplica());
         }
         replica.setSubscriptions(subscriptionReplicas);
+        replica.setMessageId(messageIdGenerator.get());
         return replica;
     }
 

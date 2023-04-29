@@ -32,6 +32,8 @@ public class MqttSessionReplica implements Serializable {
     private long expireTime;
     /** mqtt client 订阅 */
     private Set<TopicSubscriptionReplica> subscriptions;
+    /** 发送mqtt消息id */
+    private int messageId;
 
     /**
      * 判断session是否过期
@@ -129,6 +131,14 @@ public class MqttSessionReplica implements Serializable {
 
     public void setSubscriptions(Set<TopicSubscriptionReplica> subscriptions) {
         this.subscriptions = subscriptions;
+    }
+
+    public int getMessageId() {
+        return messageId;
+    }
+
+    public void setMessageId(int messageId) {
+        this.messageId = messageId;
     }
 
     @Override

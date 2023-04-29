@@ -200,12 +200,18 @@ public class GossipBrokerManager implements BrokerManager {
 
     @Override
     public Mono<Void> shutdown() {
-        return clusterMono.flatMap(cluster -> Mono.fromRunnable(cluster::shutdown))
-                .then(Mono.fromRunnable(forceSyncSubscriptionDisposable::dispose))
-                //close subscription sync
-                .then(Mono.fromRunnable(subscriptionSyncEventBus::dispose))
-                //close sink
-                .then(Mono.fromRunnable(() -> clusterMqttMessageSink.emitComplete(RetryNonSerializedEmitFailureHandler.RETRY_NON_SERIALIZED)));
+        return Mono.fromRunnable(forceSyncSubscriptionDisposable::dispose)
+                .flatMap(v -> clusterMono.flatMap(cluster -> {
+                    //关联gossip cluster shutdown后的操作
+                    cluster.onShutdown()
+                            //close sink
+                            .then(Mono.fromRunnable(() -> clusterMqttMessageSink.emitComplete(RetryNonSerializedEmitFailureHandler.RETRY_NON_SERIALIZED)))
+                            //close subscription sync
+                            .then(Mono.fromRunnable(subscriptionSyncEventBus::dispose))
+                            .subscribe();
+
+                    return Mono.fromRunnable(cluster::shutdown);
+                }));
     }
 
     /**

@@ -14,6 +14,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.Objects;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ForkJoinPool;
+import java.util.concurrent.TimeUnit;
 
 /**
  * 默认session持久化测试
@@ -102,8 +103,8 @@ public class DefaultMqttSessionStoreTest {
                 }
                 MqttConnectionOptions connOpts = new MqttConnectionOptions();
                 connOpts.setCleanStart(false);
-                //设置session有效期为2s
-//            connOpts.setSessionExpiryInterval(2L);
+                //设置session有效期为5min
+                connOpts.setSessionExpiryInterval(TimeUnit.MINUTES.toSeconds(5));
                 connOpts.setUserName("java");
                 connOpts.setPassword("12345".getBytes(StandardCharsets.UTF_8));
                 System.out.println("connecting to broker: " + broker);

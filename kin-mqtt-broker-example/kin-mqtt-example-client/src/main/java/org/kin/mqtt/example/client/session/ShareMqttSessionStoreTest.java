@@ -14,6 +14,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.Objects;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ForkJoinPool;
+import java.util.concurrent.TimeUnit;
 
 /**
  * 共享session持久化测试, 即session持久化在第三方组件完成
@@ -88,8 +89,8 @@ public class ShareMqttSessionStoreTest {
                 }
                 MqttConnectionOptions connOpts = new MqttConnectionOptions();
                 connOpts.setCleanStart(false);
-                //设置session有效期为2s
-//            connOpts.setSessionExpiryInterval(2L);
+                //设置session有效期为5min
+                connOpts.setSessionExpiryInterval(TimeUnit.MINUTES.toSeconds(5));
                 connOpts.setUserName("java");
                 connOpts.setPassword("12345".getBytes(StandardCharsets.UTF_8));
                 //设置3个broker, 断连后重连
