@@ -58,6 +58,7 @@ public class ConnectHandler extends AbstractMqttMessageHandler<MqttConnectMessag
         MqttSessionStore sessionStore = brokerContext.getSessionStore();
         return sessionStore
                 .get(clientId)
+                .publishOn(brokerContext.getMqttBizScheduler())
                 //存在持久化session
                 .flatMap(sessionReplica -> {
                     if (!brokerContext.getBrokerId().equals(sessionReplica.getBrokerId()) &&

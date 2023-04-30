@@ -97,6 +97,7 @@ public class MqttMessageSender {
                     } else if (saveIfOffline) {
                         //本broker离线, 看看是否在其他broker在线, 否则保存离线消息
                         return sessionStore.get(clientId)
+                                .publishOn(brokerContext.getMqttBizScheduler())
                                 .map(replica -> {
                                     if (replica.isConnected()) {
                                         brokerContext.getBrokerManager()

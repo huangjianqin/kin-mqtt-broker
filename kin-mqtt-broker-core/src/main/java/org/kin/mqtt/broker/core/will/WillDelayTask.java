@@ -49,6 +49,7 @@ public class WillDelayTask implements TimerTask {
     public void run(Timeout timeout) {
         MqttSessionStore sessionStore = brokerContext.getSessionStore();
         sessionStore.get(clientId)
+                .publishOn(brokerContext.getMqttBizScheduler())
                 .onErrorResume(e -> {
                     log.error("get session(clientId={}) from {} error", clientId, sessionStore.getClass().getSimpleName(), e);
                     //查询不到(持久化)session相关信息, 则认为session过期, 直接执行will
