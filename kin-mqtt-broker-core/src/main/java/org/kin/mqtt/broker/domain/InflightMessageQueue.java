@@ -7,6 +7,11 @@ import java.util.*;
 
 /**
  * 待发送的qos>0 mqtt message
+ * <p>
+ * MQTT v5.0协议为CONNECT报文新增了一个Receive Maximum的属性,
+ * 官方对它的解释是: 客户端使用此值限制客户端愿意同时处理的QoS为1和QoS为2的发布消息最大数量.
+ * 没有机制可以限制服务端试图发送的QoS为0的发布消息.
+ * 也就是说, 服务端可以在等待确认时使用不同的报文标识符向客户端发送后续的PUBLISH报文, 直到未被确认的报文数量到达Receive Maximum限制
  *
  * @author huangjianqin
  * @date 2023/1/2
