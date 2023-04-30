@@ -7,7 +7,7 @@
 * 支持规则引擎
 * 支持延迟发布(未实现持久化, broker重启后会丢失)
 * 支持系统topic
-* 支持retain和session离线消息存储
+* 支持retain和offline消息存储
 
 ## 设计
 
