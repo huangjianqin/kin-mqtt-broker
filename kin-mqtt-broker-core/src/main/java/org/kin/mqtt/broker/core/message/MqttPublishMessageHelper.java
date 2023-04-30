@@ -23,27 +23,6 @@ public final class MqttPublishMessageHelper {
     }
 
     /**
-     * 过滤离线会话消息
-     *
-     * @param mqttSession  mqtt session
-     * @param messageStore mqtt 消息外部存储
-     * @param supplier     mqtt publish消息生成逻辑
-     * @param timestamp    mqtt消息接收时间戳
-     * @return boolean          过滤结果
-     */
-    public static boolean filterOfflineAndSave(MqttSession mqttSession,
-                                               MqttMessageStore messageStore,
-                                               MqttMessageContext<MqttPublishMessage> pubMessageContext) {
-        if (mqttSession.isOnline()) {
-            return true;
-        } else {
-            //消息外部存储
-            messageStore.saveOfflineMessage(MqttMessageHelper.toReplica(pubMessageContext));
-            return false;
-        }
-    }
-
-    /**
      * 广播publish消息
      *
      * @param brokerContext  broker context
@@ -106,8 +85,6 @@ public final class MqttPublishMessageHelper {
                                     MqttMessageHelper.wrapPublish(messageContext.getMessage(), subscription,
                                             pubTopic.getName(), mqttSession.nextMessageId())));
                 })
-                //过滤离线会话消息
-                .filter(t2 -> filterOfflineAndSave(t2.first().getMqttSession(), brokerContext.getMessageStore(), t2.second()))
                 //将消息广播给已订阅的mqtt client
                 .map(t2 -> {
                     TopicSubscription subscription = t2.first();

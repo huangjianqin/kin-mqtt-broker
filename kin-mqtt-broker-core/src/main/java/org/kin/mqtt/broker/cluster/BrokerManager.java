@@ -55,6 +55,16 @@ public interface BrokerManager {
     Mono<Void> broadcastMqttMessage(MqttMessageReplica message);
 
     /**
+     * 给与remote broker连接的mqtt client发送publish消息
+     *
+     * @param remoteBrokerId remote broker id
+     * @param clientId       目标mqtt client id
+     * @param message        mqtt publish消息
+     * @return
+     */
+    Mono<Void> sendMqttMessage(String remoteBrokerId, String clientId, MqttMessageReplica message);
+
+    /**
      * 集群广播集群事件
      *
      * @param event 要广播的集群事件

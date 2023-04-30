@@ -40,6 +40,11 @@ public class StandaloneBrokerManager implements BrokerManager {
     }
 
     @Override
+    public Mono<Void> sendMqttMessage(String remoteBrokerId, String clientId, MqttMessageReplica message) {
+        return Mono.empty();
+    }
+
+    @Override
     public Mono<Void> broadcastEvent(MqttClusterEvent event) {
         return Mono.empty();
     }

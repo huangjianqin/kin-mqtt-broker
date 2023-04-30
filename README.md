@@ -75,6 +75,12 @@
 注意此时mqtt client进程还在, 如果mqtt client进程挂了, 重新拉起, 该场景还是需要重新走一遍正常的流程. 还有mqtt
 client有且仅能同时连接一个broker, 如果同时连接多个broker, 后续的链接会被broker强行断开
 
+### 离线消息思考
+
+* 阿里: 仅支持qos1, 客户端ack超时才判断为离线消息
+* emqx: 基于规则引擎路由到指定topic, 订阅者消费后删除
+* kin-mqtt-broker: 往指定client发送消息, 如果该client离线, 则持久化该消息, 待该client上线后, 重新发布
+
 ## 展望
 
 * 延迟发布消息未实现持久化, broker重启后会丢失

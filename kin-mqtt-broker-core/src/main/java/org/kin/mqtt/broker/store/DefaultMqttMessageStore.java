@@ -25,13 +25,13 @@ public class DefaultMqttMessageStore extends AbstractMqttMessageStore {
     private final Map<String, MqttMessageReplica> retainMessages = new NonBlockingHashMap<>();
 
     @Override
-    public void saveOfflineMessage(MqttMessageReplica replica) {
-        List<MqttMessageReplica> replicas = offlineMessages.computeIfAbsent(replica.getClientId(), k -> new CopyOnWriteArrayList<>());
+    public void saveOfflineMessage(String clientId, MqttMessageReplica replica) {
+        List<MqttMessageReplica> replicas = offlineMessages.computeIfAbsent(clientId, k -> new CopyOnWriteArrayList<>());
         replicas.add(replica);
     }
 
     @Override
-    public Flux<MqttMessageReplica> getOfflineMessage(String clientId) {
+    public Flux<MqttMessageReplica> getAndRemoveOfflineMessage(String clientId) {
         List<MqttMessageReplica> replicas = offlineMessages.remove(clientId);
         if (Objects.isNull(replicas)) {
             replicas = Collections.emptyList();

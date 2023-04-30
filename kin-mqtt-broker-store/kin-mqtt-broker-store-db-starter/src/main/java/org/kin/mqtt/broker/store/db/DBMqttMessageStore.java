@@ -13,6 +13,7 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 import javax.annotation.Nonnull;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.stream.Collectors;
@@ -33,14 +34,14 @@ public class DBMqttMessageStore extends AbstractMqttMessageStore {
     }
 
     @Override
-    public void saveOfflineMessage(MqttMessageReplica replica) {
+    public void saveOfflineMessage(String clientId, MqttMessageReplica replica) {
         Mono.usingWhen(connectionFactory.create(),
                         connection -> Mono.from(connection.beginTransaction())
                                 //保存offline消息
                                 .flatMap(v ->
                                         Mono.from(connection.createStatement("INSERT INTO kin_mqtt_broker_offline('client_id', 'topic', 'qos', 'retain', 'payload', 'create_time', 'properties')" +
                                                         " values (?,?,?,?,?,?,?)")
-                                                .bind(0, replica.getClientId())
+                                                .bind(0, clientId)
                                                 .bind(1, replica.getTopic())
                                                 .bind(2, replica.getQos())
                                                 .bind(3, replica.isRetain() ? 1 : 0)
@@ -59,16 +60,46 @@ public class DBMqttMessageStore extends AbstractMqttMessageStore {
 
     @Nonnull
     @Override
-    public Flux<MqttMessageReplica> getOfflineMessage(String clientId) {
+    public Flux<MqttMessageReplica> getAndRemoveOfflineMessage(String clientId) {
         return Flux.usingWhen(connectionFactory.create(),
                 //根据mqtt client id查询offline消息
-                connection -> Flux.from(connection.createStatement("SELECT * FROM kin_mqtt_broker_offline WHERE client_id = ?")
-                                .bind(0, clientId)
-                                .execute())
-                        //结果转换
-                        .flatMap(this::queryResult2MqttMessageReplica),
+                connection -> {
+                    Flux<? extends Result> resultFlux = Flux.from(connection.createStatement("SELECT * FROM kin_mqtt_broker_offline WHERE client_id = ?")
+                            .bind(0, clientId)
+                            .execute());
+                    //异步delete
+                    resultFlux.flatMap(r -> r.map((row, rowMetadata) -> row.get("client_id", Long.class)))
+                            .collectList()
+                            .doOnNext(this::delInvalidOfflineMessage)
+                            .subscribe();
+
+                    //结果转换
+                    return resultFlux.flatMap(this::queryResult2MqttMessageReplica);
+                },
                 Connection::close);
     }
+
+    /**
+     * 删除已消费的离线消息
+     *
+     * @param ids 离线消息记录主键id
+     */
+    private void delInvalidOfflineMessage(List<Long> ids) {
+        Mono.usingWhen(connectionFactory.create(),
+                        connection -> Mono.from(connection.beginTransaction())
+                                .flatMap(v ->
+                                        Mono.from(connection.createStatement("DELETE FROM kin_mqtt_broker_offline WHERE id in (?)")
+                                                .bind(0, StringUtils.mkString(ids))
+                                                .execute()))
+                                .thenEmpty(connection.commitTransaction())
+                                .onErrorResume(t -> {
+                                    log.error("delete offline message error, ", t);
+                                    return Mono.from(connection.rollbackTransaction());
+                                }),
+                        Connection::close)
+                .subscribe();
+    }
+
 
     @Override
     public void saveRetainMessage(MqttMessageReplica replica) {

@@ -159,7 +159,7 @@ public class ConnectHandler extends AbstractMqttMessageHandler<MqttConnectMessag
      * @param mqttSession  mqtt client
      */
     private Mono<Void> sendOfflineMessage(MqttMessageStore messageStore, MqttSession mqttSession) {
-        return messageStore.getOfflineMessage(mqttSession.getClientId())
+        return messageStore.getAndRemoveOfflineMessage(mqttSession.getClientId())
                 //以往异常导致正常流程无法继续
                 .onErrorResume(t -> {
                     log.error("", t);

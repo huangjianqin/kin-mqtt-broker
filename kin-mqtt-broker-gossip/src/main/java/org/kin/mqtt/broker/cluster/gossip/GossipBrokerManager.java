@@ -25,6 +25,8 @@ import org.kin.mqtt.broker.cluster.gossip.event.GossipNodeAddEvent;
 import org.kin.mqtt.broker.cluster.gossip.event.TopicSubscriptionFetchEvent;
 import org.kin.mqtt.broker.cluster.gossip.event.TopicSubscriptionSyncEvent;
 import org.kin.mqtt.broker.core.MqttBrokerContext;
+import org.kin.mqtt.broker.core.MqttSession;
+import org.kin.mqtt.broker.core.message.MqttMessageHelper;
 import org.kin.mqtt.broker.core.message.MqttMessageReplica;
 import org.kin.mqtt.broker.core.topic.TopicSubscription;
 import org.kin.mqtt.broker.event.MqttEventConsumer;
@@ -40,10 +42,7 @@ import reactor.core.publisher.Sinks;
 import reactor.core.scheduler.Scheduler;
 import reactor.core.scheduler.Schedulers;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -63,6 +62,8 @@ public class GossipBrokerManager implements BrokerManager {
     private static final Logger log = LoggerFactory.getLogger(GossipBrokerManager.class);
     /** gossip消息header, 标识mqtt事件类型 */
     private static final String HEADER_MQTT_EVENT_TYPE = "MqttEventType";
+    /** gossip消息header, 标识目标mqtt clientId */
+    private static final String HEADER_MQTT_CLIENT_ID = "MqttClientId";
 
     /** config */
     private final GossipConfig config;
@@ -118,7 +119,8 @@ public class GossipBrokerManager implements BrokerManager {
 
         int port = config.getPort();
         clusterMono = new ClusterImpl().config(clusterConfig -> clusterConfig.externalHost(config.getHost())
-                        .memberAlias(config.getAlias())
+                        //gossip节点名即broker id
+                        .memberAlias(brokerContext.getBrokerId())
                         .externalPort(port))
                 .membership(membershipConfig -> membershipConfig.seedMembers(seedMembers(config.getSeeds()))
                         .namespace(config.getNamespace())
@@ -165,6 +167,20 @@ public class GossipBrokerManager implements BrokerManager {
                     log.debug("cluster send message {} to node({}:{}:{}:{})",
                             message, n.getNamespace(), n.getName(), n.getHost(), n.getPort());
                     return c.send(Address.create(n.getHost(), n.getPort()), Message.builder()
+                            .data(message)
+                            .build());
+                })).then();
+    }
+
+    @Override
+    public Mono<Void> sendMqttMessage(String remoteBrokerId, String clientId, MqttMessageReplica message) {
+        return Flux.fromIterable(clusterBrokers.values())
+                .filter(n -> n.getName().equals(remoteBrokerId))
+                .flatMap(n -> clusterMono.flatMap(c -> {
+                    log.debug("cluster send message {} to node({}:{}:{}:{})",
+                            message, n.getNamespace(), n.getName(), n.getHost(), n.getPort());
+                    return c.send(Address.create(n.getHost(), n.getPort()), Message.builder()
+                            .header(HEADER_MQTT_CLIENT_ID, clientId)
                             .data(message)
                             .build());
                 })).then();
@@ -247,7 +263,23 @@ public class GossipBrokerManager implements BrokerManager {
             Map<String, String> headers = message.headers();
             if (!headers.containsKey(HEADER_MQTT_EVENT_TYPE)) {
                 //mqtt publish消息
-                clusterMqttMessageSink.emitNext(message.data(), RetryNonSerializedEmitFailureHandler.RETRY_NON_SERIALIZED);
+                String clientId = headers.get(HEADER_MQTT_CLIENT_ID);
+                MqttMessageReplica messageReplica = message.data();
+                if (Objects.isNull(clientId)) {
+                    //mqtt client pub/sub
+                    clusterMqttMessageSink.emitNext(messageReplica, RetryNonSerializedEmitFailureHandler.RETRY_NON_SERIALIZED);
+                } else {
+                    //broker -> client
+                    MqttSession mqttSession = brokerContext.getSessionManager().get(clientId);
+                    if (Objects.isNull(mqttSession)) {
+                        return;
+                    }
+
+                    //开启retry
+                    //不纳入Inflight
+                    mqttSession.sendMessage(MqttMessageHelper.createPublish(messageReplica), messageReplica.getQos() > 0, true)
+                            .subscribe();
+                }
             } else {
                 //mqtt event
                 subscriptionSyncEventBus.post((MqttClusterEvent) message.data());
