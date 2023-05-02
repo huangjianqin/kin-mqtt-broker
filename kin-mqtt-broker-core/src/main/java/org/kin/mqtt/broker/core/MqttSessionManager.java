@@ -4,7 +4,6 @@ import java.util.Collection;
 
 /**
  * 在线mqtt session管理
- * todo 设计优化
  *
  * @author huangjianqin
  * @date 2022/11/15
