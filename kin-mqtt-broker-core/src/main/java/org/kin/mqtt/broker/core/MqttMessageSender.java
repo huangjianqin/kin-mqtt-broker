@@ -93,7 +93,7 @@ public class MqttMessageSender {
                         MqttQoS mqttQoS = fixedHeader.qosLevel();
                         //开启retry
                         //不纳入Inflight
-                        return mqttSession.sendMessage(message, mqttQoS.value() > 0, true);
+                        return mqttSession.sendMessage(message, mqttQoS.value() > 0);
                     } else if (saveIfOffline) {
                         //本broker离线, 看看是否在其他broker在线, 否则保存离线消息
                         return sessionStore.get(clientId)

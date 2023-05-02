@@ -1,37 +1,43 @@
 package org.kin.mqtt.broker.domain;
 
-import io.netty.handler.codec.mqtt.MqttMessage;
+import com.google.common.base.Preconditions;
+import io.netty.handler.codec.mqtt.MqttPublishMessage;
+import org.kin.mqtt.broker.core.message.MqttMessageContext;
 
 import javax.annotation.Nullable;
-import java.util.*;
+import java.util.Deque;
+import java.util.LinkedList;
 
 /**
  * 待发送的qos>0 mqtt message
  * <p>
  * MQTT v5.0协议为CONNECT报文新增了一个Receive Maximum的属性,
- * 官方对它的解释是: 客户端使用此值限制客户端愿意同时处理的QoS为1和QoS为2的发布消息最大数量.
+ * 官方对它的解释是: 客户端使用此值限制服务端愿意同时处理的QoS为1和QoS为2的发布消息最大数量.
  * 没有机制可以限制服务端试图发送的QoS为0的发布消息.
  * 也就是说, 服务端可以在等待确认时使用不同的报文标识符向客户端发送后续的PUBLISH报文, 直到未被确认的报文数量到达Receive Maximum限制
  *
  * @author huangjianqin
  * @date 2023/1/2
  */
-public class InflightMessageQueue {
-    /** 缓存最大大小 */
-    public static final int MAX_QUEUE_SIZE = 128;
-
+public class InflightWindow {
+    /** 队列最大大小 */
+    private static final int MAX_QUEUE_SIZE = 128;
     /** 接收端愿意同时处理的QoS为1和2的PUBLISH消息最大数量 */
     private volatile int receiveMaximum;
-    /** 待发送的qos>0消息缓存, 按先入先出的顺序存储 */
-    private final Queue<MqttMessage> queue = new LinkedList<>();
-    /** 可发送消息配额 */
-    private int quota;
 
-    public InflightMessageQueue() {
+
+    /** 待发送的qos>0消息缓存, 按先入先出的顺序存储 */
+    private final Deque<MqttPublishMessage> queue = new LinkedList<>();
+    /** 可发送消息配额 */
+    private volatile int quota;
+
+    public InflightWindow() {
         this(0);
     }
 
-    public InflightMessageQueue(int receiveMaximum) {
+    public InflightWindow(int receiveMaximum) {
+        Preconditions.checkArgument(receiveMaximum <= MAX_QUEUE_SIZE, "receiveMaximum must be less and equal than " + MAX_QUEUE_SIZE);
+
         this.receiveMaximum = receiveMaximum;
         this.quota = receiveMaximum;
     }
@@ -39,58 +45,28 @@ public class InflightMessageQueue {
     /**
      * 取配额, 如果拿到了, 则可以发送mqtt消息
      *
-     * @param message mqtt消息
-     * @return inflight message queue大小
+     * @param messageContext mqtt publish消息上下文
+     * @return 是否拿到配额
      */
-    public int takeQuota(MqttMessage message) {
+    public boolean takeQuota(MqttMessageContext<MqttPublishMessage> messageContext) {
         if (receiveMaximum <= 0) {
-            return 0;
+            return true;
         }
 
+        MqttPublishMessage message = messageContext.getMessage();
         if (message.fixedHeader().qosLevel().value() < 1) {
             //不考虑at most once
-            return 0;
+            return true;
         }
 
         synchronized (this) {
-            if (quota > 0) {
+            if (quota > 0 && queue.size() < 1) {
+                //有配额并且队列无等待
                 quota--;
-                return 0;
+                return true;
             } else {
                 queue.add(message);
-                return queue.size();
-            }
-        }
-    }
-
-    /**
-     * 取inflight mqtt message, 如果有足够配额, 则扣除并返回
-     * 目前用于mqtt client重连时, 重发mqtt message
-     */
-    public Collection<MqttMessage> takeInflightMqttMessages() {
-        if (receiveMaximum > 0) {
-            synchronized (this) {
-                if (quota > 0) {
-                    Collection<MqttMessage> messages = new ArrayList<>(quota);
-                    MqttMessage message;
-                    while (quota > 0 && Objects.nonNull((message = queue.poll()))) {
-                        quota--;
-                        messages.add(message);
-                    }
-                    return messages;
-                } else {
-                    return Collections.emptyList();
-                }
-            }
-        } else {
-            synchronized (this) {
-                Collection<MqttMessage> messages = new ArrayList<>(queue.size());
-                MqttMessage message;
-                while (Objects.nonNull((message = queue.poll()))) {
-                    messages.add(message);
-                }
-
-                return messages;
+                return false;
             }
         }
     }
@@ -103,7 +79,7 @@ public class InflightMessageQueue {
      * @return inflight消息
      */
     @Nullable
-    public MqttMessage returnQuota() {
+    public MqttPublishMessage returnQuota() {
         if (receiveMaximum <= 0) {
             return null;
         }
@@ -138,5 +114,12 @@ public class InflightMessageQueue {
     //getter
     public int getReceiveMaximum() {
         return receiveMaximum;
+    }
+
+    /**
+     * 不保证准确性
+     */
+    public int getQuota() {
+        return quota;
     }
 }

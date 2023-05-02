@@ -17,7 +17,8 @@ public interface MqttMessageStore extends Closeable {
      * @param clientId 接收到的mqtt client id
      * @param replica  mqtt消息副本
      */
-    void saveOfflineMessage(String clientId, MqttMessageReplica replica);
+    void saveOfflineMessage(String clientId,
+                            MqttMessageReplica replica);
 
     /**
      * 获取mqtt client下线后接收到的消息
@@ -41,20 +42,4 @@ public interface MqttMessageStore extends Closeable {
      * @return mqtt retain消息
      */
     Flux<MqttMessageReplica> getRetainMessage(String topic);
-
-//    /**
-//     * 保留mqtt session inflight消息
-//     *
-//     * @param replica mqtt消息副本
-//     */
-//    void saveInflightMessage(MqttMessageReplica replica);
-//
-//    /**
-//     * 获取mqtt session inflight消息
-//     *
-//     * @param topic topic
-//     * @return mqtt inflight消息
-//     */
-//    @Nonnull
-//    Flux<MqttMessageReplica> getInflightMessage(String topic);
 }

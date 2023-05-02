@@ -2,13 +2,13 @@ package org.kin.mqtt.broker.store;
 
 import org.jctools.maps.NonBlockingHashMap;
 import org.kin.mqtt.broker.core.message.MqttMessageReplica;
+import org.kin.mqtt.broker.domain.InflightWindow;
 import org.kin.mqtt.broker.utils.TopicUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import reactor.core.publisher.Flux;
 
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
+import java.util.*;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.stream.Collectors;
 
@@ -19,13 +19,23 @@ import java.util.stream.Collectors;
  * @date 2022/11/16
  */
 public class DefaultMqttMessageStore extends AbstractMqttMessageStore {
+    private static final Logger log = LoggerFactory.getLogger(DefaultMqttMessageStore.class);
+
     /** key -> client id, value -> 离线接收的mqtt消息 */
     private final Map<String, List<MqttMessageReplica>> offlineMessages = new NonBlockingHashMap<>();
     /** key -> topic, value -> 该topic的retain消息 */
     private final Map<String, MqttMessageReplica> retainMessages = new NonBlockingHashMap<>();
+    /**
+     * 待发送的qos>0消息缓存, 按先入先出的顺序存储
+     * 同步操作, 故不用并发安全集合类
+     *
+     * @see InflightWindow
+     */
+    private final Map<String, Queue<MqttMessageReplica>> inflightMessageQueues = new NonBlockingHashMap<>();
 
     @Override
-    public void saveOfflineMessage(String clientId, MqttMessageReplica replica) {
+    public void saveOfflineMessage(String clientId,
+                                   MqttMessageReplica replica) {
         List<MqttMessageReplica> replicas = offlineMessages.computeIfAbsent(clientId, k -> new CopyOnWriteArrayList<>());
         replicas.add(replica);
     }

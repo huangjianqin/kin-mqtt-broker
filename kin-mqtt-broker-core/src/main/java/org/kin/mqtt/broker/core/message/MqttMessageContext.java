@@ -79,7 +79,16 @@ public class MqttMessageContext<T extends MqttMessage> {
      * 将集群广播的mqtt message包装成{@link MqttMessageContext}实例
      */
     public static MqttMessageContext<MqttPublishMessage> fromCluster(MqttMessageReplica replica) {
-        return new MqttMessageContext<>(MqttMessageHelper.createPublish(replica), true,
+        return fromReplica(replica, true);
+    }
+
+    /**
+     * {@link MqttMessageReplica}实例转换成{@link MqttMessageContext}实例
+     *
+     * @param fromCluster 用于区分本broker还是remote broker的{@link MqttMessageReplica}实例
+     */
+    public static MqttMessageContext<MqttPublishMessage> fromReplica(MqttMessageReplica replica, boolean fromCluster) {
+        return new MqttMessageContext<>(MqttMessageHelper.createPublish(replica), fromCluster,
                 replica.getBrokerId(), replica.getClientId());
     }
 

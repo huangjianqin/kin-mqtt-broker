@@ -26,6 +26,7 @@
 9. [✘]客户标识符
 10. [✘]Server redirection
 11. [✘]增强认证
+12. [✓]支持receiveMaximum
 
 ### 集群
 

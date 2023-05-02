@@ -216,7 +216,7 @@ public class MqttMessageHelper {
     public static MqttPublishMessage createPublish(MqttMessageReplica replica) {
         return MqttMessageHelper.createPublish(false,
                 MqttQoS.valueOf(replica.getQos()),
-                0,
+                replica.getMessageId(),
                 replica.getTopic(),
                 PooledByteBufAllocator.DEFAULT.buffer().writeBytes(replica.getPayload()),
                 replica.getProperties());
@@ -230,8 +230,8 @@ public class MqttMessageHelper {
     public static MqttPublishMessage createPublish(MqttMessageReplica replica, String realTopic) {
         return MqttMessageHelper.createPublish(false,
                 MqttQoS.valueOf(replica.getQos()),
-                0,
-                replica.getTopic(),
+                replica.getMessageId(),
+                realTopic,
                 PooledByteBufAllocator.DEFAULT.buffer().writeBytes(replica.getPayload()),
                 replica.getProperties());
     }
@@ -405,6 +405,7 @@ public class MqttMessageHelper {
         MqttFixedHeader fixedHeader = message.fixedHeader();
         return MqttMessageReplica.builder()
                 .brokerId(messageContext.getBrokerId())
+                .messageId(variableHeader.packetId())
                 .clientId(messageContext.getClientId())
                 .topic(variableHeader.topicName())
                 .setRetain(fixedHeader.isRetain())

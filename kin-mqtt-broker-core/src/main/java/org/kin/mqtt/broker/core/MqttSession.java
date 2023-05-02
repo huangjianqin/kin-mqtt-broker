@@ -18,7 +18,7 @@ import org.kin.mqtt.broker.core.topic.TopicSubscription;
 import org.kin.mqtt.broker.core.topic.TopicSubscriptionReplica;
 import org.kin.mqtt.broker.core.will.Will;
 import org.kin.mqtt.broker.core.will.WillDelayTask;
-import org.kin.mqtt.broker.domain.InflightMessageQueue;
+import org.kin.mqtt.broker.domain.InflightWindow;
 import org.kin.mqtt.broker.event.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -77,7 +77,7 @@ public class MqttSession {
     /** mqtt session status */
     private volatile SessionStatus status = SessionStatus.INIT;
     /** 待发送的qos>0 mqtt message */
-    private InflightMessageQueue inflightMessageQueue;
+    private InflightWindow inflightWindow;
     /** 遗愿 */
     private Will will;
     /** 用于控制建立connection后, client还不发送connect消息, 则broker主动关闭connection */
@@ -87,7 +87,7 @@ public class MqttSession {
     /** 发送mqtt消息id */
     private AtomicInteger messageIdGenerator;
     /**
-     * exactly once消息缓存
+     * 接到来自于该mqtt session的exactly once消息缓存
      *
      * @see io.netty.handler.codec.mqtt.MqttQoS#EXACTLY_ONCE
      */
@@ -110,39 +110,10 @@ public class MqttSession {
      * @return complete signal
      */
     public Mono<Void> sendMessage(MqttMessage mqttMessage, boolean retry) {
-        return sendMessage(mqttMessage, retry, false);
-    }
-
-    /**
-     * 往指定mqtt channel发送mqtt消息
-     *
-     * @param mqttMessage mqtt消息
-     * @param retry       是否重试
-     * @param inflight    是否是inflight缓存中的mqtt消息
-     * @return complete signal
-     */
-    public Mono<Void> sendMessage(MqttMessage mqttMessage, boolean retry, boolean inflight) {
         log.debug("session {} send {} message", getConnection(), mqttMessage.fixedHeader().messageType());
         if (retry) {
-            if (!inflight) {
-                //普通消息
-                int queuedSize = inflightMessageQueue.takeQuota(mqttMessage);
-                if (queuedSize > 0) {
-                    //拿不到配额
-                    if (queuedSize > InflightMessageQueue.MAX_QUEUE_SIZE) {
-                        //force mqtt client close
-                        close().subscribe();
-                        throw new IllegalStateException(
-                                String.format("mqtt client '%s' consume message too slow(queuedSize=%d, maxSize=%d), force close", clientId, queuedSize, InflightMessageQueue.MAX_QUEUE_SIZE));
-                    } else {
-                        return Mono.empty();
-                    }
-                }
-            }
-
-            //Increase the reference count of bytebuf, and the reference count of retrybytebuf is 2
-            //mqttSession.write() method releases a reference count.
             MqttMessageType mqttMessageType = mqttMessage.fixedHeader().messageType();
+
             //待发送的mqtt消息
             MqttMessage reply = getReplyMqttMessage(mqttMessage);
 
@@ -154,21 +125,30 @@ public class MqttSession {
             long uuid = genMqttMessageRetryId(mqttMessageType, MqttMessageHelper.getMessageId(mqttMessage));
             retryService.execRetry(new PublishRetry(uuid, retryTask, cleaner, retryService));
 
-            return sendMessage0(Mono.just(mqttMessage))
-                    //保证write消息过程遇到异常, 也能释放receiveNum
-                    .doOnError(t -> onRecPubRespMessage());
+            return sendMessage0(Mono.just(mqttMessage));
         } else {
             return sendMessage0(Mono.just(mqttMessage));
         }
     }
 
     /**
-     * 接收到publish的响应消息, 即PUBACK, PUBCOMP或PUBREC
+     * Inflight queue入队
+     *
+     * @return true表示入队成功, 则等待有空闲token再处理publish消息; 否则马上处理
+     * @see org.kin.mqtt.broker.core.message.handler.PublishHandler
+     */
+    public boolean tryEnqueueInflightQueue(MqttMessageContext<MqttPublishMessage> messageContext) {
+        //client的pub消息
+        return !inflightWindow.takeQuota(messageContext);
+    }
+
+    /**
+     * 接收到publish的响应消息, 即PUBACK或PUBCOMP
      */
     public void onRecPubRespMessage() {
-        MqttMessage mqttMessage = inflightMessageQueue.returnQuota();
+        MqttMessage mqttMessage = inflightWindow.returnQuota();
         if (Objects.nonNull(mqttMessage)) {
-            sendMessage(mqttMessage, mqttMessage.fixedHeader().qosLevel().value() > 0, true).subscribe();
+            sendMessage(mqttMessage, mqttMessage.fixedHeader().qosLevel().value() > 0).subscribe();
         }
     }
 
@@ -376,7 +356,8 @@ public class MqttSession {
         if (Objects.nonNull(receiveMaximumProp)) {
             receiveMaximumPropVal = receiveMaximumProp.value();
         }
-        inflightMessageQueue = new InflightMessageQueue(receiveMaximumPropVal);
+
+        inflightWindow = new InflightWindow(receiveMaximumPropVal);
         subscriptions = new NonBlockingHashSet<>();
         messageIdGenerator = new AtomicInteger();
         qos2MessageCache = new NonBlockingHashMap<>();
@@ -422,10 +403,6 @@ public class MqttSession {
         //注册dispose逻辑
         afterDispose(this::close0);
 
-        //重连, 如果仍然有inflight消息, 则尝试重发
-        // TODO: 2023/4/22
-        trySendInflightMqttMessage();
-
         //register session
         if (brokerContext.getSessionManager().register(clientId, this)) {
             brokerContext.broadcastEvent(new MqttClientRegisterEvent(this));
@@ -455,18 +432,6 @@ public class MqttSession {
 
             brokerContext.broadcastEvent(new MqttSubscribeEvent(this, subscriptions));
         }
-    }
-
-    /**
-     * 2s后尝试发送inflight mqtt message
-     */
-    private void trySendInflightMqttMessage() {
-        HashedWheelTimer bsTimer = brokerContext.getBsTimer();
-        bsTimer.newTimeout(t -> {
-            for (MqttMessage message : inflightMessageQueue.takeInflightMqttMessages()) {
-                sendMessage(message, message.fixedHeader().qosLevel().value() > 0, true).subscribe();
-            }
-        }, 2, TimeUnit.SECONDS);
     }
 
     /**
@@ -568,7 +533,7 @@ public class MqttSession {
         }
 
         if (sessionExpiryInterval < 0) {
-            this.expireTime = 0xFFFFFFFF;
+            this.expireTime = 0xFFFFFFFFL;
         } else if (sessionExpiryInterval > 0) {
             this.expireTime = disConnectTime + TimeUnit.SECONDS.toMillis(sessionExpiryInterval);
         }
@@ -674,11 +639,13 @@ public class MqttSession {
      * 只有当mqtt session=-1或者>0才会持久化
      */
     public void tryPersist() {
-        if (expiryInternal != 0) {
-            //持久化
-            brokerContext.getSessionStore()
-                    .saveAsync(toReplica());
+        if (isCleanAfterOffline()) {
+            return;
         }
+
+        //持久化
+        brokerContext.getSessionStore()
+                .saveAsync(toReplica());
     }
 
     /**
@@ -705,6 +672,15 @@ public class MqttSession {
     public void onDisconnect(int sessionExpiryInterval) {
         disConnectTime = System.currentTimeMillis();
         updateExpireTime(sessionExpiryInterval);
+    }
+
+    /**
+     * session是否持久化
+     *
+     * @return session是否持久化, true表示非持久化
+     */
+    public boolean isCleanAfterOffline() {
+        return expiryInternal == 0;
     }
 
     //getter

@@ -19,6 +19,8 @@ public class MqttMessageReplica implements Serializable {
     private String brokerId;
     /** 发送该mqtt消息的mqtt client */
     private String clientId;
+    /** 原mqtt message id */
+    private int messageId;
     /** mqtt消息topic */
     private String topic;
     /** mqtt消息qos */
@@ -47,6 +49,11 @@ public class MqttMessageReplica implements Serializable {
 
         public Builder brokerId(String brokerId) {
             mqttMessageReplica.brokerId = brokerId;
+            return this;
+        }
+
+        public Builder messageId(int messageId) {
+            mqttMessageReplica.messageId = messageId;
             return this;
         }
 
@@ -102,6 +109,14 @@ public class MqttMessageReplica implements Serializable {
 
     public void setBrokerId(String brokerId) {
         this.brokerId = brokerId;
+    }
+
+    public int getMessageId() {
+        return messageId;
+    }
+
+    public void setMessageId(int messageId) {
+        this.messageId = messageId;
     }
 
     public String getClientId() {
@@ -172,6 +187,7 @@ public class MqttMessageReplica implements Serializable {
     public String toString() {
         return "MqttMessageReplica{" +
                 "brokerId='" + brokerId + '\'' +
+                "messageId='" + messageId + '\'' +
                 "clientId='" + clientId + '\'' +
                 ", topic='" + topic + '\'' +
                 ", qos=" + qos +
