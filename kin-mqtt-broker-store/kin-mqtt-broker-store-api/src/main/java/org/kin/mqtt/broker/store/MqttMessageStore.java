@@ -4,6 +4,8 @@ import org.kin.framework.Closeable;
 import org.kin.mqtt.broker.core.message.MqttMessageReplica;
 import reactor.core.publisher.Flux;
 
+import java.util.Collection;
+
 /**
  * mqtt消息外部存储
  *
@@ -19,6 +21,15 @@ public interface MqttMessageStore extends Closeable {
      */
     void saveOfflineMessage(String clientId,
                             MqttMessageReplica replica);
+
+    /**
+     * 批量保存mqtt client下线后接收到的消息
+     *
+     * @param clientId 接收到的mqtt client id
+     * @param replicas mqtt消息副本列表
+     */
+    void saveOfflineMessages(String clientId,
+                             Collection<MqttMessageReplica> replicas);
 
     /**
      * 获取mqtt client下线后接收到的消息

@@ -1,5 +1,6 @@
 package org.kin.mqtt.broker.store.redis;
 
+import org.kin.framework.utils.CollectionUtils;
 import org.kin.framework.utils.JSON;
 import org.kin.mqtt.broker.core.message.MqttMessageReplica;
 import org.kin.mqtt.broker.store.AbstractMqttMessageStore;
@@ -8,7 +9,10 @@ import org.springframework.data.redis.core.ReactiveRedisTemplate;
 import reactor.core.publisher.Flux;
 
 import javax.annotation.Nonnull;
+import java.util.Collection;
+import java.util.List;
 import java.util.Objects;
+import java.util.stream.Collectors;
 
 /**
  * 基于redis存储retain和offline消息
@@ -39,6 +43,18 @@ public class RedisMqttMessageStore extends AbstractMqttMessageStore {
     @Override
     public void saveOfflineMessage(String clientId, MqttMessageReplica replica) {
         template.opsForList().rightPush(getOfflineMessageKey(clientId), JSON.write(replica)).subscribe();
+    }
+
+    @Override
+    public void saveOfflineMessages(String clientId, Collection<MqttMessageReplica> replicas) {
+        if (CollectionUtils.isEmpty(replicas)) {
+            return;
+        }
+
+        List<String> jsons = replicas.stream()
+                .map(JSON::write)
+                .collect(Collectors.toList());
+        template.opsForList().rightPushAll(getOfflineMessageKey(clientId), jsons).subscribe();
     }
 
     @Nonnull

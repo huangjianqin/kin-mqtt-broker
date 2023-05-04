@@ -10,6 +10,7 @@ import org.jctools.maps.NonBlockingHashSet;
 import org.kin.framework.utils.CollectionUtils;
 import org.kin.mqtt.broker.core.message.MqttMessageContext;
 import org.kin.mqtt.broker.core.message.MqttMessageHelper;
+import org.kin.mqtt.broker.core.message.MqttMessageReplica;
 import org.kin.mqtt.broker.core.message.MqttQos2PubMessage;
 import org.kin.mqtt.broker.core.retry.PublishRetry;
 import org.kin.mqtt.broker.core.retry.RetryService;
@@ -20,6 +21,7 @@ import org.kin.mqtt.broker.core.will.Will;
 import org.kin.mqtt.broker.core.will.WillDelayTask;
 import org.kin.mqtt.broker.domain.InflightWindow;
 import org.kin.mqtt.broker.event.*;
+import org.kin.mqtt.broker.store.MqttMessageStore;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import reactor.core.Disposable;
@@ -110,10 +112,19 @@ public class MqttSession {
      * @return complete signal
      */
     public Mono<Void> sendMessage(MqttMessage mqttMessage, boolean retry) {
-        log.debug("session {} send {} message", getConnection(), mqttMessage.fixedHeader().messageType());
-        if (retry) {
-            MqttMessageType mqttMessageType = mqttMessage.fixedHeader().messageType();
+        MqttMessageType mqttMessageType = mqttMessage.fixedHeader().messageType();
+        log.debug("session {} send {} message", getConnection(), mqttMessageType);
 
+
+        if (MqttMessageType.PUBLISH.equals(mqttMessageType) &&
+                mqttMessage.fixedHeader().qosLevel().value() > 0 &&
+                tryEnqueueInflightQueue(MqttMessageContext.common((MqttPublishMessage) mqttMessage, brokerContext.getBrokerId(), clientId))) {
+            //仅针对qos1和qos2的publish message
+            //进入了inflight queue等待
+            return Mono.empty();
+        }
+
+        if (retry) {
             //待发送的mqtt消息
             MqttMessage reply = getReplyMqttMessage(mqttMessage);
 
@@ -143,7 +154,7 @@ public class MqttSession {
     }
 
     /**
-     * 接收到publish的响应消息, 即PUBACK或PUBCOMP
+     * 接收到broker -> client的publish的响应消息, 即PUBACK或PUBCOMP
      */
     public void onRecPubRespMessage() {
         MqttMessage mqttMessage = inflightWindow.returnQuota();
@@ -459,6 +470,14 @@ public class MqttSession {
         //取消订阅
         //!!会清空MqttSession.subscriptions
         brokerContext.getTopicManager().removeAllSubscriptions(this);
+
+        //将inflight message保存为offline message, 待client重新上线后重试
+        MqttMessageStore messageStore = brokerContext.getMessageStore();
+        List<MqttMessageReplica> inflightMessageReplicas = inflightWindow.drainInflightMqttMessages()
+                .stream()
+                .map(MqttMessageContext::toReplica)
+                .collect(Collectors.toList());
+        messageStore.saveOfflineMessages(clientId, inflightMessageReplicas);
 
         brokerContext.broadcastEvent(new MqttClientUnregisterEvent(this));
         brokerContext.broadcastEvent(new OnlineClientNumEvent(brokerContext.getSessionManager().size()));

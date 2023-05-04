@@ -5,16 +5,20 @@ import io.netty.handler.codec.mqtt.MqttPublishMessage;
 import org.kin.mqtt.broker.core.message.MqttMessageContext;
 
 import javax.annotation.Nullable;
-import java.util.Deque;
-import java.util.LinkedList;
+import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  * 待发送的qos>0 mqtt message
  * <p>
- * MQTT v5.0协议为CONNECT报文新增了一个Receive Maximum的属性,
- * 官方对它的解释是: 客户端使用此值限制服务端愿意同时处理的QoS为1和QoS为2的发布消息最大数量.
+ * MQTT v5.0协议为CONNECT报文新增了一个Receive Maximum的属性, 达到流控效果
+ * 官方对它的解释是:
+ * 客户端告诉服务端客户端能同时处理的QoS为1和QoS为2的发布消息最大数量.
  * 没有机制可以限制服务端试图发送的QoS为0的发布消息.
  * 也就是说, 服务端可以在等待确认时使用不同的报文标识符向客户端发送后续的PUBLISH报文, 直到未被确认的报文数量到达Receive Maximum限制
+ * <p>
+ * inflight message一直缓存在内存中, 直至client close, 才会尝试存储到offline message queue, 待client重新上线后重试inflight message
+ * 期间如果broker down, 则inflight message就会丢失
  *
  * @author huangjianqin
  * @date 2023/1/2
@@ -27,7 +31,7 @@ public class InflightWindow {
 
 
     /** 待发送的qos>0消息缓存, 按先入先出的顺序存储 */
-    private final Deque<MqttPublishMessage> queue = new LinkedList<>();
+    private final Deque<MqttMessageContext<MqttPublishMessage>> queue = new LinkedList<>();
     /** 可发送消息配额 */
     private volatile int quota;
 
@@ -65,7 +69,7 @@ public class InflightWindow {
                 quota--;
                 return true;
             } else {
-                queue.add(message);
+                queue.add(messageContext);
                 return false;
             }
         }
@@ -85,12 +89,19 @@ public class InflightWindow {
         }
 
         synchronized (this) {
-            if (queue.size() > 0) {
-                return queue.poll();
-            } else {
-                quota++;
-                return null;
+            MqttMessageContext<MqttPublishMessage> messageContext;
+            while (queue.size() > 0) {
+                messageContext = queue.poll();
+                if (!messageContext.isExpire()) {
+                    //没有过期
+                    return messageContext.getMessage();
+                }
             }
+
+            //1. queue没有inflight message
+            //2. queue中所有inflight message都过期
+            quota++;
+            return null;
         }
     }
 
@@ -108,6 +119,23 @@ public class InflightWindow {
             //补差
             int diff = this.receiveMaximum - oldReceiveMaximum;
             quota += diff;
+        }
+    }
+
+    /**
+     * 取所有inflight mqtt message
+     * 目前用于mqtt client close时缓存至offline message, 待mqtt client重连后, 重试
+     */
+    public Collection<MqttMessageContext<MqttPublishMessage>> drainInflightMqttMessages() {
+        if (receiveMaximum < 1) {
+            return Collections.emptyList();
+        }
+
+        synchronized (this) {
+            //过滤掉过期的
+            return new ArrayList<>(queue).stream()
+                    .filter(mc -> !mc.isExpire())
+                    .collect(Collectors.toList());
         }
     }
 

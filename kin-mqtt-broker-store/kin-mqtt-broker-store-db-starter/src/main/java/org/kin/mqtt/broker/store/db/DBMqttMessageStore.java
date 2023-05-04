@@ -1,6 +1,7 @@
 package org.kin.mqtt.broker.store.db;
 
 import io.r2dbc.spi.*;
+import org.kin.framework.utils.CollectionUtils;
 import org.kin.framework.utils.JSON;
 import org.kin.framework.utils.StringUtils;
 import org.kin.mqtt.broker.core.message.MqttMessageReplica;
@@ -13,6 +14,7 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 import javax.annotation.Nonnull;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -52,6 +54,44 @@ public class DBMqttMessageStore extends AbstractMqttMessageStore {
                                 .thenEmpty(connection.commitTransaction())
                                 .onErrorResume(t -> {
                                     log.error("save offline message error, ", t);
+                                    return Mono.from(connection.rollbackTransaction());
+                                }),
+                        Connection::close)
+                .subscribe();
+    }
+
+    @Override
+    public void saveOfflineMessages(String clientId, Collection<MqttMessageReplica> replicas) {
+        if (CollectionUtils.isEmpty(replicas)) {
+            return;
+        }
+
+        Mono.usingWhen(connectionFactory.create(),
+                        connection -> Mono.from(connection.beginTransaction())
+                                //保存offline消息
+                                .flatMap(v -> {
+                                    String sql = "INSERT INTO kin_mqtt_broker_offline('client_id', 'topic', 'qos', 'retain', 'payload', 'create_time', 'properties') values (?,?,?,?,?,?,?)";
+                                    for (int i = 0; i < replicas.size() - 1; i++) {
+                                        sql += ", (?,?,?,?,?,?,?)";
+                                    }
+
+                                    Statement statement = connection.createStatement(sql);
+                                    int idx = 0;
+                                    for (MqttMessageReplica replica : replicas) {
+                                        statement.bind(idx++, clientId)
+                                                .bind(idx++, replica.getTopic())
+                                                .bind(idx++, replica.getQos())
+                                                .bind(idx++, replica.isRetain() ? 1 : 0)
+                                                .bind(idx++, JSON.write(replica.getPayload()))
+                                                .bind(idx++, replica.getRecTime())
+                                                .bind(idx++, JSON.write(replica.getProperties()));
+                                    }
+
+                                    return Mono.from(statement.execute());
+                                })
+                                .thenEmpty(connection.commitTransaction())
+                                .onErrorResume(t -> {
+                                    log.error("batch save offline message error, ", t);
                                     return Mono.from(connection.rollbackTransaction());
                                 }),
                         Connection::close)

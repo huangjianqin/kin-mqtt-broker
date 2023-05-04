@@ -1,8 +1,8 @@
 package org.kin.mqtt.broker.store;
 
 import org.jctools.maps.NonBlockingHashMap;
+import org.kin.framework.utils.CollectionUtils;
 import org.kin.mqtt.broker.core.message.MqttMessageReplica;
-import org.kin.mqtt.broker.domain.InflightWindow;
 import org.kin.mqtt.broker.utils.TopicUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -25,19 +25,22 @@ public class DefaultMqttMessageStore extends AbstractMqttMessageStore {
     private final Map<String, List<MqttMessageReplica>> offlineMessages = new NonBlockingHashMap<>();
     /** key -> topic, value -> 该topic的retain消息 */
     private final Map<String, MqttMessageReplica> retainMessages = new NonBlockingHashMap<>();
-    /**
-     * 待发送的qos>0消息缓存, 按先入先出的顺序存储
-     * 同步操作, 故不用并发安全集合类
-     *
-     * @see InflightWindow
-     */
-    private final Map<String, Queue<MqttMessageReplica>> inflightMessageQueues = new NonBlockingHashMap<>();
 
     @Override
     public void saveOfflineMessage(String clientId,
                                    MqttMessageReplica replica) {
-        List<MqttMessageReplica> replicas = offlineMessages.computeIfAbsent(clientId, k -> new CopyOnWriteArrayList<>());
-        replicas.add(replica);
+        List<MqttMessageReplica> replicaCache = offlineMessages.computeIfAbsent(clientId, k -> new CopyOnWriteArrayList<>());
+        replicaCache.add(replica);
+    }
+
+    @Override
+    public void saveOfflineMessages(String clientId, Collection<MqttMessageReplica> replicas) {
+        if (CollectionUtils.isEmpty(replicas)) {
+            return;
+        }
+
+        List<MqttMessageReplica> replicaCache = offlineMessages.computeIfAbsent(clientId, k -> new CopyOnWriteArrayList<>());
+        replicaCache.addAll(replicas);
     }
 
     @Override
