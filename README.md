@@ -55,18 +55,25 @@
 需要支持集群节点共享访问
 
 * 统一数据存储, 即外挂DB(集群), 用于存储所有配置, 规则, 还有业务数据. 绝对靠谱
-* 类似nacos的AP方案, 但基于gossip实现AP, 集群节点分为core和replicator, core负责写, replicator负责读. core节点不支持动态水平扩展,
-  通过gossip协议发现的节点,
-  哪怕是配置成core, 也会被认为是replicator. core写逻辑可以参考nacos的AP方案, 写完成时广播 replicator同步,
-  同时也有定时checksum的机制. 每份数据
-  都自带版本号, 用于core节点停机自动水平扩展时, 判断本地没有任何数据, 则从其他节点全量拉取, 并取版本号最大且本节点负责的数据存储.
+* 类似nacos的AP方案, 但基于gossip实现AP, 集群节点分为core和replicator, core负责写, replicator负责读.
+  core节点不支持动态水平扩展(取决于配置, 比如配置所有core节点的ip:port),
+  通过gossip协议发现的节点, 哪怕是配置成core, 也会被认为是replicator. core写逻辑可以参考nacos的AP方案, 写完成时广播
+  replicator同步,
+  同时也有定时checksum的机制. 每份数据都自带版本号, 用于core节点停机自动水平扩展时, 判断本地没有任何数据, 则从其他节点全量拉取,
+  并取版本号最大且本节点负责的数据存储.
+  缺点是因网络波动会导致数据短暂不一致. 同时, 因为core节点只写, 故业务层要实现修改数据只能连接core节点,
+  或者通过replicator节点转发.
+* 基于multi-raft: broker自身也是raft节点, 数据一致性基于raft, 同时利用raft机制和copy-on-write维护数据缓存, 用于broker快速访问.
+  不同类型的数据使用不同的raft分组, 分摊数据同步压力.
+  同时, 因为缓存支持快速访问, 几乎不影响broker业务性能. 缺点是因raft同步会导致数据短暂不一致, 并且实现复杂度较高.
 * 期待的框架: 读写分离, 几个节点负责维护写, 不承载mqtt流量; 其余节点负责读(还有本地缓存), 承载mqtt流量;
 
 目前需要存储的数据类型:
 
 * 规则
 * mqtt client session
-* topic retain消息
+* retain消息
+* offline消息
 
 ### session持久化思考
 

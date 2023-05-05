@@ -11,7 +11,7 @@ import java.util.stream.Collectors;
 /**
  * 待发送的qos>0 mqtt message
  * <p>
- * MQTT v5.0协议为CONNECT报文新增了一个Receive Maximum的属性, 达到流控效果
+ * MQTT v5.0协议为CONNECT报文新增了一个Receive Maximum的属性, 达到限流效果
  * 官方对它的解释是:
  * 客户端告诉服务端客户端能同时处理的QoS为1和QoS为2的发布消息最大数量.
  * 没有机制可以限制服务端试图发送的QoS为0的发布消息.
