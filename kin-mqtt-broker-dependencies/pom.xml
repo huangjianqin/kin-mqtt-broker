@@ -6,7 +6,7 @@
 
     <groupId>org.kin</groupId>
     <artifactId>kin-mqtt-broker-dependencies</artifactId>
-    <version>0.1.0.0</version>
+    <version>0.2.0.0</version>
     <packaging>pom</packaging>
     <description>kin-mqtt-broker项目第三方依赖清单</description>
 

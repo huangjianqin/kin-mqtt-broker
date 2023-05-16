@@ -28,9 +28,9 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
 
-        <revision>0.1.0.0</revision>
+        <revision>0.2.0.0</revision>
 
-        <kin-mqtt-broker-dependencies.version>0.1.0.0</kin-mqtt-broker-dependencies.version>
+        <kin-mqtt-broker-dependencies.version>0.2.0.0</kin-mqtt-broker-dependencies.version>
     </properties>
 
     <dependencyManagement>
