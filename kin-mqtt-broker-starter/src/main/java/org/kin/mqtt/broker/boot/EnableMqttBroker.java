@@ -1,4 +1,4 @@
-package org.kin.mqtt.broker.cluster.standalone;
+package org.kin.mqtt.broker.boot;
 
 import org.springframework.context.annotation.Import;
 

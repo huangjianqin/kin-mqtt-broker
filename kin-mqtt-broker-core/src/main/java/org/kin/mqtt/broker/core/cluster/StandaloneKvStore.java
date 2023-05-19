@@ -8,8 +8,10 @@ import com.alipay.sofa.jraft.rhea.storage.KVEntry;
 import com.alipay.sofa.jraft.rhea.storage.RocksRawKVStore;
 import com.alipay.sofa.jraft.rhea.util.ByteArray;
 import io.scalecube.reactor.RetryNonSerializedEmitFailureHandler;
+import org.apache.commons.io.FileUtils;
 import org.kin.framework.collection.Tuple;
 import org.kin.framework.utils.CollectionUtils;
+import org.kin.framework.utils.ExceptionUtils;
 import org.kin.framework.utils.JSON;
 import org.kin.mqtt.broker.core.MqttBrokerException;
 import org.rocksdb.RocksDB;
@@ -19,6 +21,7 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.Sinks;
 
+import java.io.File;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
@@ -40,7 +43,7 @@ public class StandaloneKvStore implements ClusterStore {
     /** mqtt broker cluster */
     private final Cluster cluster;
     /** rocks store */
-    private RocksRawKVStore rocksStore;
+    private final RocksRawKVStore rocksStore = new RocksRawKVStore();
 
     public StandaloneKvStore(Cluster cluster) {
         this.cluster = cluster;
@@ -48,8 +51,17 @@ public class StandaloneKvStore implements ClusterStore {
 
     @Override
     public void init() {
+        String dbPath = cluster.getConfig().getDataPath() + "/db";
+
+        try {
+            FileUtils.forceMkdir(new File(dbPath));
+        } catch (Throwable t) {
+            log.error("fail to make dir for dbPath {}.", dbPath);
+            ExceptionUtils.throwExt(t);
+        }
+
         RocksDBOptions options = RocksDBOptionsConfigured.newConfigured()
-                .withDbPath(cluster.getConfig().getDataPath() + "/db")
+                .withDbPath(dbPath)
                 .withSync(true)
                 .config();
 

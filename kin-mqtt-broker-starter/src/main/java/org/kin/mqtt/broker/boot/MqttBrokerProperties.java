@@ -1,4 +1,4 @@
-package org.kin.mqtt.broker.cluster.standalone;
+package org.kin.mqtt.broker.boot;
 
 import org.kin.mqtt.broker.Constants;
 import org.kin.mqtt.broker.core.MqttBrokerConfig;

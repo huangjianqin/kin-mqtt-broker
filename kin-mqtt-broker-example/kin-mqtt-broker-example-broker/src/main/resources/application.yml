@@ -5,6 +5,8 @@ org:
         auth:
           users:
             java: '12345'
+        cluster:
+          dataPath: datas/standalone
 
 server:
   port: 8000
