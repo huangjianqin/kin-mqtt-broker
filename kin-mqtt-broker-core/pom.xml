@@ -127,6 +127,28 @@
             <artifactId>org.eclipse.paho.mqttv5.client</artifactId>
             <scope>test</scope>
         </dependency>
+
+        <!-- gossip -->
+        <dependency>
+            <groupId>io.scalecube</groupId>
+            <artifactId>scalecube-cluster</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>io.scalecube</groupId>
+            <artifactId>scalecube-codec-jackson</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>io.scalecube</groupId>
+            <artifactId>scalecube-transport-netty</artifactId>
+        </dependency>
+
+        <!-- jraft-rheakv -->
+        <dependency>
+            <groupId>com.alipay.sofa</groupId>
+            <artifactId>jraft-rheakv-core</artifactId>
+        </dependency>
     </dependencies>
 
 </project>

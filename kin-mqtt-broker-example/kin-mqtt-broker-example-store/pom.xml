@@ -23,7 +23,7 @@
 
         <dependency>
             <groupId>org.kin</groupId>
-            <artifactId>kin-mqtt-broker-gossip-starter</artifactId>
+            <artifactId>kin-mqtt-broker-starter</artifactId>
             <version>${project.version}</version>
         </dependency>
 

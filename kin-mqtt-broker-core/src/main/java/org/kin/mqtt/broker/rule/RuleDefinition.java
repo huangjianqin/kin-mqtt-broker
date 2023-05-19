@@ -1,5 +1,6 @@
 package org.kin.mqtt.broker.rule;
 
+import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.google.common.base.Preconditions;
 import org.kin.framework.utils.StringUtils;
 import org.kin.mqtt.broker.rule.action.ActionDefinition;
@@ -25,6 +26,7 @@ public class RuleDefinition {
     /** sql */
     private String sql;
     /** 绑定的动作 */
+    @JsonTypeInfo(use = JsonTypeInfo.Id.MINIMAL_CLASS)
     private Set<ActionDefinition> actionDefs;
 
     private RuleDefinition() {

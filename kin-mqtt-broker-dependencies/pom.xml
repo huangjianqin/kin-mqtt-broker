@@ -23,6 +23,7 @@
         <kin-reactor-sql.version>0.1.0.0</kin-reactor-sql.version>
         <reactor-kafka.version>1.3.9</reactor-kafka.version>
         <reactor-rabbitmq.version>1.5.5</reactor-rabbitmq.version>
+        <jraft-rheakv.version>1.3.12</jraft-rheakv.version>
     </properties>
 
     <dependencyManagement>
@@ -112,6 +113,12 @@
                 <groupId>io.projectreactor.rabbitmq</groupId>
                 <artifactId>reactor-rabbitmq</artifactId>
                 <version>${reactor-rabbitmq.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>com.alipay.sofa</groupId>
+                <artifactId>jraft-rheakv-core</artifactId>
+                <version>${jraft-rheakv.version}</version>
             </dependency>
         </dependencies>
     </dependencyManagement>

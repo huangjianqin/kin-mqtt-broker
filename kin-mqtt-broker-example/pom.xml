@@ -13,8 +13,7 @@
     <artifactId>kin-mqtt-broker-example</artifactId>
 
     <modules>
-        <module>kin-mqtt-broker-example-standalone</module>
-        <module>kin-mqtt-broker-example-gossip</module>
+        <module>kin-mqtt-broker-example-broker</module>
         <module>kin-mqtt-example-client</module>
         <module>kin-mqtt-example-web</module>
         <module>kin-mqtt-broker-example-api</module>

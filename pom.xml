@@ -10,14 +10,12 @@
     <modules>
         <module>kin-mqtt-broker-core</module>
         <module>kin-mqtt-broker-auth</module>
-        <module>kin-mqtt-broker-standalone-starter</module>
-        <module>kin-mqtt-broker-gossip-starter</module>
+        <module>kin-mqtt-broker-starter</module>
         <module>kin-mqtt-broker-example</module>
         <module>kin-mqtt-broker-store</module>
         <module>kin-mqtt-broker-common</module>
         <module>kin-mqtt-broker-bridge</module>
         <module>kin-mqtt-broker-acl</module>
-        <module>kin-mqtt-broker-gossip</module>
     </modules>
     <packaging>pom</packaging>
 

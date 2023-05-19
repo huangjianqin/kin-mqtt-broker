@@ -17,15 +17,15 @@ import org.kin.mqtt.broker.acl.NoneAclService;
 import org.kin.mqtt.broker.auth.AuthService;
 import org.kin.mqtt.broker.auth.NoneAuthService;
 import org.kin.mqtt.broker.bridge.Bridge;
-import org.kin.mqtt.broker.cluster.BrokerManager;
-import org.kin.mqtt.broker.cluster.StandaloneBrokerManager;
+import org.kin.mqtt.broker.core.cluster.BrokerManager;
+import org.kin.mqtt.broker.core.cluster.StandaloneBrokerManager;
+import org.kin.mqtt.broker.core.event.MqttEventConsumer;
 import org.kin.mqtt.broker.core.handler.ByteBuf2WsFrameEncoder;
 import org.kin.mqtt.broker.core.handler.MqttBrokerHandler;
 import org.kin.mqtt.broker.core.handler.WsFrame2ByteBufDecoder;
 import org.kin.mqtt.broker.core.message.MqttMessageContext;
 import org.kin.mqtt.broker.core.topic.share.RandomShareSubLoadBalance;
 import org.kin.mqtt.broker.core.topic.share.ShareSubLoadBalance;
-import org.kin.mqtt.broker.event.MqttEventConsumer;
 import org.kin.mqtt.broker.rule.RuleDefinition;
 import org.kin.mqtt.broker.store.DefaultMqttMessageStore;
 import org.kin.mqtt.broker.store.DefaultMqttSessionStore;
@@ -310,8 +310,10 @@ public class MqttBrokerBootstrap extends ServerTransport<MqttBrokerBootstrap> {
         if (config.isEnableSysTopic()) {
             initSysTopicPublisher(brokerContext);
         }
-        //集群初始化
-        initBrokerManager(brokerContext);
+
+        // TODO: 2023/5/19 集群初始完成才初始化rule
+        //初始化集群
+        brokerContext.getCluster().init();
         //init bridge manager
         addBridges(brokerContext);
 
@@ -375,22 +377,6 @@ public class MqttBrokerBootstrap extends ServerTransport<MqttBrokerBootstrap> {
                                 mqttSession.getClientId()), mqttSession, brokerContext))
                 .subscribe(mqttMessage -> {
                 });
-    }
-
-    /**
-     * {@link BrokerManager}初始化完成之后的操作
-     */
-    private void initBrokerManager(MqttBrokerContext brokerContext) {
-        brokerContext.getBrokerManager().start(brokerContext)
-                .then(Mono.fromRunnable(() -> brokerManager.clusterMqttMessages()
-                        .onErrorResume(e -> Mono.empty())
-                        .publishOn(brokerContext.getMqttBizScheduler())
-                        .flatMap(mqttMessageReplica -> brokerContext.getDispatcher()
-                                .dispatch(MqttMessageContext.fromCluster(mqttMessageReplica), brokerContext))
-                        .subscribe((mqttMessageReplica) -> {
-                                },
-                                t -> log.error("broker manager handle cluster message error", t))))
-                .subscribe();
     }
 
     /**

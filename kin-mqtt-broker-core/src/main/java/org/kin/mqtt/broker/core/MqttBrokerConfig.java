@@ -2,6 +2,7 @@ package org.kin.mqtt.broker.core;
 
 import com.google.common.base.Preconditions;
 import org.kin.framework.utils.StringUtils;
+import org.kin.mqtt.broker.core.cluster.ClusterConfig;
 
 /**
  * @author huangjianqin
@@ -38,6 +39,8 @@ public class MqttBrokerConfig {
     private int connMessagePerSec = -1;
     /** 允许连接建立速率(/s), 默认无限制 */
     private int connectPerSec = -1;
+    /** mqtt broker集群配置 */
+    private ClusterConfig cluster;
 
     public static MqttBrokerConfig create() {
         return new MqttBrokerConfig();
@@ -61,6 +64,10 @@ public class MqttBrokerConfig {
         }
         Preconditions.checkArgument(sysTopicInterval > 0, "sysTopicInterval must be greater than 0");
         Preconditions.checkArgument(receiveMaximum > 0, "receiveMaximum must be greater than 0");
+
+        if (cluster == null) {
+            cluster = ClusterConfig.DEFAULT;
+        }
     }
 
     /**
@@ -194,6 +201,14 @@ public class MqttBrokerConfig {
         return this;
     }
 
+    /**
+     * mqtt broker集群配置
+     */
+    public MqttBrokerConfig cluster(ClusterConfig cluster) {
+        this.cluster = cluster;
+        return this;
+    }
+
     //setter && getter
     public String getBrokerId() {
         return brokerId;
@@ -305,5 +320,13 @@ public class MqttBrokerConfig {
 
     public void setConnectPerSec(int connectPerSec) {
         this.connectPerSec = connectPerSec;
+    }
+
+    public ClusterConfig getCluster() {
+        return cluster;
+    }
+
+    public void setCluster(ClusterConfig cluster) {
+        this.cluster = cluster;
     }
 }

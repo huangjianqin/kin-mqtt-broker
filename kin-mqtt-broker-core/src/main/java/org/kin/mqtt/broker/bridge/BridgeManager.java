@@ -2,9 +2,9 @@ package org.kin.mqtt.broker.bridge;
 
 import org.jctools.maps.NonBlockingHashMap;
 import org.kin.framework.Closeable;
-import org.kin.mqtt.broker.cluster.event.BridgeAddEvent;
-import org.kin.mqtt.broker.cluster.event.BridgeRemoveEvent;
 import org.kin.mqtt.broker.core.MqttBrokerContext;
+import org.kin.mqtt.broker.core.cluster.event.BridgeAddEvent;
+import org.kin.mqtt.broker.core.cluster.event.BridgeRemoveEvent;
 
 import javax.annotation.Nullable;
 import java.util.Map;

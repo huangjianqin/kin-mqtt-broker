@@ -8,13 +8,14 @@ import org.kin.framework.utils.SysUtils;
 import org.kin.mqtt.broker.acl.AclService;
 import org.kin.mqtt.broker.auth.AuthService;
 import org.kin.mqtt.broker.bridge.BridgeManager;
-import org.kin.mqtt.broker.cluster.BrokerManager;
-import org.kin.mqtt.broker.cluster.event.MqttClusterEvent;
+import org.kin.mqtt.broker.core.cluster.BrokerManager;
+import org.kin.mqtt.broker.core.cluster.Cluster;
+import org.kin.mqtt.broker.core.cluster.event.MqttClusterEvent;
+import org.kin.mqtt.broker.core.event.MqttEvent;
+import org.kin.mqtt.broker.core.event.MqttEventConsumer;
 import org.kin.mqtt.broker.core.retry.RetryService;
 import org.kin.mqtt.broker.core.topic.TopicManager;
 import org.kin.mqtt.broker.core.topic.share.ShareSubLoadBalance;
-import org.kin.mqtt.broker.event.MqttEvent;
-import org.kin.mqtt.broker.event.MqttEventConsumer;
 import org.kin.mqtt.broker.rule.RuleDefinition;
 import org.kin.mqtt.broker.rule.RuleEngine;
 import org.kin.mqtt.broker.rule.RuleManager;
@@ -47,8 +48,8 @@ public class MqttBrokerContext implements Closeable {
     private final MqttMessageDispatcher dispatcher;
     /** auth service */
     private final AuthService authService;
-    /** mqtt broker集群管理 */
-    private final BrokerManager brokerManager;
+    /** mqtt broker cluster */
+    private final Cluster cluster;
     /** mqtt消息外部存储 */
     private final MqttMessageStore messageStore;
     /** mqtt session外部存储 */
@@ -77,7 +78,7 @@ public class MqttBrokerContext implements Closeable {
         this.topicManager = new DefaultTopicManager(shareSubLoadBalance);
         this.dispatcher = dispatcher;
         this.authService = authService;
-        this.brokerManager = brokerManager;
+        this.cluster = new Cluster(this, brokerConfig.getCluster());
         this.messageStore = messageStore;
         this.sessionStore = sessionStore;
         this.ruleManager.addRules(ruleDefinitions);
@@ -94,7 +95,7 @@ public class MqttBrokerContext implements Closeable {
     @Override
     public void close() {
         //cluster close
-        brokerManager.shutdown().subscribe();
+        cluster.shutdown().subscribe();
         //retry close
         retryService.close();
         //bridge close
@@ -114,7 +115,7 @@ public class MqttBrokerContext implements Closeable {
      * 广播集群事件
      */
     public void broadcastClusterEvent(MqttClusterEvent event) {
-        brokerManager.broadcastEvent(event).subscribe();
+        cluster.getBrokerManager().broadcastEvent(event).subscribe();
     }
 
     /**
@@ -165,8 +166,12 @@ public class MqttBrokerContext implements Closeable {
         return dispatcher;
     }
 
+    public Cluster getCluster() {
+        return cluster;
+    }
+
     public BrokerManager getBrokerManager() {
-        return brokerManager;
+        return cluster.getBrokerManager();
     }
 
     public RuleManager getRuleManager() {
