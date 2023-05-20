@@ -67,18 +67,18 @@ public class GossipBrokerManager implements BrokerManager {
     private final Map<String, MqttBrokerNode> clusterBrokers = new NonBlockingHashMap<>();
     /** 新broker加入集群处理逻辑 */
     @Nullable
-    private final Consumer<MqttBrokerMetadata> brokerAddPostProcessor;
+    private final Consumer<MqttBrokerNode> brokerAddPostProcessor;
     /** broker从集群移除处理逻辑 */
     @Nullable
-    private final Consumer<MqttBrokerMetadata> brokerRemovePostProcessor;
+    private final Consumer<MqttBrokerNode> brokerRemovePostProcessor;
 
     public GossipBrokerManager(org.kin.mqtt.broker.core.cluster.Cluster mqttBrokerCluster) {
         this(mqttBrokerCluster, null, null);
     }
 
     public GossipBrokerManager(org.kin.mqtt.broker.core.cluster.Cluster mqttBrokerCluster,
-                               @Nullable Consumer<MqttBrokerMetadata> brokerAddPostProcessor,
-                               @Nullable Consumer<MqttBrokerMetadata> brokerRemovePostProcessor) {
+                               @Nullable Consumer<MqttBrokerNode> brokerAddPostProcessor,
+                               @Nullable Consumer<MqttBrokerNode> brokerRemovePostProcessor) {
         this.mqttBrokerCluster = mqttBrokerCluster;
         this.brokerContext = mqttBrokerCluster.getBrokerContext();
         this.brokerAddPostProcessor = brokerAddPostProcessor;
@@ -95,7 +95,7 @@ public class GossipBrokerManager implements BrokerManager {
                         .memberAlias(brokerContext.getBrokerId())
                         .externalPort(port)
                         .metadata(MqttBrokerMetadata.create(mqttBrokerCluster)))
-                .membership(membershipConfig -> membershipConfig.seedMembers(seedMembers(config.getSeeds()))
+                .membership(membershipConfig -> membershipConfig.seedMembers(seedMembers(config.getGossipSeeds()))
                         .namespace(DEFAULT_NAMESPACE)
                         .syncInterval(5_000))
                 .transport(transportConfig -> transportConfig.transportFactory(new TcpTransportFactory())
@@ -234,7 +234,7 @@ public class GossipBrokerManager implements BrokerManager {
                         clusterBrokers.put(address, brokerNode);
 
                         if (Objects.nonNull(brokerAddPostProcessor)) {
-                            brokerAddPostProcessor.accept(metadata);
+                            brokerAddPostProcessor.accept(brokerNode);
                         }
                     } catch (Exception e) {
                         error("broker({}:{}:{}) add post processor error", namespace, id, address, e);
@@ -243,11 +243,11 @@ public class GossipBrokerManager implements BrokerManager {
                 case LEAVING:
                 case REMOVED:
                     try {
-                        clusterBrokers.remove(address);
+                        MqttBrokerNode brokerNode = clusterBrokers.remove(address);
 
-                        MqttBrokerMetadata metadata = (MqttBrokerMetadata) JacksonMetadataCodec.INSTANCE.deserialize(event.oldMetadata());
-                        if (Objects.nonNull(brokerRemovePostProcessor)) {
-                            brokerRemovePostProcessor.accept(metadata);
+                        if (Objects.nonNull(brokerNode) &&
+                                Objects.nonNull(brokerRemovePostProcessor)) {
+                            brokerRemovePostProcessor.accept(brokerNode);
                         }
                     } catch (Exception e) {
                         error("broker({}:{}:{}) add post processor error", namespace, id, address, e);

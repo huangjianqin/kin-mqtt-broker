@@ -65,6 +65,50 @@ public interface ClusterStore {
     Mono<Void> put(Map<String, Object> kvs);
 
     /**
+     * 扫描[{@code startKey}, {@code endKey}]之间所有key的kv对
+     * !!!可能会有重复key的kv对出现
+     *
+     * @param startKey start key
+     * @param endKey   end key
+     * @param type     value类型
+     * @return Flux
+     */
+    <T> Flux<Tuple<String, T>> scan(String startKey, String endKey, Class<T> type);
+
+    /**
+     * 扫描{@code startKey}后面所有key的kv对
+     * !!!可能会有重复key的kv对出现
+     *
+     * @param startKey start key
+     * @param type     value类型
+     * @return Flux
+     */
+    default <T> Flux<Tuple<String, T>> scan(String startKey, Class<T> type) {
+        return scan(startKey, null, type);
+    }
+
+    /**
+     * 扫描[{@code startKey}, {@code endKey}]之间所有key的kv对, value为原始byte[]
+     * !!!可能会有重复key的kv对出现
+     *
+     * @param startKey start key
+     * @param endKey   end key
+     * @return Flux
+     */
+    Flux<Tuple<String, byte[]>> scanRaw(String startKey, String endKey);
+
+    /**
+     * 扫描{@code startKey}后面所有key的kv对, value为原始byte[]
+     * !!!可能会有重复key的kv对出现
+     *
+     * @param startKey start key
+     * @return Flux
+     */
+    default Flux<Tuple<String, byte[]>> scanRaw(String startKey) {
+        return scanRaw(startKey, null);
+    }
+
+    /**
      * 添加replicator
      *
      * @param nodeAddress replicator node address

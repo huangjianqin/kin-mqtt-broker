@@ -16,17 +16,20 @@ public class MqttBrokerNode {
     private String host;
     /** gossip暴露端口 */
     private int port;
-    /** jraft-rheakv store rpc暴露端口 */
+    /** cluster store rpc暴露端口 */
     private int storePort;
+    /** 是否是core节点 */
+    private boolean core;
     /** 已注册订阅topic(正则表达式) */
     private volatile Set<String> subscribedRegexTopics = Collections.emptySet();
 
-    public static MqttBrokerNode create(String id, MqttBrokerMetadata metadata){
+    public static MqttBrokerNode create(String id, MqttBrokerMetadata metadata) {
         MqttBrokerNode node = new MqttBrokerNode();
         node.id = id;
         node.host = metadata.getHost();
         node.port = metadata.getPort();
         node.storePort = metadata.getStorePort();
+        node.core = metadata.isCore();
         return node;
     }
 
@@ -54,6 +57,24 @@ public class MqttBrokerNode {
         return false;
     }
 
+    /**
+     * 获取gossip address
+     *
+     * @return gossip address
+     */
+    public String getAddress() {
+        return host + ":" + port;
+    }
+
+    /**
+     * 获取cluster store address
+     *
+     * @return cluster store address
+     */
+    public String getStoreAddress() {
+        return host + ":" + storePort;
+    }
+
     //getter
     public String getId() {
         return id;
@@ -71,13 +92,18 @@ public class MqttBrokerNode {
         return storePort;
     }
 
+    public boolean isCore() {
+        return core;
+    }
+
     @Override
     public String toString() {
-        return "GossipNode{" +
+        return "MqttBrokerNode{" +
                 "name='" + id + '\'' +
                 ", host='" + host + '\'' +
                 ", port=" + port +
                 ", storePort=" + storePort +
+                ", core=" + core +
                 ", subscribedRegexTopics=" + subscribedRegexTopics +
                 '}';
     }

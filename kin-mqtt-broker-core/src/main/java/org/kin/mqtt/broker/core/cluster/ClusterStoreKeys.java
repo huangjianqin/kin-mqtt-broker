@@ -26,10 +26,21 @@ public final class ClusterStoreKeys {
 
     /**
      * 生成指定mqtt broker 订阅关系数据存储key
-     * @param brokerId  mqtt broker id
-     * @return  mqtt broker 订阅关系数据存储key
+     *
+     * @param brokerId mqtt broker id
+     * @return mqtt broker 订阅关系数据存储key
      */
-    public static String getBrokerTopicSubscriptionKey(String brokerId){
+    public static String getBrokerTopicSubscriptionKey(String brokerId) {
         return BROKER_TOPIC_SUBSCRIPTION_KEY_PREFIX + brokerId;
+    }
+
+    /**
+     * 生成指定mqtt broker 规则引擎规则key
+     *
+     * @param ruleName rule definition name
+     * @return mqtt broker 规则引擎规则key
+     */
+    public static String getRuleKey(String ruleName) {
+        return RULE_KEY_PREFIX + ruleName;
     }
 }

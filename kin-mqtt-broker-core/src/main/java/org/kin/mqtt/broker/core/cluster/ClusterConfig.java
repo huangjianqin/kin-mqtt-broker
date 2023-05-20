@@ -4,14 +4,22 @@ import org.kin.framework.utils.NetUtils;
 import org.kin.framework.utils.StringUtils;
 import org.kin.framework.utils.SysUtils;
 
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
+
 /**
  * mqtt broker集群化配置
+ *
  * @author huangjianqin
  * @date 2022/11/19
  */
 public class ClusterConfig {
     /** 默认mqtt broker集群化配置 */
     public static final ClusterConfig DEFAULT = create();
+    /** gossip port下标 */
+    private static final int GOSSIP_PORT_IDX = 1;
+    /** cluster store port下标 */
+    private static final int STORE_PORT_IDX = 2;
 
     /** 暴露host */
     private String host = NetUtils.getIp();
@@ -19,6 +27,7 @@ public class ClusterConfig {
      * core节点配置(包含gossip集群seeds和jraft-rheakv参与选举的节点)
      * ','分割
      * 至少配置3个节点, 否则jraft-rheakv选举leader失败
+     * 格式host:port:storePort
      */
     private String seeds;
 
@@ -43,8 +52,16 @@ public class ClusterConfig {
      * 判断是否是core节点
      * @return  true, 则是core节点
      */
-    public boolean isCore(){
-        return seeds.contains(getStoreAddress());
+    public boolean isCore() {
+        for (String hpp : seeds.split(",")) {
+            String[] splits = hpp.split(":");
+            if (splits[0].equals(host) &&
+                    splits[STORE_PORT_IDX].equals(Integer.toString(storePort))) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**
@@ -57,10 +74,42 @@ public class ClusterConfig {
 
     /**
      * 获取cluster store address
-     * @return  cluster store address
+     *
+     * @return cluster store address
      */
-    public String getStoreAddress(){
+    public String getStoreAddress() {
         return host + ":" + storePort;
+    }
+
+    /**
+     * 获取gossip集群seeds
+     *
+     * @return gossip集群seeds
+     */
+    public String getGossipSeeds() {
+        return parseSeeds(GOSSIP_PORT_IDX);
+    }
+
+    /**
+     * 获取raft kv store集群seeds
+     *
+     * @return raft kv store集群seeds
+     */
+    public String getStoreSeeds() {
+        return parseSeeds(STORE_PORT_IDX);
+    }
+
+    /**
+     * 解析seeds, 并取第{@code idx}个port作为正式的port
+     *
+     * @param idx 第n个port
+     * @return 正常host:port数组且以,分割的字符串
+     */
+    private String parseSeeds(int idx) {
+        return StringUtils.mkString(Stream.of(seeds.split(",")).map(hpp -> {
+            String[] splits = hpp.split(":");
+            return splits[0] + ":" + Integer.parseInt(splits[idx]);
+        }).collect(Collectors.toList()));
     }
 
     //----------------------------------------------------------------------------------------------------------------
@@ -80,6 +129,7 @@ public class ClusterConfig {
      * core节点配置(包含gossip集群seeds和jraft-rheakv参与选举的节点)
      * ','分割
      * 至少配置3个节点, 否则jraft-rheakv选举leader失败
+     * 格式host:port:storePort
      */
     public ClusterConfig seeds(String seeds) {
         this.seeds = seeds;

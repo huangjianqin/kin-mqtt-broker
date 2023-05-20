@@ -37,8 +37,18 @@ public final class Cluster {
         this.clusterStore = this.cluster ? new RaftKvStore(brokerContext, this) :
                 new StandaloneKvStore(this);
         this.brokerManager = this.cluster ? new GossipBrokerManager(this,
-                metadata -> clusterStore.addReplicator(metadata.getStoreAddress()),
-                metadata -> clusterStore.removeReplicator(metadata.getStoreAddress())) :
+                node -> {
+                    if (node.isCore()) {
+                        return;
+                    }
+                    clusterStore.addReplicator(node.getStoreAddress());
+                },
+                node -> {
+                    if (node.isCore()) {
+                        return;
+                    }
+                    clusterStore.removeReplicator(node.getStoreAddress());
+                }) :
                 StandaloneBrokerManager.INSTANCE;
     }
 

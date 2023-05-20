@@ -13,6 +13,7 @@ import org.kin.framework.collection.Tuple;
 import org.kin.framework.utils.CollectionUtils;
 import org.kin.framework.utils.ExceptionUtils;
 import org.kin.framework.utils.JSON;
+import org.kin.framework.utils.StringUtils;
 import org.kin.mqtt.broker.core.MqttBrokerException;
 import org.rocksdb.RocksDB;
 import org.slf4j.Logger;
@@ -29,9 +30,10 @@ import java.util.stream.Collectors;
 
 /**
  * 参考{@link RocksRawKVStore}
- * @see com.alipay.sofa.jraft.rhea.storage.RocksRawKVStore
+ *
  * @author huangjianqin
  * @date 2023/5/19
+ * @see com.alipay.sofa.jraft.rhea.storage.RocksRawKVStore
  */
 public class StandaloneKvStore implements ClusterStore {
     private static final Logger log = LoggerFactory.getLogger(StandaloneKvStore.class);
@@ -120,8 +122,7 @@ public class StandaloneKvStore implements ClusterStore {
             public void run(Status status) {
                 if (status.isOk()) {
                     sink.emitValue((byte[]) getData(), RetryNonSerializedEmitFailureHandler.RETRY_NON_SERIALIZED);
-                }
-                else{
+                } else {
                     sink.emitEmpty(RetryNonSerializedEmitFailureHandler.RETRY_NON_SERIALIZED);
                 }
             }
@@ -133,7 +134,7 @@ public class StandaloneKvStore implements ClusterStore {
     public <T> Flux<Tuple<String, T>> multiGet(List<String> keys, Class<T> type) {
         checkInit();
 
-        if(CollectionUtils.isEmpty(keys)){
+        if (CollectionUtils.isEmpty(keys)) {
             return Flux.empty();
         }
 
@@ -152,8 +153,7 @@ public class StandaloneKvStore implements ClusterStore {
                         sink.emitNext(new Tuple<>(toSKey(bKey), JSON.read(bValue, type)),
                                 RetryNonSerializedEmitFailureHandler.RETRY_NON_SERIALIZED);
                     }
-                }
-                else{
+                } else {
                     sink.emitComplete(RetryNonSerializedEmitFailureHandler.RETRY_NON_SERIALIZED);
                 }
             }
@@ -166,7 +166,7 @@ public class StandaloneKvStore implements ClusterStore {
     public Flux<Tuple<String, byte[]>> multiGetRaw(List<String> keys) {
         checkInit();
 
-        if(CollectionUtils.isEmpty(keys)){
+        if (CollectionUtils.isEmpty(keys)) {
             return Flux.empty();
         }
 
@@ -184,8 +184,7 @@ public class StandaloneKvStore implements ClusterStore {
 
                         sink.emitNext(new Tuple<>(toSKey(bKey), bValue), RetryNonSerializedEmitFailureHandler.RETRY_NON_SERIALIZED);
                     }
-                }
-                else{
+                } else {
                     sink.emitComplete(RetryNonSerializedEmitFailureHandler.RETRY_NON_SERIALIZED);
                 }
             }
@@ -212,7 +211,7 @@ public class StandaloneKvStore implements ClusterStore {
     public Mono<Void> put(Map<String, Object> kvs) {
         checkInit();
 
-        if(CollectionUtils.isEmpty(kvs)){
+        if (CollectionUtils.isEmpty(kvs)) {
             return Mono.empty();
         }
 
@@ -222,13 +221,63 @@ public class StandaloneKvStore implements ClusterStore {
                 .collect(Collectors.toList());
 
         Sinks.One<Void> sink = Sinks.one();
-        rocksStore.put(kvEntries , new BaseKVStoreClosure() {
+        rocksStore.put(kvEntries, new BaseKVStoreClosure() {
             @Override
             public void run(Status status) {
                 sink.emitEmpty(RetryNonSerializedEmitFailureHandler.RETRY_NON_SERIALIZED);
             }
         });
         return sink.asMono();
+    }
+
+    @Override
+    public <T> Flux<Tuple<String, T>> scan(String startKey, String endKey, Class<T> type) {
+        checkInit();
+
+        Sinks.Many<Tuple<String, T>> sink = Sinks.many().multicast().onBackpressureBuffer();
+        rocksStore.scan(StringUtils.isNotBlank(startKey) ? toBKey(startKey) : null,
+                StringUtils.isNotBlank(endKey) ? toBKey(endKey) : null,
+                new BaseKVStoreClosure() {
+                    @SuppressWarnings("unchecked")
+                    @Override
+                    public void run(Status status) {
+                        if (status.isOk()) {
+                            List<KVEntry> list = (List<KVEntry>) getData();
+                            for (KVEntry entry : list) {
+                                sink.emitNext(new Tuple<>(toSKey(entry.getKey()), JSON.read(entry.getValue(), type)),
+                                        RetryNonSerializedEmitFailureHandler.RETRY_NON_SERIALIZED);
+                            }
+                        } else {
+                            sink.emitComplete(RetryNonSerializedEmitFailureHandler.RETRY_NON_SERIALIZED);
+                        }
+                    }
+                });
+        return sink.asFlux();
+    }
+
+    @Override
+    public Flux<Tuple<String, byte[]>> scanRaw(String startKey, String endKey) {
+        checkInit();
+
+        Sinks.Many<Tuple<String, byte[]>> sink = Sinks.many().multicast().onBackpressureBuffer();
+        rocksStore.scan(StringUtils.isNotBlank(startKey) ? toBKey(startKey) : null,
+                StringUtils.isNotBlank(endKey) ? toBKey(endKey) : null,
+                new BaseKVStoreClosure() {
+                    @SuppressWarnings("unchecked")
+                    @Override
+                    public void run(Status status) {
+                        if (status.isOk()) {
+                            List<KVEntry> list = (List<KVEntry>) getData();
+                            for (KVEntry entry : list) {
+                                sink.emitNext(new Tuple<>(toSKey(entry.getKey()), entry.getValue()),
+                                        RetryNonSerializedEmitFailureHandler.RETRY_NON_SERIALIZED);
+                            }
+                        } else {
+                            sink.emitComplete(RetryNonSerializedEmitFailureHandler.RETRY_NON_SERIALIZED);
+                        }
+                    }
+                });
+        return sink.asFlux();
     }
 
     @Override

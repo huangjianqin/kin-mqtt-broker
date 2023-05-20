@@ -2,16 +2,17 @@ org:
   kin:
     mqtt:
       broker:
-        gossip:
-          port: 5002
-          alias: 'MQTTBroker1884'
-          seeds: 'localhost:5001;localhost:5003'
-          namespace: mqtt-broker
         port: 1884
         auth:
           users:
             java: '12345'
         broker-id: B2
+        cluster:
+          host: localhost
+          seeds: 'localhost:5001:15001,localhost:5002:15002,localhost:5003:15003'
+          port: 5002
+          storePort: 15002
+        data-path: datas/b2
 server:
   port: 8002
 
@@ -36,3 +37,10 @@ management:
 spring:
   netty:
     leak-detection: paranoid
+
+logging:
+  level:
+    com:
+      alipay: WARN
+    io:
+      scalecube: WARN

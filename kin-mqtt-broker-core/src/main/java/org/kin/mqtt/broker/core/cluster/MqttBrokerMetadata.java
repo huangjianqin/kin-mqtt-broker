@@ -25,14 +25,14 @@ public class MqttBrokerMetadata implements Serializable {
     /** 是否是core节点 */
     private boolean core;
 
-    public static MqttBrokerMetadata create(Cluster mqttBrokerCluster) {
-        ClusterConfig config = mqttBrokerCluster.getConfig();
+    public static MqttBrokerMetadata create(Cluster cluster) {
+        ClusterConfig config = cluster.getConfig();
 
         MqttBrokerMetadata metadata = new MqttBrokerMetadata();
         metadata.host = config.getHost();
         metadata.port = config.getPort();
         metadata.storePort = config.getStorePort();
-        metadata.core = mqttBrokerCluster.isCore();
+        metadata.core = cluster.isCore();
         return metadata;
     }
 
