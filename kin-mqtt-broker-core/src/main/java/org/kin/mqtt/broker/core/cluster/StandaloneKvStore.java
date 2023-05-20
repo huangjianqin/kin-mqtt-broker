@@ -51,7 +51,7 @@ public class StandaloneKvStore implements ClusterStore {
 
     @Override
     public void init() {
-        String dbPath = cluster.getConfig().getDataPath() + "/db";
+        String dbPath = cluster.getBrokerContext().getBrokerConfig().getDataPath() + "/db";
 
         try {
             FileUtils.forceMkdir(new File(dbPath));

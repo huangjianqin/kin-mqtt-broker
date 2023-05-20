@@ -15,6 +15,7 @@ import com.alipay.sofa.jraft.util.Endpoint;
 import org.kin.framework.collection.Tuple;
 import org.kin.framework.utils.CollectionUtils;
 import org.kin.framework.utils.JSON;
+import org.kin.mqtt.broker.core.MqttBrokerConfig;
 import org.kin.mqtt.broker.core.MqttBrokerContext;
 import org.kin.mqtt.broker.core.MqttBrokerException;
 import org.slf4j.Logger;
@@ -61,12 +62,12 @@ public class RaftKvStore implements ClusterStore{
 
     @Override
     public void init() {
-        ClusterConfig config = cluster.getConfig();
+        MqttBrokerConfig brokerConfig = cluster.getBrokerContext().getBrokerConfig();
 
         if (cluster.isCore()) {
-            kvStore = initCoreStore(config);
+            kvStore = initCoreStore(brokerConfig);
         } else {
-            kvStore = initReplicatorStore(config);
+            kvStore = initReplicatorStore(brokerConfig);
         }
 
         for (int i = 0; i < REGION_NUM; i++) {
@@ -102,10 +103,11 @@ public class RaftKvStore implements ClusterStore{
     /**
      * 初始化core节点, 参与raft选举
      *
-     * @param config mqtt broker集群配置
+     * @param brokerConfig mqtt broker配置
      */
-    private DefaultRheaKVStore initCoreStore(ClusterConfig config) {
-        int storeProcessors = config.getStoreProcessors();
+    private DefaultRheaKVStore initCoreStore(MqttBrokerConfig brokerConfig) {
+        ClusterConfig clusterConfig = brokerConfig.getCluster();
+        int storeProcessors = clusterConfig.getStoreProcessors();
 
         //线程数设计得考虑core+replicator混用
         //blot线程
@@ -119,18 +121,18 @@ public class RaftKvStore implements ClusterStore{
         //Utils.cpus() * 6, core是该值/3
 //        nodeOptions.setRaftRpcThreadPoolSize(Utils.cpus() * 3);
 
-        Endpoint endpoint = new Endpoint(config.getHost(), config.getStorePort());
+        Endpoint endpoint = new Endpoint(clusterConfig.getHost(), clusterConfig.getStorePort());
         RheaKVStoreOptions opts = RheaKVStoreOptionsConfigured.newConfigured()
                 .withClusterName(CLUSTER_NAME)
                 .withUseParallelCompress(true)
-                .withInitialServerList(config.getSeeds())
+                .withInitialServerList(clusterConfig.getSeeds())
                 .withStoreEngineOptions(StoreEngineOptionsConfigured.newConfigured()
                         .withStorageType(StorageType.RocksDB)
                         .withRocksDBOptions(RocksDBOptionsConfigured.newConfigured()
-                                .withDbPath(config.getDataPath() + "/db")
+                                .withDbPath(brokerConfig.getDataPath() + "/db")
                                 .withSync(true)
                                 .config())
-                        .withRaftDataPath(config.getDataPath() + "/raft")
+                        .withRaftDataPath(brokerConfig.getDataPath() + "/raft")
                         .withServerAddress(endpoint)
                         //控制read index失败后重新请求leader线程数, Math.max(Utils.cpus() << 2, 16), max=core*4倍
                         .withReadIndexCoreThreads(storeProcessors)
@@ -171,10 +173,11 @@ public class RaftKvStore implements ClusterStore{
     /**
      * 初始化replicator节点, 不参与raft选举, 仅仅从leader拉取数据
      *
-     * @param config mqtt broker集群配置
+     * @param brokerConfig mqtt broker配置
      */
-    private DefaultRheaKVStore initReplicatorStore(ClusterConfig config) {
-        int storeProcessors = config.getStoreProcessors();
+    private DefaultRheaKVStore initReplicatorStore(MqttBrokerConfig brokerConfig) {
+        ClusterConfig clusterConfig = brokerConfig.getCluster();
+        int storeProcessors = clusterConfig.getStoreProcessors();
 
         //blot线程
 //        int tpMinSize = Integer.parseInt(Configs.TP_MIN_SIZE_DEFAULT);
@@ -187,18 +190,18 @@ public class RaftKvStore implements ClusterStore{
         //Utils.cpus() * 6, core是该值/3
 //        nodeOptions.setRaftRpcThreadPoolSize(Utils.cpus() * 3);
 
-        Endpoint endpoint = new Endpoint(config.getHost(), config.getStorePort());
+        Endpoint endpoint = new Endpoint(clusterConfig.getHost(), clusterConfig.getStorePort());
         RheaKVStoreOptions opts = RheaKVStoreOptionsConfigured.newConfigured()
                 .withClusterName(CLUSTER_NAME)
                 .withUseParallelCompress(true)
-                .withInitialServerList(config.getSeeds() + "," + endpoint)
+                .withInitialServerList(clusterConfig.getSeeds() + "," + endpoint)
                 .withStoreEngineOptions(StoreEngineOptionsConfigured.newConfigured()
                         .withStorageType(StorageType.RocksDB)
                         .withRocksDBOptions(RocksDBOptionsConfigured.newConfigured()
-                                .withDbPath(config.getDataPath() + "/db")
+                                .withDbPath(brokerConfig.getDataPath() + "/db")
                                 .withSync(true)
                                 .config())
-                        .withRaftDataPath(config.getDataPath() + "/raft")
+                        .withRaftDataPath(brokerConfig.getDataPath() + "/raft")
                         .withServerAddress(endpoint)
                         //控制read index失败后重新请求leader线程数, Math.max(Utils.cpus() << 2, 16), max=core*4倍
                         .withReadIndexCoreThreads(storeProcessors)

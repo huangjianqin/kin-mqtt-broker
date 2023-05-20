@@ -39,6 +39,8 @@ public class MqttBrokerConfig {
     private int connMessagePerSec = -1;
     /** 允许连接建立速率(/s), 默认无限制 */
     private int connectPerSec = -1;
+    /** cluster store数据存储目录 */
+    private String dataPath = "data";
     /** mqtt broker集群配置 */
     private ClusterConfig cluster;
 
@@ -209,6 +211,15 @@ public class MqttBrokerConfig {
         return this;
     }
 
+
+    /**
+     * cluster store数据存储目录
+     */
+    public MqttBrokerConfig dataPath(String dataPath) {
+        this.dataPath = dataPath;
+        return this;
+    }
+
     //setter && getter
     public String getBrokerId() {
         return brokerId;
@@ -320,6 +331,14 @@ public class MqttBrokerConfig {
 
     public void setConnectPerSec(int connectPerSec) {
         this.connectPerSec = connectPerSec;
+    }
+
+    public String getDataPath() {
+        return dataPath;
+    }
+
+    public void setDataPath(String dataPath) {
+        this.dataPath = dataPath;
     }
 
     public ClusterConfig getCluster() {

@@ -26,8 +26,6 @@ public class ClusterConfig {
     /** gossip暴露端口 */
     private int port = 11000;
     //---------------------------------------------------cluster store
-    /** cluster store数据存储目录 */
-    private String dataPath = "data";
     /** cluster store rpc暴露端口 */
     private int storePort = 11100;
     /** cluster store用到的cpu processor数量 */
@@ -97,14 +95,6 @@ public class ClusterConfig {
     }
 
     /**
-     * cluster store数据存储目录
-     */
-    public ClusterConfig dataPath(String dataPath) {
-        this.dataPath = dataPath;
-        return this;
-    }
-
-    /**
      * cluster store rpc暴露端口
      */
     public ClusterConfig storePort(int storePort) {
@@ -143,14 +133,6 @@ public class ClusterConfig {
 
     public void setPort(int port) {
         this.port = port;
-    }
-
-    public String getDataPath() {
-        return dataPath;
-    }
-
-    public void setDataPath(String dataPath) {
-        this.dataPath = dataPath;
     }
 
     public int getStorePort() {
