@@ -77,7 +77,7 @@ public final class Cluster {
      */
     public Mono<Void> shutdown() {
         return brokerManager.shutdown().
-                doOnNext(v -> clusterStore.shutdown());
+                then(Mono.fromRunnable(clusterStore::shutdown));
     }
 
     //getter
