@@ -17,8 +17,6 @@ import org.kin.mqtt.broker.acl.NoneAclService;
 import org.kin.mqtt.broker.auth.AuthService;
 import org.kin.mqtt.broker.auth.NoneAuthService;
 import org.kin.mqtt.broker.bridge.Bridge;
-import org.kin.mqtt.broker.core.cluster.BrokerManager;
-import org.kin.mqtt.broker.core.cluster.StandaloneBrokerManager;
 import org.kin.mqtt.broker.core.event.MqttEventConsumer;
 import org.kin.mqtt.broker.core.handler.ByteBuf2WsFrameEncoder;
 import org.kin.mqtt.broker.core.handler.MqttBrokerHandler;
@@ -28,9 +26,7 @@ import org.kin.mqtt.broker.core.topic.share.RandomShareSubLoadBalance;
 import org.kin.mqtt.broker.core.topic.share.ShareSubLoadBalance;
 import org.kin.mqtt.broker.rule.RuleDefinition;
 import org.kin.mqtt.broker.store.DefaultMqttMessageStore;
-import org.kin.mqtt.broker.store.DefaultMqttSessionStore;
 import org.kin.mqtt.broker.store.MqttMessageStore;
-import org.kin.mqtt.broker.store.MqttSessionStore;
 import org.kin.mqtt.broker.systopic.impl.OnlineClientNumPublisher;
 import org.kin.transport.netty.ServerTransport;
 import org.slf4j.Logger;
@@ -57,12 +53,8 @@ public class MqttBrokerBootstrap extends ServerTransport<MqttBrokerBootstrap> {
     private final List<Interceptor> interceptors = new LinkedList<>();
     /** auth service, 默认不进行校验 */
     private AuthService authService = NoneAuthService.INSTANCE;
-    /** mqtt broker集群管理. 默认单节点模式 */
-    private BrokerManager brokerManager = StandaloneBrokerManager.INSTANCE;
     /** mqtt消息外部存储, 默认存储在jvm内存 */
     private MqttMessageStore messageStore = new DefaultMqttMessageStore();
-    /** mqtt session外部存储, 默认存储在jvm内存 */
-    private MqttSessionStore sessionStore = DefaultMqttSessionStore.INSTANCE;
     /** 规则链定义 */
     private List<RuleDefinition> ruleDefinitions = new LinkedList<>();
     /** 数据桥接实现 */
@@ -121,26 +113,10 @@ public class MqttBrokerBootstrap extends ServerTransport<MqttBrokerBootstrap> {
     }
 
     /**
-     * mqtt broker集群管理
-     */
-    public MqttBrokerBootstrap brokerManager(BrokerManager brokerManager) {
-        this.brokerManager = brokerManager;
-        return this;
-    }
-
-    /**
      * mqtt消息外部存储
      */
     public MqttBrokerBootstrap messageStore(MqttMessageStore messageStore) {
         this.messageStore = messageStore;
-        return this;
-    }
-
-    /**
-     * mqtt session外部存储
-     */
-    public MqttBrokerBootstrap sessionStore(MqttSessionStore sessionStore) {
-        this.sessionStore = sessionStore;
         return this;
     }
 
@@ -223,7 +199,7 @@ public class MqttBrokerBootstrap extends ServerTransport<MqttBrokerBootstrap> {
 
         int port = config.getPort();
         MqttBrokerContext brokerContext = new MqttBrokerContext(config, new MqttMessageDispatcher(interceptors),
-                authService, brokerManager, messageStore, sessionStore,
+                authService, messageStore,
                 ruleDefinitions, aclService, shareSubLoadBalance, eventConsumers);
 
         //启动mqtt broker
@@ -410,15 +386,23 @@ public class MqttBrokerBootstrap extends ServerTransport<MqttBrokerBootstrap> {
         return authService;
     }
 
-    public BrokerManager getBrokerManager() {
-        return brokerManager;
-    }
-
     public List<RuleDefinition> getRuleDefinitions() {
         return ruleDefinitions;
     }
 
     public AclService getAclService() {
         return aclService;
+    }
+
+    public List<Bridge> getBridges() {
+        return bridges;
+    }
+
+    public List<MqttEventConsumer> getEventConsumers() {
+        return eventConsumers;
+    }
+
+    public ShareSubLoadBalance getShareSubLoadBalance() {
+        return shareSubLoadBalance;
     }
 }

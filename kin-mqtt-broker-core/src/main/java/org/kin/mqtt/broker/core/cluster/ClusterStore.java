@@ -109,6 +109,14 @@ public interface ClusterStore {
     }
 
     /**
+     * 移除指定key的value
+     *
+     * @param key key
+     * @return complete signal
+     */
+    Mono<Void> remove(String key);
+
+    /**
      * 添加replicator
      *
      * @param nodeAddress replicator node address

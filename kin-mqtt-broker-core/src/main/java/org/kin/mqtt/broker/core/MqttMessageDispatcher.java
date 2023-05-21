@@ -72,7 +72,8 @@ public class MqttMessageDispatcher {
      * @param brokerContext  mqtt broker context
      */
     public Mono<Void> dispatch(MqttMessageContext<? extends MqttMessage> messageContext, MqttBrokerContext brokerContext) {
-        return dispatch(messageContext, null, brokerContext);
+        return dispatch(messageContext, null, brokerContext)
+                .then(Mono.fromRunnable(() -> ReactorNetty.safeRelease(messageContext.getMessage())));
     }
 
     /**
@@ -226,18 +227,20 @@ public class MqttMessageDispatcher {
 
     /**
      * 处理集群广播消息
+     *
+     * @return complete signal
      */
     @SuppressWarnings("unchecked")
-    private void dispatchClusterMessage(MqttMessageContext<? extends MqttMessage> messageContext, MqttBrokerContext brokerContext) {
+    private Mono<Void> dispatchClusterMessage(MqttMessageContext<? extends MqttMessage> messageContext, MqttBrokerContext brokerContext) {
         MqttMessage mqttMessage = messageContext.getMessage();
         if (mqttMessage.decoderResult().isFailure()) {
             //mqtt message decode failure
-            return;
+            return Mono.empty();
         }
 
         if (!(mqttMessage instanceof MqttPublishMessage)) {
             //集群仅会广播publish消息
-            return;
+            return Mono.empty();
         }
 
         //处理publish消息
@@ -245,11 +248,9 @@ public class MqttMessageDispatcher {
         MqttPublishVariableHeader variableHeader = publishMessage.variableHeader();
         PubTopic pubTopic = TopicUtils.parsePubTopic(variableHeader.topicName());
 
-        MqttPublishMessageHelper.broadcast(brokerContext, pubTopic, (MqttMessageContext<MqttPublishMessage>) messageContext)
+        return MqttPublishMessageHelper.broadcast(brokerContext, pubTopic, (MqttMessageContext<MqttPublishMessage>) messageContext)
                 .then(MqttPublishMessageHelper.trySaveRetainMessage(brokerContext.getMessageStore(), (MqttMessageContext<MqttPublishMessage>) messageContext))
-                .subscribe();
-
-        Metrics.counter(MetricsNames.CLUSTER_PUBLISH_MSG_COUNT).increment();
+                .then(Mono.fromRunnable(() -> Metrics.counter(MetricsNames.CLUSTER_PUBLISH_MSG_COUNT).increment()));
     }
 
     /**

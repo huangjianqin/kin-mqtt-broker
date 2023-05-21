@@ -5,6 +5,7 @@ import io.netty.buffer.Unpooled;
 import io.netty.handler.codec.mqtt.MqttPublishMessage;
 import io.netty.handler.codec.mqtt.MqttQoS;
 import org.kin.mqtt.broker.boot.EnableMqttBroker;
+import org.kin.mqtt.broker.core.MqttBroker;
 import org.kin.mqtt.broker.core.MqttMessageSender;
 import org.kin.mqtt.broker.core.message.MqttMessageHelper;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -28,7 +29,8 @@ public class MqttBrokerApplication {
     }
 
     @Bean
-    public ApplicationRunner sendMqttMessageLoop(@Autowired MqttMessageSender mqttMessageSender) {
+    public ApplicationRunner sendMqttMessageLoop(@Autowired MqttBroker mqttBroker,
+                                                 @Autowired MqttMessageSender mqttMessageSender) {
         return args -> ForkJoinPool.commonPool().execute(() -> {
             int messageId = 1;
             while (true) {
@@ -38,7 +40,7 @@ public class MqttBrokerApplication {
                     throw new RuntimeException(e);
                 }
 
-                String s = "broker loop:" + messageId;
+                String s = "broker-" + mqttBroker.getBrokerId() + " loop:" + messageId;
                 ByteBuf byteBuf = Unpooled.copiedBuffer(s.getBytes(StandardCharsets.UTF_8));
 
                 MqttPublishMessage pubMessage = MqttMessageHelper.createPublish(false,

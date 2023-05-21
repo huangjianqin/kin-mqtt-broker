@@ -1,4 +1,4 @@
-package org.kin.mqtt.example.client.session;
+package org.kin.mqtt.example.client.common;
 
 import org.eclipse.paho.mqttv5.client.IMqttMessageListener;
 import org.eclipse.paho.mqttv5.client.IMqttToken;
@@ -17,12 +17,12 @@ import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.TimeUnit;
 
 /**
- * 共享session持久化测试, 即session持久化在第三方组件完成
+ * 跨broker节点共享session的subscriber
  *
  * @author huangjianqin
  * @date 2023/4/22
  */
-public class ShareMqttSessionStoreTest {
+public class ShareSessionMqttSubscriber {
     public static void main(String[] args) throws InterruptedException {
         CountDownLatch latch = new CountDownLatch(1);
 
@@ -89,8 +89,8 @@ public class ShareMqttSessionStoreTest {
                 }
                 MqttConnectionOptions connOpts = new MqttConnectionOptions();
                 connOpts.setCleanStart(false);
-                //设置session有效期为5min
-                connOpts.setSessionExpiryInterval(TimeUnit.MINUTES.toSeconds(5));
+                //设置session有效期为1min
+                connOpts.setSessionExpiryInterval(TimeUnit.MINUTES.toSeconds(1));
                 connOpts.setUserName("java");
                 connOpts.setPassword("12345".getBytes(StandardCharsets.UTF_8));
                 //设置3个broker, 断连后重连

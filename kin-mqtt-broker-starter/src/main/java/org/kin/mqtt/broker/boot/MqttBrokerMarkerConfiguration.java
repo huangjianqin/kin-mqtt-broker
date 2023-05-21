@@ -4,7 +4,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 /**
- * 注入{@link Marker}bean, 进而触发加载{@link MqttBrokerStandAloneAutoConfiguration}
+ * 注入{@link Marker}bean, 进而触发加载{@link MqttBrokerAutoConfiguration}
  *
  * @author huangjianqin
  * @date 2022/11/19

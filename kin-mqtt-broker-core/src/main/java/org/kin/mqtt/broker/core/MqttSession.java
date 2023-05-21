@@ -1,6 +1,7 @@
 package org.kin.mqtt.broker.core;
 
 import com.google.common.util.concurrent.RateLimiter;
+import io.netty.buffer.ByteBufHolder;
 import io.netty.channel.Channel;
 import io.netty.handler.codec.mqtt.*;
 import io.netty.util.HashedWheelTimer;
@@ -114,7 +115,6 @@ public class MqttSession {
         MqttMessageType mqttMessageType = mqttMessage.fixedHeader().messageType();
         log.debug("session {} send {} message", getConnection(), mqttMessageType);
 
-
         if (MqttMessageType.PUBLISH.equals(mqttMessageType) &&
                 mqttMessage.fixedHeader().qosLevel().value() > 0 &&
                 tryEnqueueInflightQueue(MqttMessageContext.common((MqttPublishMessage) mqttMessage, brokerContext.getBrokerId(), clientId))) {
@@ -130,9 +130,15 @@ public class MqttSession {
             Runnable retryTask = () -> sendMessage0(Mono.just(reply)).subscribe();
             Runnable cleaner = () -> {
                 //完全释放
-                MqttPublishMessage pubReply = (MqttPublishMessage) reply;
-                for (int i = 0; i < pubReply.refCnt(); i++) {
-                    ReactorNetty.safeRelease(reply);
+                if (reply instanceof ByteBufHolder) {
+                    ByteBufHolder holderReply = (ByteBufHolder) reply;
+                    try {
+                        while (holderReply.refCnt() > 0) {
+                            ReactorNetty.safeRelease(reply);
+                        }
+                    } catch (Exception e) {
+                        //do nothing
+                    }
                 }
             };
 
@@ -140,11 +146,9 @@ public class MqttSession {
             //开启retry task, 最大重试次数为5, 间隔3s
             long uuid = genMqttMessageRetryId(mqttMessageType, MqttMessageHelper.getMessageId(mqttMessage));
             retryService.execRetry(new PublishRetry(uuid, retryTask, cleaner, retryService));
-
-            return sendMessage0(Mono.just(mqttMessage));
-        } else {
-            return sendMessage0(Mono.just(mqttMessage));
         }
+
+        return sendMessage0(Mono.just(mqttMessage));
     }
 
     /**

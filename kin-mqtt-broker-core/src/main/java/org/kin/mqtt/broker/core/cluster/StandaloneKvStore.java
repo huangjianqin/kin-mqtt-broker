@@ -281,6 +281,20 @@ public class StandaloneKvStore implements ClusterStore {
     }
 
     @Override
+    public Mono<Void> remove(String key) {
+        checkInit();
+
+        Sinks.One<Void> sink = Sinks.one();
+        rocksStore.delete(toBKey(key), new BaseKVStoreClosure() {
+            @Override
+            public void run(Status status) {
+                sink.emitEmpty(RetryNonSerializedEmitFailureHandler.RETRY_NON_SERIALIZED);
+            }
+        });
+        return sink.asMono();
+    }
+
+    @Override
     public void addReplicator(String nodeAddress) {
         //do nothing
     }

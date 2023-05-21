@@ -209,8 +209,7 @@ public class GossipBrokerManager implements BrokerManager {
                 }
 
                 //开启retry
-                //不纳入Inflight
-                mqttSession.sendMessage(MqttMessageHelper.createPublish(messageReplica), messageReplica.getQos() > 0).subscribe();
+                mqttSession.sendMessage(MqttMessageHelper.createPublish(mqttSession, messageReplica), messageReplica.getQos() > 0).subscribe();
             }
         }
 

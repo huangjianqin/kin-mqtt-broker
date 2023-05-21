@@ -31,6 +31,8 @@ public final class Cluster {
     private final boolean cluster;
     /** 是否为core节点 */
     private final boolean core;
+    /** 基于cluster store的{@link MqttSessionStore}实现 */
+    private final MqttSessionStore sessionStore;
 
     public Cluster(MqttBrokerContext brokerContext) {
         this.brokerContext = brokerContext;
@@ -54,6 +56,7 @@ public final class Cluster {
                     clusterStore.removeReplicator(node.getStoreAddress());
                 }) :
                 StandaloneBrokerManager.INSTANCE;
+        this.sessionStore = new DefaultMqttSessionStore(this.clusterStore);
     }
 
     /**
@@ -68,7 +71,7 @@ public final class Cluster {
                         .publishOn(brokerContext.getMqttBizScheduler())
                         .flatMap(mqttMessageReplica -> brokerContext.getDispatcher()
                                 .dispatch(MqttMessageContext.fromCluster(mqttMessageReplica), brokerContext))
-                        .subscribe((mqttMessageReplica) -> {
+                        .subscribe((v) -> {
                                 },
                                 t -> brokerManager.error("broker manager handle cluster message error", t))))
                 .subscribe();
@@ -132,6 +135,10 @@ public final class Cluster {
 
     public ClusterStore getClusterStore() {
         return clusterStore;
+    }
+
+    public MqttSessionStore getSessionStore() {
+        return sessionStore;
     }
 
     //--------------------------------------------------------internal mqtt event consumer

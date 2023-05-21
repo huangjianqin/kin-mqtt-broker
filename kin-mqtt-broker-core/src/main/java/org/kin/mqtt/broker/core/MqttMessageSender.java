@@ -3,9 +3,9 @@ package org.kin.mqtt.broker.core;
 import io.netty.handler.codec.mqtt.MqttFixedHeader;
 import io.netty.handler.codec.mqtt.MqttPublishMessage;
 import io.netty.handler.codec.mqtt.MqttQoS;
+import org.kin.mqtt.broker.core.cluster.MqttSessionStore;
 import org.kin.mqtt.broker.core.message.MqttMessageContext;
 import org.kin.mqtt.broker.core.message.MqttMessageHelper;
-import org.kin.mqtt.broker.store.MqttSessionStore;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
@@ -88,14 +88,13 @@ public class MqttMessageSender {
 
                     MqttSession mqttSession = sessionManager.get(clientId);
                     if (Objects.nonNull(mqttSession) && mqttSession.isOnline()) {
-                        //本broker在线, 直接publish
+                        //本client在线, 直接publish
                         MqttFixedHeader fixedHeader = message.fixedHeader();
                         MqttQoS mqttQoS = fixedHeader.qosLevel();
                         //开启retry
-                        //不纳入Inflight
                         return mqttSession.sendMessage(message, mqttQoS.value() > 0);
                     } else if (saveIfOffline) {
-                        //本broker离线, 看看是否在其他broker在线, 否则保存离线消息
+                        //本client离线, 看看是否在其他broker在线, 否则保存离线消息
                         return sessionStore.get(clientId)
                                 .publishOn(brokerContext.getMqttBizScheduler())
                                 .map(replica -> {

@@ -1,4 +1,4 @@
-package org.kin.mqtt.example.client.session;
+package org.kin.mqtt.example.client.common;
 
 import org.eclipse.paho.mqttv5.client.IMqttMessageListener;
 import org.eclipse.paho.mqttv5.client.IMqttToken;
@@ -17,12 +17,12 @@ import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.TimeUnit;
 
 /**
- * 默认session持久化测试
+ * 自动断开broker连接, 然后重新连接该broker的subscriber
  *
  * @author huangjianqin
  * @date 2022/12/22
  */
-public class DefaultMqttSessionStoreTest {
+public class AutoReconnectMqttSubscriber {
     public static void main(String[] args) throws InterruptedException {
         CountDownLatch latch = new CountDownLatch(1);
 

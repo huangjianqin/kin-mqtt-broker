@@ -1,2 +1,2 @@
 org.springframework.boot.autoconfigure.EnableAutoConfiguration=\
-org.kin.mqtt.broker.boot.MqttBrokerStandAloneAutoConfiguration
+org.kin.mqtt.broker.boot.MqttBrokerAutoConfiguration

@@ -356,6 +356,22 @@ public class RaftKvStore implements ClusterStore {
     }
 
     @Override
+    public Mono<Void> put(Map<String, Object> kvs) {
+        checkInit();
+
+        if (CollectionUtils.isEmpty(kvs)) {
+            return Mono.empty();
+        }
+
+        List<KVEntry> kvEntries = kvs.entrySet()
+                .stream()
+                .map(e -> new KVEntry(toBKey(e.getKey()), JSON.writeBytes(e.getValue())))
+                .collect(Collectors.toList());
+        return Mono.fromFuture(kvStore.put(kvEntries))
+                .then();
+    }
+
+    @Override
     public <T> Flux<Tuple<String, T>> scan(String startKey, String endKey, Class<T> type) {
         checkInit();
         return Mono.fromFuture(kvStore.scan(StringUtils.isNotBlank(startKey) ? toBKey(startKey) : null,
@@ -386,18 +402,9 @@ public class RaftKvStore implements ClusterStore {
     }
 
     @Override
-    public Mono<Void> put(Map<String, Object> kvs) {
+    public Mono<Void> remove(String key) {
         checkInit();
-
-        if (CollectionUtils.isEmpty(kvs)) {
-            return Mono.empty();
-        }
-
-        List<KVEntry> kvEntries = kvs.entrySet()
-                .stream()
-                .map(e -> new KVEntry(toBKey(e.getKey()), JSON.writeBytes(e.getValue())))
-                .collect(Collectors.toList());
-        return Mono.fromFuture(kvStore.put(kvEntries))
+        return Mono.fromFuture(kvStore.delete(key))
                 .then();
     }
 

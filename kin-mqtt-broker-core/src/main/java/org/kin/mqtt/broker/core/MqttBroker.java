@@ -56,4 +56,8 @@ public class MqttBroker implements Closeable {
     public MqttMessageSender getMqttMessageSender() {
         return mqttMessageSender;
     }
+
+    public String getBrokerId() {
+        return getContext().getBrokerId();
+    }
 }

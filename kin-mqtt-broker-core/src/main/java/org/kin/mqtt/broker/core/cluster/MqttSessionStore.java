@@ -1,4 +1,4 @@
-package org.kin.mqtt.broker.store;
+package org.kin.mqtt.broker.core.cluster;
 
 import org.kin.mqtt.broker.core.session.MqttSessionReplica;
 import reactor.core.publisher.Mono;
