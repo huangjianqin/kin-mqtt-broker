@@ -1,11 +1,12 @@
 package org.kin.mqtt.broker.example.store.redis;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
+import io.netty.buffer.PooledByteBufAllocator;
 import io.netty.handler.codec.mqtt.MqttPublishMessage;
 import io.netty.handler.codec.mqtt.MqttQoS;
 import org.kin.mqtt.broker.boot.EnableMqttBroker;
 import org.kin.mqtt.broker.boot.MqttBrokerProperties;
+import org.kin.mqtt.broker.core.MqttBroker;
 import org.kin.mqtt.broker.core.MqttMessageSender;
 import org.kin.mqtt.broker.core.message.MqttMessageHelper;
 import org.kin.mqtt.broker.example.Topics;
@@ -30,7 +31,8 @@ public class MqttBrokerRedisStoreApplication {
     }
 
     @Bean
-    public ApplicationRunner sendMqttMessageLoop(@Autowired MqttMessageSender mqttMessageSender,
+    public ApplicationRunner sendMqttMessageLoop(@Autowired MqttBroker mqttBroker,
+                                                 @Autowired MqttMessageSender mqttMessageSender,
                                                  @Autowired MqttBrokerProperties properties) {
         return args -> ForkJoinPool.commonPool().execute(() -> {
             if (!properties.getBrokerId().equals("B1")) {
@@ -44,8 +46,10 @@ public class MqttBrokerRedisStoreApplication {
                     throw new RuntimeException(e);
                 }
 
-                String s = "redis store base gossip broker loop:" + messageId;
-                ByteBuf byteBuf = Unpooled.copiedBuffer(s.getBytes(StandardCharsets.UTF_8));
+                String s = "broker-" + mqttBroker.getBrokerId() + " loop:" + messageId;
+                byte[] bytes = s.getBytes(StandardCharsets.UTF_8);
+                ByteBuf byteBuf = PooledByteBufAllocator.DEFAULT.directBuffer(bytes.length);
+                byteBuf.writeBytes(bytes);
 
                 MqttPublishMessage pubMessage = MqttMessageHelper.createPublish(false,
                         MqttQoS.AT_LEAST_ONCE,
