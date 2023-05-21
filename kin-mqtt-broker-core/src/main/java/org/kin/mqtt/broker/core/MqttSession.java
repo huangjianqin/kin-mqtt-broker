@@ -128,7 +128,13 @@ public class MqttSession {
             MqttMessage reply = getReplyMqttMessage(mqttMessage);
 
             Runnable retryTask = () -> sendMessage0(Mono.just(reply)).subscribe();
-            Runnable cleaner = () -> ReactorNetty.safeRelease(reply);
+            Runnable cleaner = () -> {
+                //完全释放
+                MqttPublishMessage pubReply = (MqttPublishMessage) reply;
+                for (int i = 0; i < pubReply.refCnt(); i++) {
+                    ReactorNetty.safeRelease(reply);
+                }
+            };
 
             RetryService retryService = brokerContext.getRetryService();
             //开启retry task, 最大重试次数为5, 间隔3s
