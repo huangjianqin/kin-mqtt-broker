@@ -1,5 +1,8 @@
 package org.kin.mqtt.broker.core.cluster;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.util.Collections;
 import java.util.Set;
 
@@ -10,6 +13,7 @@ import java.util.Set;
  * @date 2022/11/15
  */
 public class MqttBrokerNode {
+    private static final Logger log = LoggerFactory.getLogger(MqttBrokerNode.class);
     /** broker id */
     private String id;
     /** host */
@@ -21,7 +25,7 @@ public class MqttBrokerNode {
     /** 是否是core节点 */
     private boolean core;
     /** 已注册订阅topic(正则表达式) */
-    private volatile Set<String> subscribedRegexTopics = Collections.emptySet();
+    private volatile Set<String> subRegexTopics = Collections.emptySet();
 
     public static MqttBrokerNode create(String id, MqttBrokerMetadata metadata) {
         MqttBrokerNode node = new MqttBrokerNode();
@@ -36,11 +40,12 @@ public class MqttBrokerNode {
     /**
      * 更新broker订阅信息
      */
-    public void updateSubscriptions(Set<String> subscribedRegexTopics){
-        if (subscribedRegexTopics == null) {
-            subscribedRegexTopics = Collections.emptySet();
+    public void updateSubscriptions(Set<String> subRegexTopics) {
+        log.debug("mqtt broker '{}' subscription changed, {}", id, subRegexTopics);
+        if (subRegexTopics == null) {
+            subRegexTopics = Collections.emptySet();
         }
-        this.subscribedRegexTopics = subscribedRegexTopics;
+        this.subRegexTopics = subRegexTopics;
     }
 
     /**
@@ -49,7 +54,7 @@ public class MqttBrokerNode {
      * @param topic mqtt topic
      */
     public boolean hasSubscription(String topic) {
-        for (String regexTopic : subscribedRegexTopics) {
+        for (String regexTopic : subRegexTopics) {
             if (topic.matches(regexTopic)) {
                 return true;
             }
@@ -104,7 +109,7 @@ public class MqttBrokerNode {
                 ", port=" + port +
                 ", storePort=" + storePort +
                 ", core=" + core +
-                ", subscribedRegexTopics=" + subscribedRegexTopics +
+                ", subRegexTopics=" + subRegexTopics +
                 '}';
     }
 }

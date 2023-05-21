@@ -4,9 +4,11 @@ import io.netty.handler.codec.mqtt.MqttQoS;
 import org.kin.mqtt.broker.core.topic.*;
 import org.kin.mqtt.broker.core.topic.share.RandomShareSubLoadBalance;
 import org.kin.mqtt.broker.core.topic.share.ShareSubLoadBalance;
+import org.kin.mqtt.broker.utils.TopicUtils;
 
 import javax.annotation.Nullable;
 import java.util.*;
+import java.util.concurrent.CopyOnWriteArraySet;
 import java.util.stream.Collectors;
 
 /**
@@ -18,6 +20,8 @@ public class DefaultTopicManager implements TopicManager {
     private final TopicFilter treeFilter = new TreeTopicFilter();
     /** 共享订阅负载均衡实现 */
     private final ShareSubLoadBalance loadBalance;
+    /** 已注册订阅topic(正则表达式) */
+    private volatile Set<String> subRegexTopics = new CopyOnWriteArraySet<>();
 
     public DefaultTopicManager() {
         this(RandomShareSubLoadBalance.INSTANCE);
@@ -78,6 +82,7 @@ public class DefaultTopicManager implements TopicManager {
         } else {
             simpleFilter.addSubscription(subscription);
         }
+        subRegexTopics.add(TopicUtils.toRegexTopic(topic));
     }
 
     @Override
@@ -89,6 +94,7 @@ public class DefaultTopicManager implements TopicManager {
         } else {
             simpleFilter.removeSubscription(subscription);
         }
+        subRegexTopics.remove(TopicUtils.toRegexTopic(topic));
     }
 
     @Override
@@ -123,5 +129,10 @@ public class DefaultTopicManager implements TopicManager {
         return getAllSubscriptions().stream()
                 .collect(Collectors.groupingBy(TopicSubscription::getTopic,
                         Collectors.mapping(TopicSubscription::getMqttSession, Collectors.toSet())));
+    }
+
+    @Override
+    public Set<String> getAllSubRegexTopics() {
+        return new HashSet<>(subRegexTopics);
     }
 }

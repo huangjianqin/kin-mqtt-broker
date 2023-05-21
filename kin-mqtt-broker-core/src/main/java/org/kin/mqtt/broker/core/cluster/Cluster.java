@@ -1,6 +1,12 @@
 package org.kin.mqtt.broker.core.cluster;
 
+import org.kin.framework.reactor.event.ReactorEventBus;
+import org.kin.mqtt.broker.core.MqttBrokerConfig;
 import org.kin.mqtt.broker.core.MqttBrokerContext;
+import org.kin.mqtt.broker.core.cluster.event.BrokerSubscriptionsChangedEvent;
+import org.kin.mqtt.broker.core.event.MqttEventConsumer;
+import org.kin.mqtt.broker.core.event.MqttSubscribeEvent;
+import org.kin.mqtt.broker.core.event.MqttUnsubscribeEvent;
 import org.kin.mqtt.broker.core.message.MqttMessageContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -15,8 +21,6 @@ import reactor.core.publisher.Mono;
 public final class Cluster {
     private static final Logger log = LoggerFactory.getLogger(Cluster.class);
 
-    /** 集群配置 */
-    private final ClusterConfig config;
     /** mqtt broker context */
     private final MqttBrokerContext brokerContext;
     /** 集群数据访问接口 */
@@ -28,9 +32,9 @@ public final class Cluster {
     /** 是否为core节点 */
     private final boolean core;
 
-    public Cluster(MqttBrokerContext brokerContext, ClusterConfig config) {
-        this.config = config;
+    public Cluster(MqttBrokerContext brokerContext) {
         this.brokerContext = brokerContext;
+        ClusterConfig config = brokerContext.getBrokerConfig().getCluster();
         this.cluster = config.isClusterMode();
         this.core = !this.cluster || config.isCore();
 
@@ -68,6 +72,23 @@ public final class Cluster {
                                 },
                                 t -> brokerManager.error("broker manager handle cluster message error", t))))
                 .subscribe();
+
+        //注册事件
+        ReactorEventBus eventBus = brokerContext.getEventBus();
+        eventBus.register(new MqttSubscribeEventConsumer());
+        eventBus.register(new MqttUnsubscribeEventConsumer());
+    }
+
+    /**
+     * 更新本broker的订阅信息, 然后广播集群其他broker, 更新本broker的订阅信息
+     */
+    private void onSubscriptionChanged() {
+        //广播集群其他broker, 更新本broker的订阅信息
+        String brokerId = brokerContext.getBrokerId();
+        String key = ClusterStoreKeys.getBrokerSubscriptionKey(brokerId);
+        clusterStore.put(key, new BrokerSubscriptions(brokerContext.getTopicManager().getAllSubRegexTopics()))
+                .then(brokerManager.broadcastEvent(new BrokerSubscriptionsChangedEvent(brokerId)))
+                .subscribe();
     }
 
     /**
@@ -94,7 +115,11 @@ public final class Cluster {
     }
 
     public ClusterConfig getConfig() {
-        return config;
+        return getBrokerConfig().getCluster();
+    }
+
+    public MqttBrokerConfig getBrokerConfig() {
+        return brokerContext.getBrokerConfig();
     }
 
     public BrokerManager getBrokerManager() {
@@ -107,5 +132,27 @@ public final class Cluster {
 
     public ClusterStore getClusterStore() {
         return clusterStore;
+    }
+
+    //--------------------------------------------------------internal mqtt event consumer
+
+    /**
+     * 注册订阅consumer
+     */
+    private class MqttSubscribeEventConsumer implements MqttEventConsumer<MqttSubscribeEvent> {
+        @Override
+        public void consume(ReactorEventBus eventBus, MqttSubscribeEvent event) {
+            onSubscriptionChanged();
+        }
+    }
+
+    /**
+     * 取消订阅consumer
+     */
+    private class MqttUnsubscribeEventConsumer implements MqttEventConsumer<MqttUnsubscribeEvent> {
+        @Override
+        public void consume(ReactorEventBus eventBus, MqttUnsubscribeEvent event) {
+            onSubscriptionChanged();
+        }
     }
 }

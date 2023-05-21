@@ -12,11 +12,14 @@ import io.scalecube.net.Address;
 import io.scalecube.reactor.RetryNonSerializedEmitFailureHandler;
 import io.scalecube.transport.netty.tcp.TcpTransportFactory;
 import org.jctools.maps.NonBlockingHashMap;
+import org.kin.framework.reactor.event.ReactorEventBus;
 import org.kin.framework.utils.ClassUtils;
 import org.kin.framework.utils.JSON;
 import org.kin.mqtt.broker.core.MqttBrokerContext;
 import org.kin.mqtt.broker.core.MqttSession;
 import org.kin.mqtt.broker.core.cluster.event.AbstractMqttClusterEvent;
+import org.kin.mqtt.broker.core.cluster.event.AbstractMqttClusterEventConsumer;
+import org.kin.mqtt.broker.core.cluster.event.BrokerSubscriptionsChangedEvent;
 import org.kin.mqtt.broker.core.cluster.event.MqttClusterEvent;
 import org.kin.mqtt.broker.core.message.MqttMessageHelper;
 import org.kin.mqtt.broker.core.message.MqttMessageReplica;
@@ -53,18 +56,15 @@ public class GossipBrokerManager implements BrokerManager {
     private static final String DEFAULT_NAMESPACE = "KinMqttBroker";
 
     /** 集群配置 */
-    private final org.kin.mqtt.broker.core.cluster.Cluster mqttBrokerCluster;
-    /**
-     * mqtt broker context
-     * lazy init
-     */
-    private final MqttBrokerContext brokerContext;
+    private final org.kin.mqtt.broker.core.cluster.Cluster brokerCluster;
     /** gossip cluster */
     private Mono<Cluster> clusterMono;
     /** 来自集群广播的mqtt消息流 */
     private final Sinks.Many<MqttMessageReplica> clusterMqttMessageSink = Sinks.many().unicast().onBackpressureBuffer();
     /** remote集群节点信息, key -> host:port */
-    private final Map<String, MqttBrokerNode> clusterBrokers = new NonBlockingHashMap<>();
+    private final Map<String, MqttBrokerNode> address2Broker = new NonBlockingHashMap<>();
+    /** remote集群节点信息, key -> mqtt broker id */
+    private final Map<String, MqttBrokerNode> id2Broker = new NonBlockingHashMap<>();
     /** 新broker加入集群处理逻辑 */
     @Nullable
     private final Consumer<MqttBrokerNode> brokerAddPostProcessor;
@@ -72,29 +72,37 @@ public class GossipBrokerManager implements BrokerManager {
     @Nullable
     private final Consumer<MqttBrokerNode> brokerRemovePostProcessor;
 
-    public GossipBrokerManager(org.kin.mqtt.broker.core.cluster.Cluster mqttBrokerCluster) {
-        this(mqttBrokerCluster, null, null);
+    public GossipBrokerManager(org.kin.mqtt.broker.core.cluster.Cluster brokerCluster) {
+        this(brokerCluster, null, null);
     }
 
-    public GossipBrokerManager(org.kin.mqtt.broker.core.cluster.Cluster mqttBrokerCluster,
+    public GossipBrokerManager(org.kin.mqtt.broker.core.cluster.Cluster brokerCluster,
                                @Nullable Consumer<MqttBrokerNode> brokerAddPostProcessor,
                                @Nullable Consumer<MqttBrokerNode> brokerRemovePostProcessor) {
-        this.mqttBrokerCluster = mqttBrokerCluster;
-        this.brokerContext = mqttBrokerCluster.getBrokerContext();
+        this.brokerCluster = brokerCluster;
         this.brokerAddPostProcessor = brokerAddPostProcessor;
         this.brokerRemovePostProcessor = brokerRemovePostProcessor;
     }
 
+    /**
+     * 获取mqtt broker context
+     *
+     * @return mqtt broker context
+     */
+    private MqttBrokerContext getBrokerContext() {
+        return brokerCluster.getBrokerContext();
+    }
+
     @Override
     public Mono<Void> init() {
-        ClusterConfig config = mqttBrokerCluster.getConfig();
+        ClusterConfig config = brokerCluster.getConfig();
 
         int port = config.getPort();
         clusterMono = new ClusterImpl().config(clusterConfig -> clusterConfig.externalHost(config.getHost())
                         //gossip节点名即broker id
-                        .memberAlias(brokerContext.getBrokerId())
+                        .memberAlias(getBrokerContext().getBrokerId())
                         .externalPort(port)
-                        .metadata(MqttBrokerMetadata.create(mqttBrokerCluster)))
+                        .metadata(MqttBrokerMetadata.create(brokerCluster)))
                 .membership(membershipConfig -> membershipConfig.seedMembers(seedMembers(config.getGossipSeeds()))
                         .namespace(DEFAULT_NAMESPACE)
                         .syncInterval(5_000))
@@ -103,6 +111,10 @@ public class GossipBrokerManager implements BrokerManager {
                         .port(port))
                 .handler(c -> new GossipMessageHandler())
                 .start();
+
+        //注册事件
+        ReactorEventBus eventBus = getBrokerContext().getEventBus();
+        eventBus.register(new BrokerSubscriptionsChangedEventConsumer());
 
         return clusterMono.then();
     }
@@ -125,7 +137,7 @@ public class GossipBrokerManager implements BrokerManager {
 
     @Override
     public Mono<Void> broadcastMqttMessage(MqttMessageReplica message) {
-        return Flux.fromIterable(clusterBrokers.values())
+        return Flux.fromIterable(id2Broker.values())
                 //过滤没有订阅的broker节点
                 .filter(n -> n.hasSubscription(message.getTopic()))
                 //只往有订阅的broker节点广播publish消息
@@ -137,7 +149,7 @@ public class GossipBrokerManager implements BrokerManager {
 
     @Override
     public Mono<Void> sendMqttMessage(String remoteBrokerId, String clientId, MqttMessageReplica message) {
-        return Flux.fromIterable(clusterBrokers.values()).filter(n -> n.getId().equals(remoteBrokerId)).flatMap(n -> clusterMono.flatMap(c -> {
+        return Flux.fromIterable(id2Broker.values()).filter(n -> n.getId().equals(remoteBrokerId)).flatMap(n -> clusterMono.flatMap(c -> {
             debug("send cluster message {} to node({}:{}:{})", message, n.getId(), n.getHost(), n.getPort());
             return c.send(Address.create(n.getHost(), n.getPort()), Message.builder().header(HEADER_MQTT_CLIENT_ID, clientId).data(message).build());
         })).then();
@@ -146,7 +158,9 @@ public class GossipBrokerManager implements BrokerManager {
     @Override
     public Mono<Void> broadcastEvent(MqttClusterEvent event) {
         if (event instanceof AbstractMqttClusterEvent) {
-            ((AbstractMqttClusterEvent) event).setAddress(mqttBrokerCluster.getConfig().getAddress());
+            AbstractMqttClusterEvent clusterEvent = (AbstractMqttClusterEvent) event;
+            clusterEvent.setId(getBrokerContext().getBrokerId());
+            clusterEvent.setAddress(brokerCluster.getConfig().getAddress());
         }
         return clusterMono.flatMap(c -> {
             debug("broadcast cluster event {} ", event);
@@ -155,13 +169,13 @@ public class GossipBrokerManager implements BrokerManager {
     }
 
     @Override
-    public MqttBrokerNode getNode(String address) {
-        return clusterBrokers.get(address);
+    public MqttBrokerNode getNodeById(String brokerId) {
+        return id2Broker.get(brokerId);
     }
 
     @Override
     public Collection<MqttBrokerNode> getClusterBrokerNodes() {
-        return clusterBrokers.values();
+        return id2Broker.values();
     }
 
     @Override
@@ -189,7 +203,7 @@ public class GossipBrokerManager implements BrokerManager {
                 clusterMqttMessageSink.emitNext(messageReplica, RetryNonSerializedEmitFailureHandler.RETRY_NON_SERIALIZED);
             } else {
                 //broker -> client
-                MqttSession mqttSession = brokerContext.getSessionManager().get(clientId);
+                MqttSession mqttSession = getBrokerContext().getSessionManager().get(clientId);
                 if (Objects.isNull(mqttSession)) {
                     return;
                 }
@@ -214,7 +228,7 @@ public class GossipBrokerManager implements BrokerManager {
                 throw new IllegalStateException(String.format("unknown mqtt event class '%s'", eventTypeStr));
             }
 
-            brokerContext.broadcastEvent(JSON.read((String) message.data(), eventType));
+            getBrokerContext().broadcastEvent(JSON.read((String) message.data(), eventType));
         }
 
         @Override
@@ -231,7 +245,8 @@ public class GossipBrokerManager implements BrokerManager {
                         MqttBrokerMetadata metadata = (MqttBrokerMetadata) JacksonMetadataCodec.INSTANCE.deserialize(event.newMetadata());
 
                         MqttBrokerNode brokerNode = MqttBrokerNode.create(id, metadata);
-                        clusterBrokers.put(address, brokerNode);
+                        id2Broker.put(metadata.getId(), brokerNode);
+                        address2Broker.put(address, brokerNode);
 
                         if (Objects.nonNull(brokerAddPostProcessor)) {
                             brokerAddPostProcessor.accept(brokerNode);
@@ -243,8 +258,10 @@ public class GossipBrokerManager implements BrokerManager {
                 case LEAVING:
                 case REMOVED:
                     try {
-                        MqttBrokerNode brokerNode = clusterBrokers.remove(address);
+                        MqttBrokerMetadata metadata = (MqttBrokerMetadata) JacksonMetadataCodec.INSTANCE.deserialize(event.oldMetadata());
 
+                        MqttBrokerNode brokerNode = id2Broker.remove(metadata.getId());
+                        address2Broker.remove(address);
                         if (Objects.nonNull(brokerNode) &&
                                 Objects.nonNull(brokerRemovePostProcessor)) {
                             brokerRemovePostProcessor.accept(brokerNode);
@@ -259,6 +276,29 @@ public class GossipBrokerManager implements BrokerManager {
                 default:
                     break;
             }
+        }
+    }
+
+    //--------------------------------------------------------internal mqtt event consumer
+
+    /**
+     * 集群broker订阅信息变化consumer
+     */
+    private class BrokerSubscriptionsChangedEventConsumer extends AbstractMqttClusterEventConsumer<BrokerSubscriptionsChangedEvent> {
+
+        protected BrokerSubscriptionsChangedEventConsumer() {
+            super(GossipBrokerManager.this);
+        }
+
+        @Override
+        protected void consume(ReactorEventBus eventBus, MqttBrokerNode node, BrokerSubscriptionsChangedEvent event) {
+            ClusterStore clusterStore = brokerCluster.getClusterStore();
+            String brokerId = node.getId();
+
+            String key = ClusterStoreKeys.getBrokerSubscriptionKey(brokerId);
+            clusterStore.get(key, BrokerSubscriptions.class)
+                    .doOnNext(bss -> node.updateSubscriptions(bss.getSubRegexTopics()))
+                    .subscribe();
         }
     }
 }

@@ -28,10 +28,11 @@ public abstract class AbstractMqttClusterEventConsumer<E extends AbstractMqttClu
 
     @Override
     public final void consume(ReactorEventBus eventBus, E event) {
+        String id = event.getId();
         String address = event.getAddress();
-        MqttBrokerNode node = brokerManager.getNode(address);
+        MqttBrokerNode node = brokerManager.getNodeById(id);
         if (Objects.isNull(node)) {
-            throw new MqttBrokerException(String.format("receive cluster event from node '%s' which is not in cluster", address));
+            throw new MqttBrokerException(String.format("receive cluster event from node '%s'(%s) which is not in cluster", id, address));
         }
         consume(eventBus, node, event);
     }

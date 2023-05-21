@@ -1,6 +1,7 @@
 package org.kin.mqtt.broker.core.cluster;
 
 import org.kin.framework.utils.NetUtils;
+import org.kin.mqtt.broker.core.MqttBrokerConfig;
 
 import java.io.Serializable;
 
@@ -13,6 +14,8 @@ import java.io.Serializable;
 public class MqttBrokerMetadata implements Serializable {
     private static final long serialVersionUID = 3458874339382194930L;
 
+    /** mqtt broker id */
+    private String id;
     /** 暴露host */
     private String host = NetUtils.getIp();
 
@@ -26,9 +29,11 @@ public class MqttBrokerMetadata implements Serializable {
     private boolean core;
 
     public static MqttBrokerMetadata create(Cluster cluster) {
+        MqttBrokerConfig brokerConfig = cluster.getBrokerConfig();
         ClusterConfig config = cluster.getConfig();
 
         MqttBrokerMetadata metadata = new MqttBrokerMetadata();
+        metadata.id = brokerConfig.getBrokerId();
         metadata.host = config.getHost();
         metadata.port = config.getPort();
         metadata.storePort = config.getStorePort();
@@ -46,13 +51,22 @@ public class MqttBrokerMetadata implements Serializable {
 
     /**
      * 获取cluster store address
-     * @return  cluster store address
+     *
+     * @return cluster store address
      */
-    public String getStoreAddress(){
+    public String getStoreAddress() {
         return host + ":" + storePort;
     }
 
     //setter && getter
+    public String getId() {
+        return id;
+    }
+
+    public void setId(String id) {
+        this.id = id;
+    }
+
     public String getHost() {
         return host;
     }

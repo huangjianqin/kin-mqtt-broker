@@ -66,13 +66,13 @@ public interface BrokerManager extends LoggerOprs {
     Mono<Void> broadcastEvent(MqttClusterEvent event);
 
     /**
-     * 根据节点address获取{@link MqttBrokerNode}实例
+     * 根据broker id获取{@link MqttBrokerNode}实例
      *
-     * @param address 节点address
+     * @param brokerId mqtt broker id
      * @return {@link MqttBrokerNode}实例
      */
     @Nullable
-    MqttBrokerNode getNode(String address);
+    MqttBrokerNode getNodeById(String brokerId);
 
     /**
      * 返回集群所有broker节点信息

@@ -10,7 +10,7 @@ public final class ClusterStoreKeys {
     /** mqtt broker 持久化session key */
     public static final String SESSION_KEY_PREFIX = "kinMqttBroker:session:";
     /** mqtt broker订阅关系信息key */
-    public static final String BROKER_TOPIC_SUBSCRIPTION_KEY_PREFIX = "kinMqttBroker:topicSubscription:";
+    public static final String BROKER_SUBSCRIPTION_KEY_PREFIX = "kinMqttBroker:subscription:";
 
     private ClusterStoreKeys() {
     }
@@ -30,8 +30,8 @@ public final class ClusterStoreKeys {
      * @param brokerId mqtt broker id
      * @return mqtt broker 订阅关系数据存储key
      */
-    public static String getBrokerTopicSubscriptionKey(String brokerId) {
-        return BROKER_TOPIC_SUBSCRIPTION_KEY_PREFIX + brokerId;
+    public static String getBrokerSubscriptionKey(String brokerId) {
+        return BROKER_SUBSCRIPTION_KEY_PREFIX + brokerId;
     }
 
     /**

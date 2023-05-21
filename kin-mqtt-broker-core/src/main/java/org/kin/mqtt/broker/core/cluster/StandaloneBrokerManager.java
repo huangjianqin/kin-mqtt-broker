@@ -47,7 +47,7 @@ public class StandaloneBrokerManager implements BrokerManager {
     }
 
     @Override
-    public MqttBrokerNode getNode(String address) {
+    public MqttBrokerNode getNodeById(String brokerId) {
         return null;
     }
 

@@ -78,7 +78,7 @@ public class MqttBrokerContext implements Closeable {
         this.topicManager = new DefaultTopicManager(shareSubLoadBalance);
         this.dispatcher = dispatcher;
         this.authService = authService;
-        this.cluster = new Cluster(this, brokerConfig.getCluster());
+        this.cluster = new Cluster(this);
         this.messageStore = messageStore;
         this.sessionStore = sessionStore;
         this.ruleManager.addRules(ruleDefinitions);

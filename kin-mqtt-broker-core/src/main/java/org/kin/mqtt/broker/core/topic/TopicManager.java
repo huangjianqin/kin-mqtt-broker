@@ -51,4 +51,11 @@ public interface TopicManager extends TopicFilter {
      * @return {@link MqttSession}
      */
     Map<String, Set<MqttSession>> getSubscriptionView();
+
+    /**
+     * 获取所有已注册订阅topic(正则表达式)
+     *
+     * @return 已注册订阅topic(正则表达式)
+     */
+    Set<String> getAllSubRegexTopics();
 }
