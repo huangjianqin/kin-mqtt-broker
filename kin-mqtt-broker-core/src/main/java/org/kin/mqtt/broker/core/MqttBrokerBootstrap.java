@@ -137,6 +137,14 @@ public class MqttBrokerBootstrap extends ServerTransport<MqttBrokerBootstrap> {
     }
 
     /**
+     * 规则链配置
+     */
+    public MqttBrokerBootstrap rules(Collection<RuleDefinition> definitions) {
+        this.ruleDefinitions.addAll(definitions);
+        return this;
+    }
+
+    /**
      * 数据桥接定义
      */
     public MqttBrokerBootstrap bridge(Bridge bridge) {
@@ -199,8 +207,7 @@ public class MqttBrokerBootstrap extends ServerTransport<MqttBrokerBootstrap> {
 
         int port = config.getPort();
         MqttBrokerContext brokerContext = new MqttBrokerContext(config, new MqttMessageDispatcher(interceptors),
-                authService, messageStore,
-                ruleDefinitions, aclService, shareSubLoadBalance, eventConsumers);
+                authService, messageStore, aclService, shareSubLoadBalance, eventConsumers);
 
         //启动mqtt broker
         LoopResources loopResources = LoopResources.create("kin-mqtt-server-" + port, 2, SysUtils.DOUBLE_CPU, false);
@@ -287,9 +294,9 @@ public class MqttBrokerBootstrap extends ServerTransport<MqttBrokerBootstrap> {
             initSysTopicPublisher(brokerContext);
         }
 
-        // TODO: 2023/5/19 集群初始完成才初始化rule
         //初始化集群
         brokerContext.getCluster().init();
+        brokerContext.getRuleManager().init(ruleDefinitions);
         //init bridge manager
         addBridges(brokerContext);
 
@@ -351,8 +358,7 @@ public class MqttBrokerBootstrap extends ServerTransport<MqttBrokerBootstrap> {
                 .flatMap(mqttMessage -> brokerContext.getDispatcher()
                         .dispatch(MqttMessageContext.common(mqttMessage, brokerContext.getBrokerId(),
                                 mqttSession.getClientId()), mqttSession, brokerContext))
-                .subscribe(mqttMessage -> {
-                });
+                .subscribe();
     }
 
     /**

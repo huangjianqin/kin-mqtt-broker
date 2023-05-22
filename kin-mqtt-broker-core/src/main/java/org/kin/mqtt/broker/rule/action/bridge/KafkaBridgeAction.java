@@ -3,7 +3,7 @@ package org.kin.mqtt.broker.rule.action.bridge;
 import org.kin.mqtt.broker.bridge.BridgeAttrNames;
 import org.kin.mqtt.broker.bridge.BridgeType;
 import org.kin.mqtt.broker.rule.RuleContext;
-import org.kin.mqtt.broker.rule.action.bridge.definition.KafkaActionDefinition;
+import org.kin.mqtt.broker.rule.action.bridge.definition.KafkaBridgeActionDefinition;
 
 /**
  * 将publish消息数据桥接到kafka
@@ -12,8 +12,8 @@ import org.kin.mqtt.broker.rule.action.bridge.definition.KafkaActionDefinition;
  * @date 2022/12/11
  * @see org.kin.mqtt.broker.bridge.BridgeType#KAFKA
  */
-public class KafkaBridgeAction extends BridgeAction<KafkaActionDefinition> {
-    public KafkaBridgeAction(KafkaActionDefinition definition) {
+public class KafkaBridgeAction extends BridgeAction<KafkaBridgeActionDefinition> {
+    public KafkaBridgeAction(KafkaBridgeActionDefinition definition) {
         super(definition);
     }
 

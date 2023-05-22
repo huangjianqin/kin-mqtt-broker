@@ -25,7 +25,7 @@ public class MqttTopicAction implements Action {
     }
 
     @Override
-    public Mono<Void> start(RuleContext context) {
+    public Mono<Void> execute(RuleContext context) {
         MqttBrokerContext brokerContext = context.getBrokerContext();
         MqttMessageReplica replica = context.getMessage();
         //script即真正topic

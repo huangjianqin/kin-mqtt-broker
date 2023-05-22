@@ -19,6 +19,7 @@ import java.util.Map;
 public final class OnlineClientNumPublisher extends AbstractSysTopicPublisher implements MqttEventConsumer<OnlineClientNumEvent> {
     public OnlineClientNumPublisher(MqttBrokerContext brokerContext) {
         super(brokerContext);
+        //注册内部consumer
         brokerContext.getEventBus().register(this);
     }
 

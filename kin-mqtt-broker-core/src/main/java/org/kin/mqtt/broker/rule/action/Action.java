@@ -11,12 +11,12 @@ import reactor.core.publisher.Mono;
  */
 public interface Action {
     /**
-     * 动作开始执行
+     * 执行动作
      *
      * @param context 规则上下文
      * @return complete signal
      */
-    Mono<Void> start(RuleContext context);
+    Mono<Void> execute(RuleContext context);
 
     /**
      * 返回动作定义

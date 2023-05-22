@@ -3,7 +3,7 @@ package org.kin.mqtt.broker.rule.action.bridge;
 import org.kin.mqtt.broker.bridge.BridgeAttrNames;
 import org.kin.mqtt.broker.bridge.BridgeType;
 import org.kin.mqtt.broker.rule.RuleContext;
-import org.kin.mqtt.broker.rule.action.bridge.definition.HttpActionDefinition;
+import org.kin.mqtt.broker.rule.action.bridge.definition.HttpBridgeActionDefinition;
 
 /**
  * 将publish消息数据桥接到http接口
@@ -12,8 +12,8 @@ import org.kin.mqtt.broker.rule.action.bridge.definition.HttpActionDefinition;
  * @date 2022/12/11
  * @see org.kin.mqtt.broker.bridge.BridgeType#HTTP
  */
-public class HttpBridgeAction extends BridgeAction<HttpActionDefinition> {
-    public HttpBridgeAction(HttpActionDefinition definition) {
+public class HttpBridgeAction extends BridgeAction<HttpBridgeActionDefinition> {
+    public HttpBridgeAction(HttpBridgeActionDefinition definition) {
         super(definition);
     }
 

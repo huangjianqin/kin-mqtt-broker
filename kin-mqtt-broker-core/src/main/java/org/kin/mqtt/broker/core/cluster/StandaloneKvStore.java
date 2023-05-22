@@ -33,7 +33,6 @@ import java.util.stream.Collectors;
  *
  * @author huangjianqin
  * @date 2023/5/19
- * @see com.alipay.sofa.jraft.rhea.storage.RocksRawKVStore
  */
 public class StandaloneKvStore implements ClusterStore {
     private static final Logger log = LoggerFactory.getLogger(StandaloneKvStore.class);
@@ -153,9 +152,8 @@ public class StandaloneKvStore implements ClusterStore {
                         sink.emitNext(new Tuple<>(toSKey(bKey), JSON.read(bValue, type)),
                                 RetryNonSerializedEmitFailureHandler.RETRY_NON_SERIALIZED);
                     }
-                } else {
-                    sink.emitComplete(RetryNonSerializedEmitFailureHandler.RETRY_NON_SERIALIZED);
                 }
+                sink.emitComplete(RetryNonSerializedEmitFailureHandler.RETRY_NON_SERIALIZED);
             }
         });
 
@@ -184,9 +182,8 @@ public class StandaloneKvStore implements ClusterStore {
 
                         sink.emitNext(new Tuple<>(toSKey(bKey), bValue), RetryNonSerializedEmitFailureHandler.RETRY_NON_SERIALIZED);
                     }
-                } else {
-                    sink.emitComplete(RetryNonSerializedEmitFailureHandler.RETRY_NON_SERIALIZED);
                 }
+                sink.emitComplete(RetryNonSerializedEmitFailureHandler.RETRY_NON_SERIALIZED);
             }
         });
 
@@ -247,9 +244,8 @@ public class StandaloneKvStore implements ClusterStore {
                                 sink.emitNext(new Tuple<>(toSKey(entry.getKey()), JSON.read(entry.getValue(), type)),
                                         RetryNonSerializedEmitFailureHandler.RETRY_NON_SERIALIZED);
                             }
-                        } else {
-                            sink.emitComplete(RetryNonSerializedEmitFailureHandler.RETRY_NON_SERIALIZED);
                         }
+                        sink.emitComplete(RetryNonSerializedEmitFailureHandler.RETRY_NON_SERIALIZED);
                     }
                 });
         return sink.asFlux();
@@ -272,9 +268,8 @@ public class StandaloneKvStore implements ClusterStore {
                                 sink.emitNext(new Tuple<>(toSKey(entry.getKey()), entry.getValue()),
                                         RetryNonSerializedEmitFailureHandler.RETRY_NON_SERIALIZED);
                             }
-                        } else {
-                            sink.emitComplete(RetryNonSerializedEmitFailureHandler.RETRY_NON_SERIALIZED);
                         }
+                        sink.emitComplete(RetryNonSerializedEmitFailureHandler.RETRY_NON_SERIALIZED);
                     }
                 });
         return sink.asFlux();

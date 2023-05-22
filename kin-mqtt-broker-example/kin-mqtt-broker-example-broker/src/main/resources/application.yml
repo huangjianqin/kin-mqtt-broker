@@ -6,6 +6,15 @@ org:
           users:
             java: '12345'
         dataPath: datas/standalone
+        rules:
+          - name: http_route
+            desc: "message from `example` route to http"
+            sql: "select * from `example`"
+            actions:
+              - type: http_bridge
+                args:
+                  bridgeName: local_http_route
+                  uri: "localhost:10000/mqtt/receive"
 
 server:
   port: 8000

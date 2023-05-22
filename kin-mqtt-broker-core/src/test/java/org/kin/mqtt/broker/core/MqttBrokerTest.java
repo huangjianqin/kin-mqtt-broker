@@ -24,7 +24,7 @@ public class MqttBrokerTest {
         //mqtt client
         CountDownLatch latch = new CountDownLatch(2);
         String broker = "tcp://127.0.0.1:1883";
-        String topic = "MQTT Examples";
+        String topic = "example";
         ForkJoinPool.commonPool().execute(() -> {
             try {
                 subscribe(broker, topic, latch);

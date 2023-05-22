@@ -3,7 +3,7 @@ package org.kin.mqtt.broker.example;
 import org.kin.mqtt.broker.bridge.Bridge;
 import org.kin.mqtt.broker.core.MqttBroker;
 import org.kin.mqtt.broker.rule.RuleDefinition;
-import org.kin.mqtt.broker.rule.action.bridge.definition.HttpActionDefinition;
+import org.kin.mqtt.broker.rule.action.bridge.definition.HttpBridgeActionDefinition;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
@@ -19,12 +19,12 @@ public class HttpActionRuleRegister implements ApplicationRunner {
 
     @Override
     public void run(ApplicationArguments args) throws Exception {
-        String topic = "MQTT Examples";
+        String topic = Topics.EXAMPLE;
         RuleDefinition ruleDefinition = RuleDefinition.builder()
                 .name("http")
                 .desc("message from '" + topic + "' transmit to web")
                 .sql("select * from `" + topic + "`")
-                .actionDefs(HttpActionDefinition.builder()
+                .actionDefs(HttpBridgeActionDefinition.builder()
                         .bridgeName(Bridge.DEFAULT_NAME)
                         .uri("localhost:10000/mqtt/receive")
                         .build())

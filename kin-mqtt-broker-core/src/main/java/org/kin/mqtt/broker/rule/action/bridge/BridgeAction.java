@@ -26,7 +26,7 @@ public abstract class BridgeAction<BAD extends BridgeActionDefinition> implement
     }
 
     @Override
-    public Mono<Void> start(RuleContext context) {
+    public Mono<Void> execute(RuleContext context) {
         MqttBrokerContext brokerContext = context.getBrokerContext();
         BridgeType bridgeType = type();
         String bridgeName = definition.getBridgeName();

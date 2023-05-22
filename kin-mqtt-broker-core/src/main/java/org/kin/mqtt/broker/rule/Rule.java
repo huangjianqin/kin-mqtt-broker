@@ -1,6 +1,7 @@
 package org.kin.mqtt.broker.rule;
 
 import org.kin.framework.reactor.utils.RetryNonSerializedEmitFailureHandler;
+import org.kin.framework.utils.CollectionUtils;
 import org.kin.framework.utils.JSON;
 import org.kin.mqtt.broker.core.MqttBrokerContext;
 import org.kin.mqtt.broker.core.message.MqttMessageReplica;
@@ -97,7 +98,7 @@ public class Rule implements Disposable {
                     return Flux.fromIterable(actions)
                             .flatMap(action -> {
                                 try {
-                                    return action.start(ruleContext);
+                                    return action.execute(ruleContext);
                                 } catch (Exception e) {
                                     log.error("action start error, message='{}', action='{}', {}", columns, action, e);
                                     return Mono.empty();
@@ -143,7 +144,7 @@ public class Rule implements Disposable {
     }
 
     /**
-     * 规则执行
+     * 执行规则
      *
      * @param brokerContext mqtt broker context
      * @param message       publish消息
@@ -152,6 +153,11 @@ public class Rule implements Disposable {
         if (Objects.isNull(this.brokerContext)) {
             //lazy init
             this.brokerContext = brokerContext;
+        }
+
+        if(CollectionUtils.isEmpty(actions)){
+            //没有action
+            return;
         }
 
         sink.emitNext(new RuleContext(brokerContext, message), RetryNonSerializedEmitFailureHandler.RETRY_NON_SERIALIZED);

@@ -8,7 +8,7 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 /**
- * 规则执行入口
+ * 规则引擎
  *
  * @author huangjianqin
  * @date 2022/11/21

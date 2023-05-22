@@ -10,6 +10,7 @@ import org.kin.mqtt.broker.auth.AuthService;
 import org.kin.mqtt.broker.bridge.BridgeManager;
 import org.kin.mqtt.broker.core.cluster.BrokerManager;
 import org.kin.mqtt.broker.core.cluster.Cluster;
+import org.kin.mqtt.broker.core.cluster.ClusterStore;
 import org.kin.mqtt.broker.core.cluster.MqttSessionStore;
 import org.kin.mqtt.broker.core.cluster.event.MqttClusterEvent;
 import org.kin.mqtt.broker.core.event.MqttEvent;
@@ -17,7 +18,6 @@ import org.kin.mqtt.broker.core.event.MqttEventConsumer;
 import org.kin.mqtt.broker.core.retry.RetryService;
 import org.kin.mqtt.broker.core.topic.TopicManager;
 import org.kin.mqtt.broker.core.topic.share.ShareSubLoadBalance;
-import org.kin.mqtt.broker.rule.RuleDefinition;
 import org.kin.mqtt.broker.rule.RuleEngine;
 import org.kin.mqtt.broker.rule.RuleManager;
 import org.kin.mqtt.broker.store.MqttMessageStore;
@@ -25,7 +25,6 @@ import reactor.core.scheduler.Scheduler;
 import reactor.core.scheduler.Schedulers;
 
 import java.util.Collection;
-import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -67,8 +66,7 @@ public class MqttBrokerContext implements Closeable {
 
     @SuppressWarnings("rawtypes")
     public MqttBrokerContext(MqttBrokerConfig brokerConfig, MqttMessageDispatcher dispatcher,
-                             AuthService authService, MqttMessageStore messageStore,
-                             List<RuleDefinition> ruleDefinitions, AclService aclService,
+                             AuthService authService, MqttMessageStore messageStore, AclService aclService,
                              ShareSubLoadBalance shareSubLoadBalance, Collection<MqttEventConsumer> eventConsumers) {
         this.brokerConfig = brokerConfig;
         this.mqttBizScheduler = Schedulers.newBoundedElastic(SysUtils.CPU_NUM * 10, Integer.MAX_VALUE, "kin-mqtt-broker-bs-" + brokerConfig.getPort(), 60);
@@ -77,7 +75,6 @@ public class MqttBrokerContext implements Closeable {
         this.authService = authService;
         this.cluster = new Cluster(this);
         this.messageStore = messageStore;
-        this.ruleManager.addRules(ruleDefinitions);
         this.aclService = aclService;
         this.eventBus = new DefaultReactorEventBus(true, mqttBizScheduler);
         for (Object eventConsumer : eventConsumers) {
@@ -167,7 +164,11 @@ public class MqttBrokerContext implements Closeable {
     }
 
     public BrokerManager getBrokerManager() {
-        return cluster.getBrokerManager();
+        return getCluster().getBrokerManager();
+    }
+
+    public ClusterStore getClusterStore() {
+        return getCluster().getClusterStore();
     }
 
     public RuleManager getRuleManager() {

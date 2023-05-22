@@ -43,4 +43,13 @@ public final class ClusterStoreKeys {
     public static String getRuleKey(String ruleName) {
         return RULE_KEY_PREFIX + ruleName;
     }
+
+    /**
+     * 判断是否是规则引擎规则存储key
+     * @param key   key
+     * @return true表示是规则引擎规则存储key
+     */
+    public static boolean isRuleKey(String key){
+        return key.startsWith(RULE_KEY_PREFIX);
+    }
 }

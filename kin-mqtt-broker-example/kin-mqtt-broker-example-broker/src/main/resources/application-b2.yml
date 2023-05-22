@@ -13,6 +13,15 @@ org:
           port: 5002
           storePort: 15002
         data-path: datas/b2
+        rules:
+          - name: http_route
+            desc: "message from 'MQTT Examples' route to http"
+            sql: "select * from 'MQTT Examples'"
+            actions:
+              - type: http
+                args:
+                  - bridgeName: local_http_route
+                  - uri: "localhost:10000/mqtt/receive"
 server:
   port: 8002
 

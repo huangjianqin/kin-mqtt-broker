@@ -6,24 +6,12 @@ package org.kin.mqtt.broker.core.cluster.event;
  * @author huangjianqin
  * @date 2022/12/20
  */
-public class RuleRemoveEvent implements MqttClusterEvent {
+public class RuleRemoveEvent extends AbstractRuleEvent implements MqttClusterEvent {
     private static final long serialVersionUID = 3202072813783134098L;
-    /** 规则名 */
-    private String ruleName;
 
     public static RuleRemoveEvent of(String ruleName) {
         RuleRemoveEvent inst = new RuleRemoveEvent();
         inst.ruleName = ruleName;
         return inst;
-    }
-
-    //setter && getter
-
-    public String getRuleName() {
-        return ruleName;
-    }
-
-    public void setRuleName(String ruleName) {
-        this.ruleName = ruleName;
     }
 }

@@ -112,7 +112,7 @@ public class GossipBrokerManager implements BrokerManager {
                 .handler(c -> new GossipMessageHandler())
                 .start();
 
-        //注册事件
+        //注册内部consumer
         ReactorEventBus eventBus = getBrokerContext().getEventBus();
         eventBus.register(new BrokerSubscriptionsChangedEventConsumer());
 

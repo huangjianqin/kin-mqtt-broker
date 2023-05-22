@@ -1,5 +1,7 @@
 package org.kin.mqtt.broker.rule.action.bridge.definition;
 
+import com.google.common.base.Preconditions;
+import org.kin.framework.utils.StringUtils;
 import org.kin.mqtt.broker.rule.action.ActionDefinition;
 import org.kin.mqtt.broker.rule.action.bridge.MqttTopicAction;
 
@@ -21,6 +23,11 @@ public class MqttTopicActionDefinition implements ActionDefinition {
 
     public static Builder builder() {
         return new Builder();
+    }
+
+    @Override
+    public void check() {
+        Preconditions.checkArgument(StringUtils.isNotBlank(topic), "mqtt topic must be not blank");
     }
 
     /** builder **/

@@ -5,10 +5,8 @@ import com.google.common.base.Preconditions;
 import org.kin.framework.utils.StringUtils;
 import org.kin.mqtt.broker.rule.action.ActionDefinition;
 
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.HashSet;
-import java.util.Set;
+import java.util.*;
+import java.util.concurrent.CopyOnWriteArraySet;
 
 /**
  * 规则定义
@@ -17,9 +15,7 @@ import java.util.Set;
  * @date 2022/11/21
  */
 public class RuleDefinition {
-    /**
-     * 规则名
-     */
+    /** 规则名 */
     private String name;
     /** 规则描述 */
     private String desc;
@@ -27,7 +23,7 @@ public class RuleDefinition {
     private String sql;
     /** 绑定的动作 */
     @JsonTypeInfo(use = JsonTypeInfo.Id.MINIMAL_CLASS)
-    private Set<ActionDefinition> actionDefs;
+    private Set<ActionDefinition> actionDefs = new CopyOnWriteArraySet<>();
 
     private RuleDefinition() {
     }
@@ -35,9 +31,12 @@ public class RuleDefinition {
     /**
      * 检查配置是符合要求
      */
-    public void selfCheck() {
+    public void check() {
         Preconditions.checkArgument(StringUtils.isNotBlank(name), "rule name must be not blank");
         Preconditions.checkArgument(StringUtils.isNotBlank(sql), "rule sql must be not blank");
+        for (ActionDefinition actionDef : actionDefs) {
+            actionDef.check();
+        }
     }
 
     /**
@@ -106,6 +105,19 @@ public class RuleDefinition {
     }
 
     @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        RuleDefinition that = (RuleDefinition) o;
+        return Objects.equals(name, that.name) && Objects.equals(desc, that.desc) && Objects.equals(sql, that.sql) && Objects.equals(actionDefs, that.actionDefs);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(name, desc, sql, actionDefs);
+    }
+
+    @Override
     public String toString() {
         return "RuleDefinition{" +
                 "name='" + name + '\'' +
@@ -150,7 +162,7 @@ public class RuleDefinition {
         }
 
         public RuleDefinition build() {
-            ruleDefinition.actionDefs = new HashSet<>(actionDefs);
+            ruleDefinition.actionDefs = new CopyOnWriteArraySet<>(actionDefs);
             return ruleDefinition;
         }
     }

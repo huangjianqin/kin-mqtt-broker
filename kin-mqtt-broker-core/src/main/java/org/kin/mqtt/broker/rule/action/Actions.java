@@ -6,14 +6,15 @@ import org.kin.mqtt.broker.rule.action.bridge.HttpBridgeAction;
 import org.kin.mqtt.broker.rule.action.bridge.KafkaBridgeAction;
 import org.kin.mqtt.broker.rule.action.bridge.MqttTopicAction;
 import org.kin.mqtt.broker.rule.action.bridge.RabbitMQBridgeAction;
-import org.kin.mqtt.broker.rule.action.bridge.definition.HttpActionDefinition;
-import org.kin.mqtt.broker.rule.action.bridge.definition.KafkaActionDefinition;
+import org.kin.mqtt.broker.rule.action.bridge.definition.HttpBridgeActionDefinition;
+import org.kin.mqtt.broker.rule.action.bridge.definition.KafkaBridgeActionDefinition;
 import org.kin.mqtt.broker.rule.action.bridge.definition.MqttTopicActionDefinition;
-import org.kin.mqtt.broker.rule.action.bridge.definition.RabbitMQActionDefinition;
+import org.kin.mqtt.broker.rule.action.bridge.definition.RabbitMQBridgeActionDefinition;
 
 import java.util.*;
 
 /**
+ * action工具类
  * @author huangjianqin
  * @date 2022/12/16
  */
@@ -24,10 +25,10 @@ public class Actions {
     private static Map<Class<? extends ActionDefinition>, ActionFactory<? extends ActionDefinition, ? extends Action>> ACTIONS = new NonBlockingHashMap<>();
 
     static {
-        registerAction(HttpActionDefinition.class, (ActionFactory<HttpActionDefinition, HttpBridgeAction>) HttpBridgeAction::new);
-        registerAction(KafkaActionDefinition.class, (ActionFactory<KafkaActionDefinition, KafkaBridgeAction>) KafkaBridgeAction::new);
+        registerAction(HttpBridgeActionDefinition.class, (ActionFactory<HttpBridgeActionDefinition, HttpBridgeAction>) HttpBridgeAction::new);
+        registerAction(KafkaBridgeActionDefinition.class, (ActionFactory<KafkaBridgeActionDefinition, KafkaBridgeAction>) KafkaBridgeAction::new);
         registerAction(MqttTopicActionDefinition.class, (ActionFactory<MqttTopicActionDefinition, MqttTopicAction>) MqttTopicAction::new);
-        registerAction(RabbitMQActionDefinition.class, (ActionFactory<RabbitMQActionDefinition, RabbitMQBridgeAction>) RabbitMQBridgeAction::new);
+        registerAction(RabbitMQBridgeActionDefinition.class, (ActionFactory<RabbitMQBridgeActionDefinition, RabbitMQBridgeAction>) RabbitMQBridgeAction::new);
     }
 
     /**
@@ -49,6 +50,7 @@ public class Actions {
     /**
      * 注册{@link Action}实现
      * 通过{@link  ActionFactory}实现类泛型获取{@link ActionDefinition}实现类信息, 注意, 此处{@link  ActionFactory}实现类不能是匿名内部类和lambda
+     * 自定义{@link Action}实现, 可通过该方法注册自定义{@link Action}构建逻辑
      *
      * @param factories {@link Action}实现构造逻辑
      */
@@ -59,6 +61,8 @@ public class Actions {
     /**
      * 注册{@link Action}实现
      * 通过{@link  ActionFactory}实现类泛型获取{@link ActionDefinition}实现类信息, 注意, 此处{@link  ActionFactory}实现类不能是匿名内部类和lambda
+     * 自定义{@link Action}实现, 可通过该方法注册自定义{@link Action}构建逻辑
+     * TODO README
      *
      * @param factories {@link Action}实现构造逻辑
      */
@@ -80,6 +84,7 @@ public class Actions {
 
     /**
      * 注册{@link Action}实现
+     * 自定义{@link Action}实现, 可通过该方法注册自定义{@link Action}构建逻辑
      *
      * @param adClass action定义class
      * @param factory {@link Action}实现构造逻辑

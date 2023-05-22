@@ -71,12 +71,11 @@ public final class Cluster {
                         .publishOn(brokerContext.getMqttBizScheduler())
                         .flatMap(mqttMessageReplica -> brokerContext.getDispatcher()
                                 .dispatch(MqttMessageContext.fromCluster(mqttMessageReplica), brokerContext))
-                        .subscribe((v) -> {
-                                },
+                        .subscribe(null,
                                 t -> brokerManager.error("broker manager handle cluster message error", t))))
                 .subscribe();
 
-        //注册事件
+        //注册内部consumer
         ReactorEventBus eventBus = brokerContext.getEventBus();
         eventBus.register(new MqttSubscribeEventConsumer());
         eventBus.register(new MqttUnsubscribeEventConsumer());

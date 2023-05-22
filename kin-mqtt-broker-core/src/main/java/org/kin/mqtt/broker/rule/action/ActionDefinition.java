@@ -8,5 +8,10 @@ package org.kin.mqtt.broker.rule.action;
  * @date 2022/12/16
  */
 public interface ActionDefinition {
-
+    /**
+     * 检查配置
+     */
+    default void check(){
+        //default do nothing
+    }
 }

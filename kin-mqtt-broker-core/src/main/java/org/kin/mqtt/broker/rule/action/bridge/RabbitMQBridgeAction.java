@@ -3,7 +3,7 @@ package org.kin.mqtt.broker.rule.action.bridge;
 import org.kin.mqtt.broker.bridge.BridgeAttrNames;
 import org.kin.mqtt.broker.bridge.BridgeType;
 import org.kin.mqtt.broker.rule.RuleContext;
-import org.kin.mqtt.broker.rule.action.bridge.definition.RabbitMQActionDefinition;
+import org.kin.mqtt.broker.rule.action.bridge.definition.RabbitMQBridgeActionDefinition;
 
 /**
  * 将publish消息数据桥接到rabbitmq
@@ -12,8 +12,8 @@ import org.kin.mqtt.broker.rule.action.bridge.definition.RabbitMQActionDefinitio
  * @date 2022/12/11
  * @see org.kin.mqtt.broker.bridge.BridgeType#RABBITMQ
  */
-public class RabbitMQBridgeAction extends BridgeAction<RabbitMQActionDefinition> {
-    public RabbitMQBridgeAction(RabbitMQActionDefinition definition) {
+public class RabbitMQBridgeAction extends BridgeAction<RabbitMQBridgeActionDefinition> {
+    public RabbitMQBridgeAction(RabbitMQBridgeActionDefinition definition) {
         super(definition);
     }
 

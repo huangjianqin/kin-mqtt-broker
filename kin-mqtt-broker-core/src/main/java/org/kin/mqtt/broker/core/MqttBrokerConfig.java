@@ -348,4 +348,5 @@ public class MqttBrokerConfig {
     public void setCluster(ClusterConfig cluster) {
         this.cluster = cluster;
     }
+
 }
