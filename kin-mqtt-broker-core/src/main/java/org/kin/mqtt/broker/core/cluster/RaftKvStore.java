@@ -297,6 +297,7 @@ public class RaftKvStore implements ClusterStore {
     @Override
     public Mono<byte[]> get(String key) {
         checkInit();
+        //readOnlySafe=false, 将直接读取本地db数据, 但不保证数据一致性
         return Mono.fromFuture(kvStore.get(toBKey(key)));
     }
 
