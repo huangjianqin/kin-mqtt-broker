@@ -173,4 +173,13 @@ public class Rule implements Disposable {
     public RuleDefinition getDefinition() {
         return definition;
     }
+
+    @Override
+    public String toString() {
+        return "Rule{" +
+                "definition=" + definition +
+                ", regexTopic='" + regexTopic + '\'' +
+                ", actions=" + actions +
+                '}';
+    }
 }

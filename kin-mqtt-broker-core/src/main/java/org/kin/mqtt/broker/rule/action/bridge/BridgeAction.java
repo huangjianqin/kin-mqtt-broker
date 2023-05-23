@@ -62,7 +62,7 @@ public abstract class BridgeAction<BAD extends BridgeActionDefinition> implement
 
     @Override
     public String toString() {
-        return "BridgeAction{" +
+        return getClass().getSimpleName() + "{" +
                 "definition=" + definition +
                 '}';
     }
