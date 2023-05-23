@@ -29,6 +29,6 @@ public class DefaultMqttSessionStore implements MqttSessionStore {
 
     @Override
     public Mono<Void> remove(String clientId) {
-        return clusterStore.remove(ClusterStoreKeys.getSessionKey(clientId));
+        return clusterStore.delete(ClusterStoreKeys.getSessionKey(clientId));
     }
 }

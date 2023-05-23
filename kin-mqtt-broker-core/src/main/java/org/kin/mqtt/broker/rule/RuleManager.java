@@ -44,12 +44,6 @@ public class RuleManager {
      */
     public void init(List<RuleDefinition> ruleDefinitions){
         ClusterStore clusterStore = brokerContext.getClusterStore();
-        // TODO: 2023/5/22 
-        clusterStore.get(ClusterStoreKeys.getRuleKey("http_bridge"), RuleDefinition.class)
-                .subscribe(t -> {
-                    System.out.println(t);
-                });
-
         clusterStore.scanRaw(ClusterStoreKeys.RULE_KEY_PREFIX)
                 .doOnNext(this::onLoadFromClusterStore)
                 .doOnComplete(() -> onFinishLoadFromClusterStore(ruleDefinitions))
@@ -197,7 +191,7 @@ public class RuleManager {
      */
     private void delRuleDefinition(RuleDefinition definition){
         ClusterStore clusterStore = brokerContext.getClusterStore();
-        clusterStore.remove(ClusterStoreKeys.getRuleKey(definition.getName()))
+        clusterStore.delete(ClusterStoreKeys.getRuleKey(definition.getName()))
                 .subscribe();
     }
 

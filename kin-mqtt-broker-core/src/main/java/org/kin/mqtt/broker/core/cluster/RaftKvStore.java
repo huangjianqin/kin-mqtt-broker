@@ -402,7 +402,7 @@ public class RaftKvStore implements ClusterStore {
     }
 
     @Override
-    public Mono<Void> remove(String key) {
+    public Mono<Void> delete(String key) {
         checkInit();
         return Mono.fromFuture(kvStore.delete(key))
                 .then();

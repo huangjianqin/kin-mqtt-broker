@@ -114,7 +114,7 @@ public interface ClusterStore {
      * @param key key
      * @return complete signal
      */
-    Mono<Void> remove(String key);
+    Mono<Void> delete(String key);
 
     /**
      * 添加replicator
