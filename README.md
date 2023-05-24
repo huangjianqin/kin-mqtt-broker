@@ -90,7 +90,7 @@ client有且仅能同时连接一个broker, 如果同时连接多个broker, 后�
 * kin-mqtt-broker: 往指定client发送消息, 如果该client离线, 则持久化该消息, 待该client上线后, 重新发布
 
 ## 展望
-
+* 整理bytebuf使用, 修复所有潜在的内存泄露问题
 * 延迟发布消息未实现持久化, broker重启后会丢失
 * 补充更多broker系统内置topic和内置event
 * coap网关
