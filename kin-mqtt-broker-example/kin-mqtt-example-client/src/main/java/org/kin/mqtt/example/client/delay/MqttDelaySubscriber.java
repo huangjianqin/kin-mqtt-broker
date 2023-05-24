@@ -4,6 +4,7 @@ import org.kin.mqtt.broker.example.Brokers;
 import org.kin.mqtt.broker.example.Topics;
 import org.kin.mqtt.example.client.common.MqttSubscriber;
 
+import java.io.IOException;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ForkJoinPool;
 
@@ -12,7 +13,7 @@ import java.util.concurrent.ForkJoinPool;
  * @date 2022/12/22
  */
 public class MqttDelaySubscriber {
-    public static void main(String[] args) throws InterruptedException {
+    public static void main(String[] args) throws InterruptedException, IOException {
         CountDownLatch latch = new CountDownLatch(1);
         MqttSubscriber subscriber = new MqttSubscriber("DelaySubscriber");
 
@@ -24,8 +25,10 @@ public class MqttDelaySubscriber {
             }
         });
 
-        Thread.sleep(30_000);
+        System.in.read();
+        System.out.println("disconnecting...");
         latch.countDown();
-        Thread.sleep(1_000);
+        Thread.sleep(5_000);
+        System.out.println("exit.");
     }
 }

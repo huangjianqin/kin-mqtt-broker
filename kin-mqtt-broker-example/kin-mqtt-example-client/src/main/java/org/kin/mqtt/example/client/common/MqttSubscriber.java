@@ -10,6 +10,7 @@ import org.eclipse.paho.mqttv5.common.MqttSubscription;
 import org.kin.mqtt.broker.example.Brokers;
 import org.kin.mqtt.broker.example.Topics;
 
+import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.Objects;
 import java.util.concurrent.CountDownLatch;
@@ -78,7 +79,7 @@ public class MqttSubscriber {
         }
     }
 
-    public static void main(String[] args) throws InterruptedException {
+    public static void main(String[] args) throws InterruptedException, IOException {
         CountDownLatch latch = new CountDownLatch(1);
 
         MqttSubscriber subscriber = new MqttSubscriber("Subscriber");
@@ -91,8 +92,10 @@ public class MqttSubscriber {
             }
         });
 
-        Thread.sleep(30_000);
-        latch.await();
-        Thread.sleep(1_000);
+        System.in.read();
+        System.out.println("disconnecting...");
+        latch.countDown();
+        Thread.sleep(5_000);
+        System.out.println("exit.");
     }
 }
