@@ -43,6 +43,7 @@ public class RuleManager {
      * 2. 对比当前rule与启动rule配置, 若有变化, 则更新
      */
     public void init(List<RuleDefinition> ruleDefinitions){
+        //异步加载
         ClusterStore clusterStore = brokerContext.getClusterStore();
         clusterStore.scanRaw(ClusterStoreKeys.RULE_KEY_PREFIX)
                 .doOnNext(this::onLoadFromClusterStore)

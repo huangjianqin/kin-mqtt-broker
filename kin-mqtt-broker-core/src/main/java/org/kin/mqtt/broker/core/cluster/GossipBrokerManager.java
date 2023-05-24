@@ -21,6 +21,7 @@ import org.kin.mqtt.broker.core.cluster.event.AbstractMqttClusterEvent;
 import org.kin.mqtt.broker.core.cluster.event.AbstractMqttClusterEventConsumer;
 import org.kin.mqtt.broker.core.cluster.event.BrokerSubscriptionsChangedEvent;
 import org.kin.mqtt.broker.core.cluster.event.MqttClusterEvent;
+import org.kin.mqtt.broker.core.message.MqttMessageContext;
 import org.kin.mqtt.broker.core.message.MqttMessageHelper;
 import org.kin.mqtt.broker.core.message.MqttMessageReplica;
 import reactor.core.publisher.Flux;
@@ -116,7 +117,14 @@ public class GossipBrokerManager implements BrokerManager {
         ReactorEventBus eventBus = getBrokerContext().getEventBus();
         eventBus.register(new BrokerSubscriptionsChangedEventConsumer());
 
-        return clusterMono.then();
+        MqttBrokerContext brokerContext = brokerCluster.getBrokerContext();
+        return clusterMono.then(Mono.fromRunnable(() -> clusterMqttMessages()
+                .onErrorResume(e -> Mono.empty())
+                .publishOn(brokerContext.getMqttBizScheduler())
+                .flatMap(mqttMessageReplica -> brokerContext.getDispatcher()
+                        .dispatch(MqttMessageContext.fromCluster(mqttMessageReplica), brokerContext))
+                .subscribe(null,
+                        t -> error("broker manager handle cluster message error", t))));
     }
 
     /**

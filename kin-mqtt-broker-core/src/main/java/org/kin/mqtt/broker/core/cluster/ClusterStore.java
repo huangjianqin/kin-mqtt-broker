@@ -17,7 +17,7 @@ public interface ClusterStore {
     /**
      * 初始化cluster store
      */
-    void init();
+    Mono<Void> init();
 
     /**
      * 获取数据

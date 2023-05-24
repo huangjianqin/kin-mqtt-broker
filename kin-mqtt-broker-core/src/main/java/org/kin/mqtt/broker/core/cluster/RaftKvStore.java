@@ -12,6 +12,7 @@ import com.alipay.sofa.jraft.rhea.storage.KVEntry;
 import com.alipay.sofa.jraft.rhea.storage.StorageType;
 import com.alipay.sofa.jraft.rhea.util.ByteArray;
 import com.alipay.sofa.jraft.util.Endpoint;
+import io.scalecube.reactor.RetryNonSerializedEmitFailureHandler;
 import org.kin.framework.collection.Tuple;
 import org.kin.framework.utils.CollectionUtils;
 import org.kin.framework.utils.JSON;
@@ -23,13 +24,11 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
+import reactor.core.publisher.Sinks;
 
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.stream.Collectors;
 
 import static org.kin.mqtt.broker.core.cluster.ClusterStoreKeys.RULE_KEY_PREFIX;
@@ -62,21 +61,24 @@ public class RaftKvStore implements ClusterStore {
     }
 
     @Override
-    public void init() {
+    public Mono<Void> init() {
         MqttBrokerConfig brokerConfig = cluster.getBrokerContext().getBrokerConfig();
 
-        if (cluster.isCore()) {
-            kvStore = initCoreStore(brokerConfig);
-        } else {
-            kvStore = initReplicatorStore(brokerConfig);
-        }
-
+        kvStore = new DefaultRheaKVStore();
+        //先添加StateListener
+        List<Mono<Void>> regionMonoList = new ArrayList<>(REGION_NUM);
         for (int i = 1; i <= REGION_NUM; i++) {
             int finalI = i;
+            Sinks.One<Void> regionSink = Sinks.one();
+            regionMonoList.add(regionSink.asMono());
+
             kvStore.addStateListener(i, new StateListener() {
+                private volatile Sinks.One<Void> sink = regionSink;
+
                 @Override
                 public void onLeaderStart(long newTerm) {
                     log.info("raft kv store region-{} become leader", finalI);
+                    onReady();
 
                     for (MqttBrokerNode node : cluster.getBrokerManager().getClusterBrokerNodes()) {
                         if (node.isCore()) {
@@ -94,14 +96,37 @@ public class RaftKvStore implements ClusterStore {
                 @Override
                 public void onStartFollowing(PeerId newLeaderId, long newTerm) {
                     log.info("raft kv store region-{} start follow node '{}'", finalI, newLeaderId.getEndpoint());
+                    onReady();
                 }
 
                 @Override
                 public void onStopFollowing(PeerId oldLeaderId, long oldTerm) {
                     log.info("raft kv store region-{} stop follow '{}'", finalI, oldLeaderId.getEndpoint());
                 }
+
+                /**
+                 * region raft node状态正常
+                 */
+                private void onReady(){
+                    if(Objects.isNull(sink)){
+                        return;
+                    }
+
+                    sink.emitEmpty(RetryNonSerializedEmitFailureHandler.RETRY_NON_SERIALIZED);
+                    //help gc
+                    sink = null;
+                }
             });
         }
+
+        if (cluster.isCore()) {
+            initCoreStore(brokerConfig);
+        } else {
+            initReplicatorStore(brokerConfig);
+        }
+
+        return Mono.when(regionMonoList)
+                .then(Mono.fromRunnable(() -> log.info("RaftKvStore start successfully")));
     }
 
     /**
@@ -109,7 +134,7 @@ public class RaftKvStore implements ClusterStore {
      *
      * @param brokerConfig mqtt broker配置
      */
-    private DefaultRheaKVStore initCoreStore(MqttBrokerConfig brokerConfig) {
+    private void initCoreStore(MqttBrokerConfig brokerConfig) {
         ClusterConfig clusterConfig = brokerConfig.getCluster();
         int storeProcessors = clusterConfig.getStoreProcessors();
 
@@ -166,12 +191,10 @@ public class RaftKvStore implements ClusterStore {
                 //Utils.cpus() + 1
                 .withDeCompressThreads(Math.min(3, storeProcessors) + 1)
                 .config();
-        DefaultRheaKVStore rheaKVStore = new DefaultRheaKVStore();
-        if (!rheaKVStore.init(opts)) {
+
+        if (!kvStore.init(opts)) {
             throw new MqttBrokerException("fail to init raft kv core store on " + endpoint);
         }
-
-        return rheaKVStore;
     }
 
     /**
@@ -179,7 +202,7 @@ public class RaftKvStore implements ClusterStore {
      *
      * @param brokerConfig mqtt broker配置
      */
-    private DefaultRheaKVStore initReplicatorStore(MqttBrokerConfig brokerConfig) {
+    private void initReplicatorStore(MqttBrokerConfig brokerConfig) {
         ClusterConfig clusterConfig = brokerConfig.getCluster();
         int storeProcessors = clusterConfig.getStoreProcessors();
 
@@ -243,12 +266,9 @@ public class RaftKvStore implements ClusterStore {
                 .withDeCompressThreads(Math.min(3, storeProcessors) + 1)
                 .config();
 
-        DefaultRheaKVStore rheaKVStore = new DefaultRheaKVStore();
-        if (!rheaKVStore.init(opts)) {
+        if (!kvStore.init(opts)) {
             throw new MqttBrokerException("fail to init raft kv replicator store on " + endpoint);
         }
-
-        return rheaKVStore;
     }
 
     /**
@@ -448,9 +468,12 @@ public class RaftKvStore implements ClusterStore {
         PeerId newLearnerPeerId = PeerId.parsePeer(nodeAddress);
         boolean learnerExists = false;
         for (PeerId learnerPeerId : node.listLearners()) {
-            if (learnerPeerId.equals(newLearnerPeerId)) {
-                learnerExists = true;
+            if (!learnerPeerId.equals(newLearnerPeerId)) {
+                continue;
             }
+
+            learnerExists = true;
+            break;
         }
 
         if (learnerExists) {
@@ -509,9 +532,12 @@ public class RaftKvStore implements ClusterStore {
         PeerId targetLearnerPeerId = PeerId.parsePeer(nodeAddress);
         boolean learnerExists = false;
         for (PeerId learnerPeerId : node.listLearners()) {
-            if (learnerPeerId.equals(targetLearnerPeerId)) {
-                learnerExists = true;
+            if (!learnerPeerId.equals(targetLearnerPeerId)) {
+                continue;
             }
+
+            learnerExists = true;
+            break;
         }
 
         if (learnerExists) {

@@ -7,7 +7,6 @@ import org.kin.mqtt.broker.core.cluster.event.BrokerSubscriptionsChangedEvent;
 import org.kin.mqtt.broker.core.event.MqttEventConsumer;
 import org.kin.mqtt.broker.core.event.MqttSubscribeEvent;
 import org.kin.mqtt.broker.core.event.MqttUnsubscribeEvent;
-import org.kin.mqtt.broker.core.message.MqttMessageContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import reactor.core.publisher.Mono;
@@ -62,23 +61,17 @@ public final class Cluster {
     /**
      * 初始化集群环境
      */
-    public void init() {
-        clusterStore.init();
-
-        brokerManager.init()
-                .then(Mono.fromRunnable(() -> brokerManager.clusterMqttMessages()
-                        .onErrorResume(e -> Mono.empty())
-                        .publishOn(brokerContext.getMqttBizScheduler())
-                        .flatMap(mqttMessageReplica -> brokerContext.getDispatcher()
-                                .dispatch(MqttMessageContext.fromCluster(mqttMessageReplica), brokerContext))
-                        .subscribe(null,
-                                t -> brokerManager.error("broker manager handle cluster message error", t))))
-                .subscribe();
-
-        //注册内部consumer
-        ReactorEventBus eventBus = brokerContext.getEventBus();
-        eventBus.register(new MqttSubscribeEventConsumer());
-        eventBus.register(new MqttUnsubscribeEventConsumer());
+    public Mono<Void> init() {
+        //先初始化cluster store
+        return clusterStore.init()
+                //然后初始化mqtt broker manager
+                .then(brokerManager.init())
+                .then(Mono.fromRunnable(() -> {
+                    //注册内部consumer
+                    ReactorEventBus eventBus = brokerContext.getEventBus();
+                    eventBus.register(new MqttSubscribeEventConsumer());
+                    eventBus.register(new MqttUnsubscribeEventConsumer());
+                }));
     }
 
     /**

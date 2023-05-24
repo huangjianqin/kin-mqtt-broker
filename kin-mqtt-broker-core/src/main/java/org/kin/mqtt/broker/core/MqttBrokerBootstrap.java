@@ -205,10 +205,28 @@ public class MqttBrokerBootstrap extends ServerTransport<MqttBrokerBootstrap> {
         config.selfCheck();
         checkRequire();
 
-        int port = config.getPort();
         MqttBrokerContext brokerContext = new MqttBrokerContext(config, new MqttMessageDispatcher(interceptors),
                 authService, messageStore, aclService, shareSubLoadBalance, eventConsumers);
 
+        //初始化cluster component
+        return brokerContext.getCluster().init()
+                //加载并apply rule
+                .then(Mono.fromRunnable(() -> brokerContext.getRuleManager().init(ruleDefinitions)))
+                //初始化bridge component
+                .then(Mono.fromRunnable(() -> addBridges(brokerContext)))
+                //初始化mqtt broker
+                .then(Mono.fromCallable(() -> initMqttBroker(brokerContext)))
+                .block();
+    }
+
+    /**
+     * 初始化mqtt broker
+     *
+     * @param brokerContext mqtt broker context
+     * @return {@link  MqttBroker}
+     */
+    private MqttBroker initMqttBroker(MqttBrokerContext brokerContext) {
+        int port = config.getPort();
         //启动mqtt broker
         LoopResources loopResources = LoopResources.create("kin-mqtt-server-" + port, 2, SysUtils.DOUBLE_CPU, false);
         List<Mono<DisposableServer>> disposableServerMonoList = new LinkedList<>();
@@ -293,12 +311,6 @@ public class MqttBrokerBootstrap extends ServerTransport<MqttBrokerBootstrap> {
         if (config.isEnableSysTopic()) {
             initSysTopicPublisher(brokerContext);
         }
-
-        //初始化集群
-        brokerContext.getCluster().init();
-        brokerContext.getRuleManager().init(ruleDefinitions);
-        //init bridge manager
-        addBridges(brokerContext);
 
         return new MqttBroker(brokerContext, disposableServerMonoList, () -> {
             loopResources.dispose();

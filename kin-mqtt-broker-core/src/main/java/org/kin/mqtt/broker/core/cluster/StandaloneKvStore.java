@@ -73,7 +73,7 @@ public class StandaloneKvStore implements ClusterStore {
     }
 
     @Override
-    public void init() {
+    public Mono<Void> init() {
         String dbPath = cluster.getBrokerContext().getBrokerConfig().getDataPath() + "/db";
 
         try {
@@ -88,7 +88,7 @@ public class StandaloneKvStore implements ClusterStore {
         try {
             if (this.db != null) {
                 log.info("{} already started.", getClass().getSimpleName());
-                return;
+                return Mono.empty();
             }
             RocksDBOptions opts = RocksDBOptionsConfigured.newConfigured()
                     .withDbPath(dbPath)
@@ -126,6 +126,8 @@ public class StandaloneKvStore implements ClusterStore {
         } finally {
             writeLock.unlock();
         }
+
+        return Mono.empty();
     }
 
     private void openRocksDB(RocksDBOptions opts) throws RocksDBException {
