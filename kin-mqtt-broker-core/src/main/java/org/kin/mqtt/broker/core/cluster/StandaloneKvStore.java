@@ -23,6 +23,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
+import reactor.core.publisher.Sinks;
 
 import java.io.File;
 import java.nio.charset.StandardCharsets;
@@ -34,6 +35,8 @@ import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.stream.Collectors;
+
+import static io.scalecube.reactor.RetryNonSerializedEmitFailureHandler.RETRY_NON_SERIALIZED;
 
 /**
  * 参考{@link RocksRawKVStore}
@@ -59,7 +62,7 @@ public class StandaloneKvStore implements ClusterStore {
     private ColumnFamilyHandle sequenceHandle;
     private ColumnFamilyHandle lockingHandle;
     private ColumnFamilyHandle fencingHandle;
-    private RocksDB db;
+    private Mono<RocksDB> db;
     private DBOptions dbOptions;
     private WriteOptions writeOptions;
     private DebugStatistics statistics;
@@ -74,6 +77,16 @@ public class StandaloneKvStore implements ClusterStore {
 
     @Override
     public Mono<Void> init() {
+        Sinks.One<RocksDB> onStart = Sinks.one();
+        db = onStart.asMono();
+        return  init(onStart)
+                .doOnError(th -> onStart.emitError(th, RETRY_NON_SERIALIZED));
+    }
+
+    /**
+     * 初始化rocks db
+     */
+    private Mono<Void> init(Sinks.One<RocksDB> onStart) {
         String dbPath = cluster.getBrokerContext().getBrokerConfig().getDataPath() + "/db";
 
         try {
@@ -86,10 +99,6 @@ public class StandaloneKvStore implements ClusterStore {
         Lock writeLock = this.readWriteLock.writeLock();
         writeLock.lock();
         try {
-            if (this.db != null) {
-                log.info("{} already started.", getClass().getSimpleName());
-                return Mono.empty();
-            }
             RocksDBOptions opts = RocksDBOptionsConfigured.newConfigured()
                     .withDbPath(dbPath)
                     .withSync(true)
@@ -118,7 +127,17 @@ public class StandaloneKvStore implements ClusterStore {
             this.writeOptions.setSync(opts.isSync());
             // If `sync` is true, `disableWAL` must be set false.
             this.writeOptions.setDisableWAL(!opts.isSync() && opts.isDisableWAL());
-            openRocksDB(opts);
+
+
+            List<ColumnFamilyHandle> cfHandles = Lists.newArrayList();
+            this.databaseVersion.incrementAndGet();
+            onStart.emitValue(RocksDB.open(this.dbOptions, opts.getDbPath(), this.cfDescriptors, cfHandles), RETRY_NON_SERIALIZED);
+            this.defaultHandle = cfHandles.get(0);
+            this.sequenceHandle = cfHandles.get(1);
+            this.lockingHandle = cfHandles.get(2);
+            this.fencingHandle = cfHandles.get(3);
+
+
             this.shutdownLock.setMaxPermits(1);
             log.info("StandaloneKvStore start successfully, options: {}.", opts);
         } catch (Exception e) {
@@ -128,16 +147,6 @@ public class StandaloneKvStore implements ClusterStore {
         }
 
         return Mono.empty();
-    }
-
-    private void openRocksDB(RocksDBOptions opts) throws RocksDBException {
-        List<ColumnFamilyHandle> cfHandles = Lists.newArrayList();
-        this.databaseVersion.incrementAndGet();
-        this.db = RocksDB.open(this.dbOptions, opts.getDbPath(), this.cfDescriptors, cfHandles);
-        this.defaultHandle = cfHandles.get(0);
-        this.sequenceHandle = cfHandles.get(1);
-        this.lockingHandle = cfHandles.get(2);
-        this.fencingHandle = cfHandles.get(3);
     }
 
     // Creates the rocksDB options, the user must take care
@@ -202,11 +211,11 @@ public class StandaloneKvStore implements ClusterStore {
     @Override
     public Mono<byte[]> get(String key) {
         checkInit();
-        return Mono.fromCallable(() -> {
+        return db.mapNotNull(idb -> {
             Lock readLock = this.readWriteLock.readLock();
             readLock.lock();
             try {
-                return this.db.get(toBKey(key));
+                return idb.get(toBKey(key));
             } catch (Exception e) {
                 log.error("fail to [GET], key: [{}], {}.", key, StackTraceUtil.stackTrace(e));
                 return null;
@@ -219,18 +228,17 @@ public class StandaloneKvStore implements ClusterStore {
     @Override
     public <T> Flux<Tuple<String, T>> multiGet(List<String> keys, Class<T> type) {
         checkInit();
-
         if (CollectionUtils.isEmpty(keys)) {
             return Flux.empty();
         }
 
-        return Flux.create(sink -> {
+        return db.flatMapMany(idb -> Flux.create(sink -> {
             List<byte[]> bKeys = keys.stream().map(this::toBKey).collect(Collectors.toList());
 
             Lock readLock = this.readWriteLock.readLock();
             readLock.lock();
             try {
-                List<byte[]> rawList = this.db.multiGetAsList(bKeys);
+                List<byte[]> rawList = idb.multiGetAsList(bKeys);
 
                 int index = 0;
                 for (byte[] value : rawList) {
@@ -239,31 +247,29 @@ public class StandaloneKvStore implements ClusterStore {
 
                     sink.next(new Tuple<>(key, JSON.read(value, type)));
                 }
-
-                sink.complete();
             } catch (Exception e) {
                 log.error("fail to [MULTI_GET], keys: [{}], {}.", keys, StackTraceUtil.stackTrace(e));
             } finally {
+                sink.complete();
                 readLock.unlock();
             }
-        });
+        }));
     }
 
     @Override
     public Flux<Tuple<String, byte[]>> multiGetRaw(List<String> keys) {
         checkInit();
-
         if (CollectionUtils.isEmpty(keys)) {
             return Flux.empty();
         }
 
-        return Flux.create(sink -> {
+        return db.flatMapMany(idb -> Flux.create(sink -> {
             List<byte[]> bKeys = keys.stream().map(this::toBKey).collect(Collectors.toList());
 
             Lock readLock = this.readWriteLock.readLock();
             readLock.lock();
             try {
-                List<byte[]> rawList = this.db.multiGetAsList(bKeys);
+                List<byte[]> rawList = idb.multiGetAsList(bKeys);
 
                 int index = 0;
                 for (byte[] value : rawList) {
@@ -272,42 +278,39 @@ public class StandaloneKvStore implements ClusterStore {
 
                     sink.next(new Tuple<>(key, value));
                 }
-
-                sink.complete();
             } catch (Exception e) {
                 log.error("fail to [MULTI_GET], keys: [{}], {}.", keys, StackTraceUtil.stackTrace(e));
             } finally {
+                sink.complete();
                 readLock.unlock();
             }
-        });
+        }));
     }
 
     @Override
     public Mono<Void> put(String key, Object obj) {
         checkInit();
-
-        return Mono.fromRunnable(() -> {
+        return db.doOnNext(idb -> {
             Lock readLock = this.readWriteLock.readLock();
             readLock.lock();
             try {
-                this.db.put(this.writeOptions, toBKey(key), JSON.writeBytes(obj));
+                idb.put(this.writeOptions, toBKey(key), JSON.writeBytes(obj));
             } catch (Exception e) {
                 log.error("fail to [PUT], [{}, {}], {}.", key, obj, StackTraceUtil.stackTrace(e));
             } finally {
                 readLock.unlock();
             }
-        });
+        }).then();
     }
 
     @Override
     public Mono<Void> put(Map<String, Object> kvs) {
         checkInit();
-
         if (CollectionUtils.isEmpty(kvs)) {
             return Mono.empty();
         }
 
-        return Mono.fromRunnable(() -> {
+        return db.doOnNext(idb ->  {
             List<KVEntry> kvEntries = kvs.entrySet()
                     .stream()
                     .map(e -> new KVEntry(toBKey(e.getKey()), JSON.writeBytes(e.getValue())))
@@ -319,24 +322,23 @@ public class StandaloneKvStore implements ClusterStore {
                 for (KVEntry entry : kvEntries) {
                     batch.put(entry.getKey(), entry.getValue());
                 }
-                this.db.write(this.writeOptions, batch);
+                idb.write(this.writeOptions, batch);
             } catch (Exception e) {
                 log.error("fail to [PUT_LIST], {}, {}.", kvEntries, StackTraceUtil.stackTrace(e));
             } finally {
                 readLock.unlock();
             }
-        });
+        }).then();
     }
 
     @Override
     public <T> Flux<Tuple<String, T>> scan(String startKey, String endKey, Class<T> type) {
         checkInit();
-
-        return Flux.create(sink -> {
+        return db.flatMapMany(idb -> Flux.create(sink -> {
             int maxCount = Integer.MAX_VALUE;
             Lock readLock = this.readWriteLock.readLock();
             readLock.lock();
-            try (RocksIterator it = this.db.newIterator()) {
+            try (RocksIterator it = idb.newIterator()) {
                 if (startKey == null) {
                     it.seekToFirst();
                 } else {
@@ -352,24 +354,23 @@ public class StandaloneKvStore implements ClusterStore {
                     sink.next(new Tuple<>(toSKey(key), JSON.read(it.value(), type)));
                     it.next();
                 }
-                sink.complete();
             } catch (Exception e) {
                 log.error("fail to [SCAN], range: ['[{}, {})'], {}.", startKey, endKey, StackTraceUtil.stackTrace(e));
             } finally {
+                sink.complete();
                 readLock.unlock();
             }
-        });
+        }));
     }
 
     @Override
     public Flux<Tuple<String, byte[]>> scanRaw(String startKey, String endKey) {
         checkInit();
-
-        return Flux.create(sink -> {
+        return db.flatMapMany(idb -> Flux.create(sink -> {
             int maxCount = Integer.MAX_VALUE;
             Lock readLock = this.readWriteLock.readLock();
             readLock.lock();
-            try (RocksIterator it = this.db.newIterator()) {
+            try (RocksIterator it = idb.newIterator()) {
                 if (startKey == null) {
                     it.seekToFirst();
                 } else {
@@ -385,30 +386,30 @@ public class StandaloneKvStore implements ClusterStore {
                     sink.next(new Tuple<>(toSKey(key), it.value()));
                     it.next();
                 }
-                sink.complete();
             } catch (Exception e) {
                 log.error("fail to [SCAN], range: ['[{}, {})'], {}.", startKey, endKey, StackTraceUtil.stackTrace(e));
             } finally {
+                sink.complete();
                 readLock.unlock();
             }
-        });
+        }));
     }
 
     @Override
     public Mono<Void> delete(String key) {
         checkInit();
-
-        return Mono.fromRunnable(() -> {
+        return db.doOnNext(idb -> {
             Lock readLock = this.readWriteLock.readLock();
             readLock.lock();
             try {
-                this.db.delete(this.writeOptions, toBKey(key));
+                idb.delete(this.writeOptions, toBKey(key));
             } catch (Exception e) {
                 log.error("fail to [DELETE], [{}], {}.", key, StackTraceUtil.stackTrace(e));
             } finally {
                 readLock.unlock();
             }
-        });
+        }).then();
+
     }
 
     @Override
@@ -422,15 +423,18 @@ public class StandaloneKvStore implements ClusterStore {
     }
 
     @Override
-    public void shutdown() {
+    public Mono<Void> shutdown() {
+        checkInit();
+        return db.doOnNext(this::shutdown0)
+                .then();
+    }
+
+    private void shutdown0(RocksDB db){
         Lock writeLock = this.readWriteLock.writeLock();
         writeLock.lock();
         try {
-            if (this.db == null) {
-                return;
-            }
             this.shutdownLock.setMaxPermits(0);
-            closeRocksDB();
+            db.close();
             if (this.defaultHandle != null) {
                 this.defaultHandle.close();
                 this.defaultHandle = null;
@@ -474,13 +478,6 @@ public class StandaloneKvStore implements ClusterStore {
         } finally {
             writeLock.unlock();
             log.info("[StandaloneKvStore] shutdown successfully.");
-        }
-    }
-
-    private void closeRocksDB() {
-        if (this.db != null) {
-            this.db.close();
-            this.db = null;
         }
     }
 }

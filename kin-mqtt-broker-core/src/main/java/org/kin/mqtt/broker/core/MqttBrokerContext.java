@@ -87,12 +87,12 @@ public class MqttBrokerContext implements Closeable {
 
     @Override
     public void close() {
-        //cluster close
-        cluster.shutdown().subscribe();
         //retry close
         retryService.close();
         //bridge close
         bridgeManager.close();
+        //cluster close
+        cluster.shutdown().subscribe();
 
         mqttBizScheduler.dispose();
     }

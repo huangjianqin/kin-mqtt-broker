@@ -42,7 +42,7 @@ public class MqttBrokerApplication {
 
                 String s = "broker-" + mqttBroker.getBrokerId() + " loop:" + messageId;
                 byte[] bytes = s.getBytes(StandardCharsets.UTF_8);
-                ByteBuf byteBuf = UnpooledByteBufAllocator.DEFAULT.directBuffer(bytes.length);
+                ByteBuf byteBuf = UnpooledByteBufAllocator.DEFAULT.buffer(bytes.length);
                 byteBuf.writeBytes(bytes);
 
                 MqttPublishMessage pubMessage = MqttMessageHelper.createPublish(false,

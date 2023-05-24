@@ -133,5 +133,5 @@ public interface ClusterStore {
     /**
      * shutdown
      */
-    void shutdown();
+    Mono<Void> shutdown();
 }

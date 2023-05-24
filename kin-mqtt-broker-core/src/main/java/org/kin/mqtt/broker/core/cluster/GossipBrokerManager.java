@@ -190,7 +190,11 @@ public class GossipBrokerManager implements BrokerManager {
     public Mono<Void> shutdown() {
         return clusterMono.flatMap(cluster -> cluster.onShutdown()
                 //close sink
-                .then(Mono.fromRunnable(() -> clusterMqttMessageSink.emitComplete(RetryNonSerializedEmitFailureHandler.RETRY_NON_SERIALIZED))));
+                .then(Mono.fromRunnable(() -> {
+                    id2Broker.clear();
+                    address2Broker.clear();
+                    clusterMqttMessageSink.emitComplete(RetryNonSerializedEmitFailureHandler.RETRY_NON_SERIALIZED);
+                })));
     }
 
     //------------------------------------------------------------------------------------------------------------------------

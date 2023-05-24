@@ -31,6 +31,7 @@ import java.time.Duration;
 import java.util.*;
 import java.util.stream.Collectors;
 
+import static io.scalecube.reactor.RetryNonSerializedEmitFailureHandler.RETRY_NON_SERIALIZED;
 import static org.kin.mqtt.broker.core.cluster.ClusterStoreKeys.RULE_KEY_PREFIX;
 import static org.kin.mqtt.broker.core.cluster.ClusterStoreKeys.SESSION_KEY_PREFIX;
 
@@ -52,7 +53,7 @@ public class RaftKvStore implements ClusterStore {
     /** mqtt broker context */
     private final MqttBrokerContext brokerContext;
     /** jraft-rheakv store */
-    private DefaultRheaKVStore kvStore;
+    private Mono<DefaultRheaKVStore> kvStore;
 
     public RaftKvStore(MqttBrokerContext brokerContext,
                        Cluster cluster) {
@@ -62,9 +63,19 @@ public class RaftKvStore implements ClusterStore {
 
     @Override
     public Mono<Void> init() {
+        Sinks.One<DefaultRheaKVStore> onStart = Sinks.one();
+        kvStore = onStart.asMono();
+        return initStore(onStart)
+                .doOnError(th -> onStart.emitError(th, RETRY_NON_SERIALIZED));
+    }
+
+    /**
+     * 初始化raft kv store
+     */
+    private Mono<Void> initStore(Sinks.One<DefaultRheaKVStore> onStart) {
         MqttBrokerConfig brokerConfig = cluster.getBrokerContext().getBrokerConfig();
 
-        kvStore = new DefaultRheaKVStore();
+        DefaultRheaKVStore kvStore = new DefaultRheaKVStore();
         //先添加StateListener
         List<Mono<Void>> regionMonoList = new ArrayList<>(REGION_NUM);
         for (int i = 1; i <= REGION_NUM; i++) {
@@ -107,8 +118,8 @@ public class RaftKvStore implements ClusterStore {
                 /**
                  * region raft node状态正常
                  */
-                private void onReady(){
-                    if(Objects.isNull(sink)){
+                private void onReady() {
+                    if (Objects.isNull(sink)) {
                         return;
                     }
 
@@ -120,21 +131,24 @@ public class RaftKvStore implements ClusterStore {
         }
 
         if (cluster.isCore()) {
-            initCoreStore(brokerConfig);
+            initCoreStore(kvStore, brokerConfig);
         } else {
-            initReplicatorStore(brokerConfig);
+            initReplicatorStore(kvStore, brokerConfig);
         }
 
         return Mono.when(regionMonoList)
-                .then(Mono.fromRunnable(() -> log.info("RaftKvStore start successfully")));
+                .doOnSuccess(v-> {
+                    log.info("RaftKvStore start successfully");
+                    onStart.emitValue(kvStore, RetryNonSerializedEmitFailureHandler.RETRY_NON_SERIALIZED);
+                });
     }
 
     /**
-     * 初始化core节点, 参与raft选举
+     * 初始化core节点raft kv store, 参与raft选举
      *
      * @param brokerConfig mqtt broker配置
      */
-    private void initCoreStore(MqttBrokerConfig brokerConfig) {
+    private void initCoreStore(DefaultRheaKVStore kvStore, MqttBrokerConfig brokerConfig) {
         ClusterConfig clusterConfig = brokerConfig.getCluster();
         int storeProcessors = clusterConfig.getStoreProcessors();
 
@@ -198,11 +212,11 @@ public class RaftKvStore implements ClusterStore {
     }
 
     /**
-     * 初始化replicator节点, 不参与raft选举, 仅仅从leader拉取数据
+     * 初始化replicator节点raft kv store, 不参与raft选举, 仅仅从leader拉取数据
      *
      * @param brokerConfig mqtt broker配置
      */
-    private void initReplicatorStore(MqttBrokerConfig brokerConfig) {
+    private void initReplicatorStore(DefaultRheaKVStore kvStore, MqttBrokerConfig brokerConfig) {
         ClusterConfig clusterConfig = brokerConfig.getCluster();
         int storeProcessors = clusterConfig.getStoreProcessors();
 
@@ -310,27 +324,26 @@ public class RaftKvStore implements ClusterStore {
     @Override
     public <T> Mono<T> get(String key, Class<T> type) {
         checkInit();
-        return Mono.fromFuture(kvStore.get(toBKey(key)))
+        return kvStore.flatMap(s -> Mono.fromFuture(s.get(toBKey(key))))
                 .map(bytes -> JSON.read(bytes, type));
     }
 
     @Override
     public Mono<byte[]> get(String key) {
         checkInit();
-        return Mono.fromFuture(kvStore.get(toBKey(key)));
+        return kvStore.flatMap(s -> Mono.fromFuture(s.get(toBKey(key))));
     }
 
     @Override
     public <T> Flux<Tuple<String, T>> multiGet(List<String> keys, Class<T> type) {
         checkInit();
-
         if (CollectionUtils.isEmpty(keys)) {
             return Flux.empty();
         }
 
         List<byte[]> bKeys = keys.stream().map(this::toBKey).collect(Collectors.toList());
 
-        return Mono.fromFuture(kvStore.multiGet(bKeys))
+        return kvStore.flatMap(s -> Mono.fromFuture(s.multiGet(bKeys)))
                 .flatMapMany(map -> {
                     List<Tuple<String, T>> tuples = new ArrayList<>(map.size());
                     for (Map.Entry<ByteArray, byte[]> entry : map.entrySet()) {
@@ -347,14 +360,13 @@ public class RaftKvStore implements ClusterStore {
     @Override
     public Flux<Tuple<String, byte[]>> multiGetRaw(List<String> keys) {
         checkInit();
-
         if (CollectionUtils.isEmpty(keys)) {
             return Flux.empty();
         }
 
         List<byte[]> bKeys = keys.stream().map(this::toBKey).collect(Collectors.toList());
 
-        return Mono.fromFuture(kvStore.multiGet(bKeys))
+        return kvStore.flatMap(s -> Mono.fromFuture(s.multiGet(bKeys)))
                 .flatMapMany(map -> {
                     List<Tuple<String, byte[]>> tuples = new ArrayList<>(map.size());
                     for (Map.Entry<ByteArray, byte[]> entry : map.entrySet()) {
@@ -371,14 +383,13 @@ public class RaftKvStore implements ClusterStore {
     @Override
     public Mono<Void> put(String key, Object obj) {
         checkInit();
-        return Mono.fromFuture(kvStore.put(toBKey(key), JSON.writeBytes(obj)))
+        return kvStore.flatMap(s -> Mono.fromFuture(s.put(toBKey(key), JSON.writeBytes(obj))))
                 .then();
     }
 
     @Override
     public Mono<Void> put(Map<String, Object> kvs) {
         checkInit();
-
         if (CollectionUtils.isEmpty(kvs)) {
             return Mono.empty();
         }
@@ -387,15 +398,15 @@ public class RaftKvStore implements ClusterStore {
                 .stream()
                 .map(e -> new KVEntry(toBKey(e.getKey()), JSON.writeBytes(e.getValue())))
                 .collect(Collectors.toList());
-        return Mono.fromFuture(kvStore.put(kvEntries))
+        return kvStore.flatMap(s -> Mono.fromFuture(s.put(kvEntries)))
                 .then();
     }
 
     @Override
     public <T> Flux<Tuple<String, T>> scan(String startKey, String endKey, Class<T> type) {
         checkInit();
-        return Mono.fromFuture(kvStore.scan(StringUtils.isNotBlank(startKey) ? toBKey(startKey) : null,
-                        StringUtils.isNotBlank(endKey) ? toBKey(endKey) : null))
+        return kvStore.flatMap(s -> Mono.fromFuture(s.scan(StringUtils.isNotBlank(startKey) ? toBKey(startKey) : null,
+                        StringUtils.isNotBlank(endKey) ? toBKey(endKey) : null)))
                 .flatMapMany(list -> {
                     List<Tuple<String, T>> tuples = new ArrayList<>(list.size());
                     for (KVEntry entry : list) {
@@ -409,8 +420,8 @@ public class RaftKvStore implements ClusterStore {
     @Override
     public Flux<Tuple<String, byte[]>> scanRaw(String startKey, String endKey) {
         checkInit();
-        return Mono.fromFuture(kvStore.scan(StringUtils.isNotBlank(startKey) ? toBKey(startKey) : null,
-                        StringUtils.isNotBlank(endKey) ? toBKey(endKey) : null))
+        return kvStore.flatMap(s -> Mono.fromFuture(s.scan(StringUtils.isNotBlank(startKey) ? toBKey(startKey) : null,
+                        StringUtils.isNotBlank(endKey) ? toBKey(endKey) : null)))
                 .flatMapMany(list -> {
                     List<Tuple<String, byte[]>> tuples = new ArrayList<>(list.size());
                     for (KVEntry entry : list) {
@@ -424,25 +435,19 @@ public class RaftKvStore implements ClusterStore {
     @Override
     public Mono<Void> delete(String key) {
         checkInit();
-        return Mono.fromFuture(kvStore.delete(key))
+        return kvStore.flatMap(s -> Mono.fromFuture(s.delete(key)))
                 .then();
     }
 
     @Override
     public void addReplicator(String nodeAddress) {
-        for (RegionEngine regionEngine : kvStore.getStoreEngine().getAllRegionEngines()) {
-            addReplicator(nodeAddress, regionEngine);
-        }
-    }
-
-    /**
-     * 添加replicator
-     *
-     * @param nodeAddress replicator node address
-     * @param regionId    kv store region id
-     */
-    private void addReplicator(String nodeAddress, long regionId) {
-        addReplicator(nodeAddress, kvStore.getStoreEngine().getRegionEngine(regionId));
+        checkInit();
+        kvStore.doOnNext(s -> {
+                    for (RegionEngine regionEngine : s.getStoreEngine().getAllRegionEngines()) {
+                        addReplicator(nodeAddress, regionEngine);
+                    }
+                })
+                .subscribe();
     }
 
     /**
@@ -484,7 +489,7 @@ public class RaftKvStore implements ClusterStore {
                     // TODO: 2023/5/19 确认延迟时间
                     Mono.delay(Duration.ofMillis(1000))
                             .subscribeOn(brokerContext.getMqttBizScheduler())
-                            .subscribe(t -> addReplicator(nodeAddress, regionId));
+                            .subscribe(t -> addReplicator(nodeAddress, regionEngine));
                     return;
                 }
                 log.info("raft kv store region-{} add learner '{}' result: {}", regionId, nodeAddress, status);
@@ -494,19 +499,13 @@ public class RaftKvStore implements ClusterStore {
 
     @Override
     public void removeReplicator(String nodeAddress) {
-        for (RegionEngine regionEngine : kvStore.getStoreEngine().getAllRegionEngines()) {
-            removeReplicator(nodeAddress, regionEngine);
-        }
-    }
-
-    /**
-     * 移除replicator
-     *
-     * @param nodeAddress replicator node address
-     * @param regionId    kv store region id
-     */
-    private void removeReplicator(String nodeAddress, long regionId) {
-        removeReplicator(nodeAddress, kvStore.getStoreEngine().getRegionEngine(regionId));
+        checkInit();
+        kvStore.doOnNext(s -> {
+                    for (RegionEngine regionEngine : s.getStoreEngine().getAllRegionEngines()) {
+                        removeReplicator(nodeAddress, regionEngine);
+                    }
+                })
+                .subscribe();
     }
 
     /**
@@ -546,7 +545,7 @@ public class RaftKvStore implements ClusterStore {
                     // TODO: 2023/5/19 确认延迟时间
                     Mono.delay(Duration.ofMillis(1000))
                             .subscribeOn(brokerContext.getMqttBizScheduler())
-                            .subscribe(t -> removeReplicator(nodeAddress, regionId));
+                            .subscribe(t -> removeReplicator(nodeAddress, regionEngine));
                     return;
                 }
                 log.info("raft kv store region-{} remove learner '{}' result: {}", regionId, nodeAddress, status);
@@ -557,7 +556,9 @@ public class RaftKvStore implements ClusterStore {
     }
 
     @Override
-    public void shutdown() {
-        kvStore.shutdown();
+    public Mono<Void> shutdown() {
+        checkInit();
+        return kvStore.doOnNext(DefaultRheaKVStore::shutdown)
+                .then();
     }
 }
