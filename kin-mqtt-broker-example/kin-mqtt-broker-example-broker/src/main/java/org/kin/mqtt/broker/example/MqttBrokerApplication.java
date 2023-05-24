@@ -1,7 +1,7 @@
 package org.kin.mqtt.broker.example;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.UnpooledByteBufAllocator;
+import io.netty.buffer.Unpooled;
 import io.netty.handler.codec.mqtt.MqttQoS;
 import io.netty.util.internal.ThreadLocalRandom;
 import org.kin.mqtt.broker.boot.EnableMqttBroker;
@@ -41,7 +41,7 @@ public class MqttBrokerApplication {
 
                 String s = "broker-" + mqttBroker.getBrokerId() + " loop:" + messageId++;
                 byte[] bytes = s.getBytes(StandardCharsets.UTF_8);
-                ByteBuf byteBuf = UnpooledByteBufAllocator.DEFAULT.buffer(bytes.length);
+                ByteBuf byteBuf = Unpooled.buffer(bytes.length);
                 byteBuf.writeBytes(bytes);
 
                 mqttMessageSender.sendMessage("Subscriber", Topics.BROKER_LOOP, MqttQoS.AT_LEAST_ONCE, byteBuf)
