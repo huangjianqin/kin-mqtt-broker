@@ -156,6 +156,7 @@ public class MqttMessageHelper {
 
     /**
      * 包装publish消息
+     * !!!会对原始payload进行copy, 并不会对原始payload进行release
      *
      * @param messageId 消息id
      * @param message   {@link MqttPublishMessage}
@@ -176,6 +177,7 @@ public class MqttMessageHelper {
 
     /**
      * 包装publish消息
+     * !!!会对原始payload进行copy, 并不会对原始payload进行release
      *
      * @param messageId    消息id
      * @param message      {@link MqttPublishMessage}
@@ -188,6 +190,7 @@ public class MqttMessageHelper {
 
     /**
      * 包装publish消息
+     * !!!会对原始payload进行copy, 并不会对原始payload进行release
      *
      * @param messageId    消息id
      * @param message      {@link MqttPublishMessage}

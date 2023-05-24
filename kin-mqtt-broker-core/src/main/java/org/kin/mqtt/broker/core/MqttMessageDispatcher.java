@@ -72,8 +72,7 @@ public class MqttMessageDispatcher {
      * @param brokerContext  mqtt broker context
      */
     public Mono<Void> dispatch(MqttMessageContext<? extends MqttMessage> messageContext, MqttBrokerContext brokerContext) {
-        return dispatch(messageContext, null, brokerContext)
-                .then(Mono.fromRunnable(() -> ReactorNetty.safeRelease(messageContext.getMessage())));
+        return dispatch(messageContext, null, brokerContext);
     }
 
     /**
@@ -84,12 +83,16 @@ public class MqttMessageDispatcher {
      * @param brokerContext  mqtt broker context
      */
     public Mono<Void> dispatch(MqttMessageContext<? extends MqttMessage> messageContext, @Nullable MqttSession mqttSession, MqttBrokerContext brokerContext) {
+        Mono<Void> signal;
         if (!messageContext.isFromCluster()) {
             //mqtt session必定不为null
-            return dispatchClientMessage(messageContext, Objects.requireNonNull(mqttSession), brokerContext);
+            signal = dispatchClientMessage(messageContext, Objects.requireNonNull(mqttSession), brokerContext);
         } else {
-            return Mono.fromRunnable(() -> dispatchClusterMessage(messageContext, brokerContext));
+            signal = dispatchClusterMessage(messageContext, brokerContext);
         }
+
+        //release payload
+        return signal.doFinally(st -> ReactorNetty.safeRelease(messageContext.getMessage()));
     }
 
     /**
@@ -173,9 +176,9 @@ public class MqttMessageDispatcher {
         MqttProperties properties = publishVariableHeader.properties();
         //是否需要替换mqtt消息
         boolean needReplaceMqttMessage = false;
+        MqttProperties.MqttProperty<Integer> topicAliasProp = properties.getProperty(MqttProperties.MqttPropertyType.TOPIC_ALIAS.value());
         if (StringUtils.isBlank(topic)) {
             //topic为空, 可能使用了topic别名
-            MqttProperties.MqttProperty<Integer> topicAliasProp = properties.getProperty(MqttProperties.MqttPropertyType.TOPIC_ALIAS.value());
             if (Objects.nonNull(topicAliasProp)) {
                 //带了topic别名, 则尝试获取真实topic
                 topic = mqttSession.getTopicByAlias(topicAliasProp.value());
@@ -187,7 +190,6 @@ public class MqttMessageDispatcher {
             }
         } else {
             //topic不为空, 尝试注册topic别名
-            MqttProperties.MqttProperty<Integer> topicAliasProp = properties.getProperty(MqttProperties.MqttPropertyType.TOPIC_ALIAS.value());
             if (Objects.nonNull(topicAliasProp)) {
                 //带了topic别名, 则注册
                 mqttSession.registerTopicAlias(topicAliasProp.value(), topic);
@@ -216,11 +218,8 @@ public class MqttMessageDispatcher {
         if (Objects.nonNull(messageHandler)) {
             return messageHandler.handle((MqttMessageContext<MqttMessage>) messageContext, mqttSession, brokerContext)
                     .contextWrite(context -> context.putNonNull(MqttBrokerContext.class, brokerContext))
-                    .doOnError(error -> log.error("handle {} message from session {} error", mqttMessageType, mqttSession, error))
-                    //释放onMqttClientConnected里面的retain(), 还有initBrokerManager的MqttMessageReplica.fromCluster(....)
-                    .doOnSuccess(v -> ReactorNetty.safeRelease(mqttMessage.payload()));
+                    .doOnError(error -> log.error("handle {} message from session {} error", mqttMessageType, mqttSession, error));
         } else {
-            ReactorNetty.safeRelease(mqttMessage.payload());
             return Mono.error(new IllegalArgumentException(String.format("does not find handler to handle %s message", mqttMessageType)));
         }
     }
@@ -259,18 +258,19 @@ public class MqttMessageDispatcher {
      * @param brokerContext  broker context
      * @param pubTopic       publish message topic信息
      * @param messageContext publish message context
-     * @return
+     * @return  complete signal
      */
     public Mono<Void> handleDelayedPublishMessage(MqttBrokerContext brokerContext, PubTopic pubTopic,
                                                   MqttMessageContext<MqttPublishMessage> messageContext) {
         return Mono.fromRunnable(() -> {
             // TODO: 2023/4/16 delay mqtt消息为实现持久化和broker重启后重新调度
             HashedWheelTimer bsTimer = brokerContext.getBsTimer();
-            //reference count+1
-            //ack后payload会被touch
+            //消息在外部会被release
             messageContext.getMessage().payload().retain();
             //remove delay info
-            bsTimer.newTimeout(t -> MqttPublishMessageHelper.broadcast(brokerContext, new PubTopic(pubTopic.getName()), messageContext).subscribe(),
+            bsTimer.newTimeout(t -> MqttPublishMessageHelper.broadcast(brokerContext, new PubTopic(pubTopic.getName()), messageContext)
+                            .doFinally(st -> ReactorNetty.safeRelease(messageContext.getMessage()))
+                            .subscribe(),
                     pubTopic.getDelay(), TimeUnit.SECONDS);
         });
     }

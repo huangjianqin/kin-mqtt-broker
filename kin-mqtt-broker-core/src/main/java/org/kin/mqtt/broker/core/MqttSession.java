@@ -105,7 +105,8 @@ public class MqttSession {
     }
 
     /**
-     * 往指定mqtt channel发送mqtt消息
+     * 往指定mqtt session发送mqtt消息
+     * 外部不需要对mqtt message进行release
      *
      * @param mqttMessage mqtt消息
      * @param retry       是否重试
@@ -264,8 +265,14 @@ public class MqttSession {
             Timeout expireTimeout = null;
             if (expireTimeMs > 0) {
                 HashedWheelTimer bsTimer = brokerContext.getBsTimer();
-                expireTimeout = bsTimer.newTimeout(t -> removeQos2Message(messageId), expireTimeMs, TimeUnit.MILLISECONDS);
+                expireTimeout = bsTimer.newTimeout(t -> {
+                    MqttMessageContext<MqttPublishMessage> cached = removeQos2Message(messageId);
+                    if (cached != null) {
+                        ReactorNetty.safeRelease(cached);
+                    }
+                }, expireTimeMs, TimeUnit.MILLISECONDS);
             }
+            messageContext.getMessage().retain();
             qos2MessageCache.put(messageId, new MqttQos2PubMessage(messageContext, expireTimeout));
         });
     }

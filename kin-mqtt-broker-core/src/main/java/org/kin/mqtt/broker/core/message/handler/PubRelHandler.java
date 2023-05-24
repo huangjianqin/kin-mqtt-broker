@@ -14,6 +14,7 @@ import org.kin.mqtt.broker.core.retry.RetryService;
 import org.kin.mqtt.broker.core.topic.PubTopic;
 import org.kin.mqtt.broker.utils.TopicUtils;
 import reactor.core.publisher.Mono;
+import reactor.netty.ReactorNetty;
 
 import javax.annotation.Nonnull;
 import java.util.Objects;
@@ -58,6 +59,7 @@ public class PubRelHandler extends AbstractMqttMessageHandler<MqttMessage> {
 
             //移除retry task
             return mono
+                    .doFinally(st -> ReactorNetty.safeRelease(pubMessageContext.getMessage()))
                     .then(Mono.fromRunnable(() -> Optional.ofNullable(retryService.getRetry(mqttSession.genMqttMessageRetryId(MqttMessageType.PUBREC, messageId))).ifPresent(Retry::cancel)));
         } else {
             return mqttSession.sendMessage(MqttMessageHelper.createPubComp(messageId), false);
