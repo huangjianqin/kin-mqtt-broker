@@ -2,12 +2,11 @@ package org.kin.mqtt.broker.example;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.UnpooledByteBufAllocator;
-import io.netty.handler.codec.mqtt.MqttPublishMessage;
 import io.netty.handler.codec.mqtt.MqttQoS;
+import io.netty.util.internal.ThreadLocalRandom;
 import org.kin.mqtt.broker.boot.EnableMqttBroker;
 import org.kin.mqtt.broker.core.MqttBroker;
 import org.kin.mqtt.broker.core.MqttMessageSender;
-import org.kin.mqtt.broker.core.message.MqttMessageHelper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.boot.SpringApplication;
@@ -35,22 +34,18 @@ public class MqttBrokerApplication {
             int messageId = 1;
             while (true) {
                 try {
-                    Thread.sleep(5_000);
+                    Thread.sleep(ThreadLocalRandom.current().nextLong(4_500) + 500);
                 } catch (InterruptedException e) {
                     throw new RuntimeException(e);
                 }
 
-                String s = "broker-" + mqttBroker.getBrokerId() + " loop:" + messageId;
+                String s = "broker-" + mqttBroker.getBrokerId() + " loop:" + messageId++;
                 byte[] bytes = s.getBytes(StandardCharsets.UTF_8);
                 ByteBuf byteBuf = UnpooledByteBufAllocator.DEFAULT.buffer(bytes.length);
                 byteBuf.writeBytes(bytes);
 
-                MqttPublishMessage pubMessage = MqttMessageHelper.createPublish(false,
-                        MqttQoS.AT_LEAST_ONCE,
-                        messageId++,
-                        Topics.BROKER_LOOP,
-                        byteBuf);
-                mqttMessageSender.sendMessage("Subscriber", pubMessage).subscribe();
+                mqttMessageSender.sendMessage("Subscriber", Topics.BROKER_LOOP, MqttQoS.AT_LEAST_ONCE, byteBuf)
+                        .subscribe();
             }
         });
     }
