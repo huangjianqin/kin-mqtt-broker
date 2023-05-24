@@ -30,7 +30,10 @@ public class InflightWindow {
     private volatile int receiveMaximum;
 
 
-    /** 待发送的qos>0消息缓存, 按先入先出的顺序存储 */
+    /**
+     * 待发送的qos>0消息缓存, 按先入先出的顺序存
+     * 这里使用{@link MqttMessageContext}是为了方便使用{@link MqttMessageContext#isExpire()}判断publish message是否过期
+     */
     private final Deque<MqttMessageContext<MqttPublishMessage>> queue = new LinkedList<>();
     /** 可发送消息配额 */
     private volatile int quota;
