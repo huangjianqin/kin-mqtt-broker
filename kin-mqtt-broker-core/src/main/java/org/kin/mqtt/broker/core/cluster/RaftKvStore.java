@@ -137,7 +137,7 @@ public class RaftKvStore implements ClusterStore {
         }
 
         return Mono.when(regionMonoList)
-                .doOnSuccess(v-> {
+                .doOnSuccess(v -> {
                     log.info("RaftKvStore start successfully");
                     onStart.emitValue(kvStore, RetryNonSerializedEmitFailureHandler.RETRY_NON_SERIALIZED);
                 });
@@ -321,10 +321,18 @@ public class RaftKvStore implements ClusterStore {
         return new String(byteArray.getBytes(), StandardCharsets.UTF_8);
     }
 
+    /**
+     * 底层异常封装
+     */
+    private Throwable onErrorMap(String oprDesc, Throwable source) {
+        return new MqttBrokerException(getClass().getSimpleName() + " fail to " + oprDesc + " due to " + source.getMessage(), source);
+    }
+
     @Override
     public <T> Mono<T> get(String key, Class<T> type) {
         checkInit();
         return kvStore.flatMap(s -> Mono.fromFuture(s.get(toBKey(key))))
+                .onErrorMap(t -> onErrorMap(String.format("[GET] key '%s'", key), t))
                 .map(bytes -> JSON.read(bytes, type));
     }
 
@@ -332,7 +340,8 @@ public class RaftKvStore implements ClusterStore {
     public Mono<byte[]> get(String key) {
         checkInit();
         //readOnlySafe=false, 将直接读取本地db数据, 但不保证数据一致性
-        return kvStore.flatMap(s -> Mono.fromFuture(s.get(toBKey(key))));
+        return kvStore.flatMap(s -> Mono.fromFuture(s.get(toBKey(key)))
+                .onErrorMap(t -> onErrorMap(String.format("[GET] key '%s'", key), t)));
     }
 
     @Override
@@ -345,6 +354,7 @@ public class RaftKvStore implements ClusterStore {
         List<byte[]> bKeys = keys.stream().map(this::toBKey).collect(Collectors.toList());
 
         return kvStore.flatMap(s -> Mono.fromFuture(s.multiGet(bKeys)))
+                .onErrorMap(t -> onErrorMap(String.format("[MULTI-GET] keys '%s'", keys), t))
                 .flatMapMany(map -> {
                     List<Tuple<String, T>> tuples = new ArrayList<>(map.size());
                     for (Map.Entry<ByteArray, byte[]> entry : map.entrySet()) {
@@ -368,6 +378,7 @@ public class RaftKvStore implements ClusterStore {
         List<byte[]> bKeys = keys.stream().map(this::toBKey).collect(Collectors.toList());
 
         return kvStore.flatMap(s -> Mono.fromFuture(s.multiGet(bKeys)))
+                .onErrorMap(t -> onErrorMap(String.format("[MULTI-GET] keys '%s'", keys), t))
                 .flatMapMany(map -> {
                     List<Tuple<String, byte[]>> tuples = new ArrayList<>(map.size());
                     for (Map.Entry<ByteArray, byte[]> entry : map.entrySet()) {
@@ -384,7 +395,8 @@ public class RaftKvStore implements ClusterStore {
     @Override
     public Mono<Void> put(String key, Object obj) {
         checkInit();
-        return kvStore.flatMap(s -> Mono.fromFuture(s.put(toBKey(key), JSON.writeBytes(obj))))
+        return kvStore.flatMap(s -> Mono.fromFuture(s.put(toBKey(key), JSON.writeBytes(obj)))
+                        .onErrorMap(t -> onErrorMap(String.format("[PUT] key '%s'", key), t)))
                 .then();
     }
 
@@ -399,7 +411,8 @@ public class RaftKvStore implements ClusterStore {
                 .stream()
                 .map(e -> new KVEntry(toBKey(e.getKey()), JSON.writeBytes(e.getValue())))
                 .collect(Collectors.toList());
-        return kvStore.flatMap(s -> Mono.fromFuture(s.put(kvEntries)))
+        return kvStore.flatMap(s -> Mono.fromFuture(s.put(kvEntries))
+                        .onErrorMap(t -> onErrorMap(String.format("[PUT] key-values '%s'", kvs), t)))
                 .then();
     }
 
@@ -408,6 +421,7 @@ public class RaftKvStore implements ClusterStore {
         checkInit();
         return kvStore.flatMap(s -> Mono.fromFuture(s.scan(StringUtils.isNotBlank(startKey) ? toBKey(startKey) : null,
                         StringUtils.isNotBlank(endKey) ? toBKey(endKey) : null)))
+                .onErrorMap(t -> onErrorMap(String.format("[SCAN] [start key, end key] '%s,%s'", startKey, endKey), t))
                 .flatMapMany(list -> {
                     List<Tuple<String, T>> tuples = new ArrayList<>(list.size());
                     for (KVEntry entry : list) {
@@ -423,6 +437,7 @@ public class RaftKvStore implements ClusterStore {
         checkInit();
         return kvStore.flatMap(s -> Mono.fromFuture(s.scan(StringUtils.isNotBlank(startKey) ? toBKey(startKey) : null,
                         StringUtils.isNotBlank(endKey) ? toBKey(endKey) : null)))
+                .onErrorMap(t -> onErrorMap(String.format("[SCAN] [start key, end key] '%s,%s'", startKey, endKey), t))
                 .flatMapMany(list -> {
                     List<Tuple<String, byte[]>> tuples = new ArrayList<>(list.size());
                     for (KVEntry entry : list) {
@@ -436,7 +451,8 @@ public class RaftKvStore implements ClusterStore {
     @Override
     public Mono<Void> delete(String key) {
         checkInit();
-        return kvStore.flatMap(s -> Mono.fromFuture(s.delete(key)))
+        return kvStore.flatMap(s -> Mono.fromFuture(s.delete(key))
+                        .onErrorMap(t -> onErrorMap(String.format("[DELETE] key '%s'", key), t)))
                 .then();
     }
 

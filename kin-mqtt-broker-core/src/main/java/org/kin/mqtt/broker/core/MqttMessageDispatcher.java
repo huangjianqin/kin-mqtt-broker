@@ -92,7 +92,8 @@ public class MqttMessageDispatcher {
         }
 
         //release payload
-        return signal.doFinally(st -> ReactorNetty.safeRelease(messageContext.getMessage()));
+        return signal.onErrorContinue((t, o) -> log.error("mqtt message dispatcher handle message error, {}", o, t))
+                .doFinally(st -> ReactorNetty.safeRelease(messageContext.getMessage()));
     }
 
     /**

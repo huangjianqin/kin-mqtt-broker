@@ -201,6 +201,13 @@ public class StandaloneKvStore implements ClusterStore {
         return new String(byteArray.getBytes(), StandardCharsets.UTF_8);
     }
 
+    /**
+     * 底层异常封装
+     */
+    private void onError(String oprDesc, Throwable source) {
+        throw new MqttBrokerException(getClass().getSimpleName() + " fail to " + oprDesc + " due to " + source.getMessage(), source);
+    }
+
     @Override
     public <T> Mono<T> get(String key, Class<T> type) {
         checkInit();
@@ -217,7 +224,7 @@ public class StandaloneKvStore implements ClusterStore {
             try {
                 return idb.get(toBKey(key));
             } catch (Exception e) {
-                log.error("fail to [GET], key: [{}], {}.", key, StackTraceUtil.stackTrace(e));
+                onError(String.format("[GET] key '%s'", key), e);
                 return null;
             } finally {
                 readLock.unlock();
@@ -248,7 +255,7 @@ public class StandaloneKvStore implements ClusterStore {
                     sink.next(new Tuple<>(key, JSON.read(value, type)));
                 }
             } catch (Exception e) {
-                log.error("fail to [MULTI_GET], keys: [{}], {}.", keys, StackTraceUtil.stackTrace(e));
+                onError(String.format("[MULTI-GET] keys '%s'", keys), e);
             } finally {
                 sink.complete();
                 readLock.unlock();
@@ -279,7 +286,7 @@ public class StandaloneKvStore implements ClusterStore {
                     sink.next(new Tuple<>(key, value));
                 }
             } catch (Exception e) {
-                log.error("fail to [MULTI_GET], keys: [{}], {}.", keys, StackTraceUtil.stackTrace(e));
+                onError(String.format("[MULTI-GET] keys '%s'", keys), e);
             } finally {
                 sink.complete();
                 readLock.unlock();
@@ -296,7 +303,7 @@ public class StandaloneKvStore implements ClusterStore {
             try {
                 idb.put(this.writeOptions, toBKey(key), JSON.writeBytes(obj));
             } catch (Exception e) {
-                log.error("fail to [PUT], [{}, {}], {}.", key, obj, StackTraceUtil.stackTrace(e));
+                onError(String.format("[PUT] key '%s'", key), e);
             } finally {
                 readLock.unlock();
             }
@@ -324,7 +331,7 @@ public class StandaloneKvStore implements ClusterStore {
                 }
                 idb.write(this.writeOptions, batch);
             } catch (Exception e) {
-                log.error("fail to [PUT_LIST], {}, {}.", kvEntries, StackTraceUtil.stackTrace(e));
+                onError(String.format("[PUT] key-values '%s'", kvs), e);
             } finally {
                 readLock.unlock();
             }
@@ -355,7 +362,7 @@ public class StandaloneKvStore implements ClusterStore {
                     it.next();
                 }
             } catch (Exception e) {
-                log.error("fail to [SCAN], range: ['[{}, {})'], {}.", startKey, endKey, StackTraceUtil.stackTrace(e));
+                onError(String.format("[SCAN] [start key, end key] '%s,%s'", startKey, endKey), e);
             } finally {
                 sink.complete();
                 readLock.unlock();
@@ -387,7 +394,7 @@ public class StandaloneKvStore implements ClusterStore {
                     it.next();
                 }
             } catch (Exception e) {
-                log.error("fail to [SCAN], range: ['[{}, {})'], {}.", startKey, endKey, StackTraceUtil.stackTrace(e));
+                onError(String.format("[SCAN] [start key, end key] '%s,%s'", startKey, endKey), e);
             } finally {
                 sink.complete();
                 readLock.unlock();
@@ -404,7 +411,7 @@ public class StandaloneKvStore implements ClusterStore {
             try {
                 idb.delete(this.writeOptions, toBKey(key));
             } catch (Exception e) {
-                log.error("fail to [DELETE], [{}], {}.", key, StackTraceUtil.stackTrace(e));
+                onError(String.format("[DELETE] key '%s'", key), e);
             } finally {
                 readLock.unlock();
             }

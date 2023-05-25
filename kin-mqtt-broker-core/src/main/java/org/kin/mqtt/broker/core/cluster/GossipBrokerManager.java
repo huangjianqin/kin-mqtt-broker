@@ -123,8 +123,8 @@ public class GossipBrokerManager implements BrokerManager {
                 .publishOn(brokerContext.getMqttBizScheduler())
                 .flatMap(mqttMessageReplica -> brokerContext.getDispatcher()
                         .dispatch(MqttMessageContext.fromCluster(mqttMessageReplica), brokerContext))
-                .subscribe(null,
-                        t -> error("broker manager handle cluster message error", t))));
+                .onErrorContinue((t, o) -> error("gossip broker manager handle cluster message error", t))
+                .subscribe()));
     }
 
     /**
