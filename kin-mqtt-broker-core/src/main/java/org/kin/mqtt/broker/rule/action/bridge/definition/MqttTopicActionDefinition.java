@@ -1,6 +1,7 @@
 package org.kin.mqtt.broker.rule.action.bridge.definition;
 
 import com.google.common.base.Preconditions;
+import io.netty.handler.codec.mqtt.MqttQoS;
 import org.kin.framework.utils.StringUtils;
 import org.kin.mqtt.broker.rule.action.ActionDefinition;
 import org.kin.mqtt.broker.rule.action.bridge.MqttTopicAction;
@@ -17,6 +18,8 @@ import java.util.Objects;
 public class MqttTopicActionDefinition implements ActionDefinition {
     /** 要转发的topic */
     private String topic;
+    /** qos */
+    private String qos;
 
     private MqttTopicActionDefinition() {
     }
@@ -28,6 +31,7 @@ public class MqttTopicActionDefinition implements ActionDefinition {
     @Override
     public void check() {
         Preconditions.checkArgument(StringUtils.isNotBlank(topic), "mqtt topic must be not blank");
+        MqttQoS.valueOf(qos);
     }
 
     /** builder **/
@@ -36,6 +40,11 @@ public class MqttTopicActionDefinition implements ActionDefinition {
 
         public Builder topic(String topic) {
             mqttTopicActionDefinition.topic = topic;
+            return this;
+        }
+
+        public Builder qos(String qos) {
+            mqttTopicActionDefinition.qos = qos;
             return this;
         }
 
@@ -53,21 +62,25 @@ public class MqttTopicActionDefinition implements ActionDefinition {
         this.topic = topic;
     }
 
+    public String getQos() {
+        return qos;
+    }
+
+    public void setQos(String qos) {
+        this.qos = qos;
+    }
+
     @Override
     public boolean equals(Object o) {
-        if (this == o) {
-            return true;
-        }
-        if (!(o instanceof MqttTopicActionDefinition)) {
-            return false;
-        }
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
         MqttTopicActionDefinition that = (MqttTopicActionDefinition) o;
-        return Objects.equals(topic, that.topic);
+        return Objects.equals(topic, that.topic) && Objects.equals(qos, that.qos);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(topic);
+        return Objects.hash(topic, qos);
     }
 
     @Override
@@ -75,6 +88,7 @@ public class MqttTopicActionDefinition implements ActionDefinition {
         return "MqttTopicActionDefinition{" +
                 super.toString() +
                 "topic='" + topic + '\'' +
+                "qos='" + qos + '\'' +
                 "} ";
     }
 }

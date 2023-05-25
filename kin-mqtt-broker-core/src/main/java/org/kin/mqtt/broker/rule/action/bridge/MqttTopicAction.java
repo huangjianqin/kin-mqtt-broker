@@ -31,7 +31,7 @@ public class MqttTopicAction implements Action {
         //script即真正topic
         //交给mqtt消息handler处理
         return brokerContext.getDispatcher()
-                .dispatch(MqttMessageContext.common(MqttMessageHelper.createPublish(replica, definition.getTopic()),
+                .dispatch(MqttMessageContext.common(MqttMessageHelper.createPublish(replica, definition.getTopic(), definition.getQos()),
                                 brokerContext.getBrokerId(), replica.getClientId()),
                         null,
                         brokerContext);

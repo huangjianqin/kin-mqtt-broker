@@ -228,9 +228,9 @@ public class MqttMessageHelper {
      *
      * @return publish消息
      */
-    public static MqttPublishMessage createPublish(MqttMessageReplica replica, String realTopic) {
+    public static MqttPublishMessage createPublish(MqttMessageReplica replica, String realTopic, String qos) {
         return MqttMessageHelper.createPublish(false,
-                MqttQoS.valueOf(replica.getQos()),
+                MqttQoS.valueOf(qos),
                 replica.getMessageId(),
                 realTopic,
                 PooledByteBufAllocator.DEFAULT.buffer().writeBytes(replica.getPayload()),
