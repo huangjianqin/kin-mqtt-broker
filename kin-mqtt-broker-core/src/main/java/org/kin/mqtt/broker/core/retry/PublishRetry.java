@@ -1,10 +1,15 @@
 package org.kin.mqtt.broker.core.retry;
 
+import io.netty.handler.codec.mqtt.MqttMessage;
+import io.netty.handler.codec.mqtt.MqttPublishMessage;
 import io.netty.util.Timeout;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import reactor.netty.ReactorNetty;
 
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.Consumer;
 
 /**
  * 针对qos=012的消息重试publish
@@ -24,36 +29,53 @@ public class PublishRetry implements Retry {
     private final int maxTimes;
     /** 重试间隔 */
     private final int period;
+    /** 重试发送的mqtt message */
+    private final MqttMessage message;
     /** 重试逻辑 */
-    private final Runnable retryTask;
-    /** 结束重试后操作, 异步 */
-    private final Runnable cleaner;
+    private final Consumer<MqttMessage> retryTask;
     /** 所属{@link RetryService} */
     private final RetryService retryService;
     /** 当前已重试次数 */
     private int curTimes;
     /** 是否已被取消 */
     private volatile boolean cancelled = false;
+    /** 是否已执行{@link #onClean()} */
+    private volatile AtomicBoolean cleaned = new AtomicBoolean();
 
-    public PublishRetry(long id, Runnable retryTask, Runnable cleaner, RetryService retryService) {
-        this(id, DEFAULT_MAX_RETRY_TIMES, DEFAULT_PERIOD, retryTask, cleaner, retryService);
+    public PublishRetry(long id, MqttMessage message, Consumer<MqttMessage> retryTask, RetryService retryService) {
+        this(id, DEFAULT_MAX_RETRY_TIMES, DEFAULT_PERIOD, message, retryTask, retryService);
     }
 
-    public PublishRetry(long id, int maxTimes, int period, Runnable retryTask, Runnable cleaner, RetryService retryService) {
+    public PublishRetry(long id, int maxTimes, int period, MqttMessage message, Consumer<MqttMessage> retryTask, RetryService retryService) {
         this.id = id;
         this.maxTimes = maxTimes;
         this.period = period;
+        this.message = message;
         this.retryTask = retryTask;
-        this.cleaner = cleaner;
         this.retryService = retryService;
     }
 
+    /**
+     * 获取要发送的mqtt消息
+     *
+     * @param mqttMessage mqtt消息
+     * @return 要发送的mqtt消息
+     */
+    public static MqttMessage getReplyMqttMessage(MqttMessage mqttMessage) {
+        if (mqttMessage instanceof MqttPublishMessage) {
+            return ((MqttPublishMessage) mqttMessage).copy();
+        } else {
+            return mqttMessage;
+        }
+    }
+
     @Override
-    public void run(Timeout timeout) throws Exception {
+    public void run(Timeout timeout){
         if (!cancelled && curTimes++ < maxTimes) {
             try {
                 log.debug("id={} retry publish", getId());
-                retryTask.run();
+                MqttMessage message = getReplyMqttMessage(this.message);
+                retryTask.accept(message);
                 retryService.execRetry(this);
             } catch (Exception e) {
                 log.error("", e);
@@ -71,9 +93,16 @@ public class PublishRetry implements Retry {
         onClean();
     }
 
+    /**
+     * 执行retry结束后的clean逻辑
+     */
     private void onClean() {
+        if (!cleaned.compareAndSet(false, true)) {
+            return;
+        }
+
         retryService.removeRetry(getId());
-        cleaner.run();
+        ReactorNetty.safeRelease(this.message);
     }
 
     @Override

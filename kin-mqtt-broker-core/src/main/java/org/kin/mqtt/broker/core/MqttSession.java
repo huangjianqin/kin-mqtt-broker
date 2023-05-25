@@ -1,7 +1,6 @@
 package org.kin.mqtt.broker.core;
 
 import com.google.common.util.concurrent.RateLimiter;
-import io.netty.buffer.ByteBufHolder;
 import io.netty.channel.Channel;
 import io.netty.handler.codec.mqtt.*;
 import io.netty.util.HashedWheelTimer;
@@ -34,6 +33,7 @@ import java.time.Duration;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
 /**
@@ -50,6 +50,8 @@ public class MqttSession {
 
     /** broker context */
     private final MqttBrokerContext brokerContext;
+    /** 重试发送的mqtt message task逻辑 */
+    private final Consumer<MqttMessage> retryMqttMessageTask = m -> sendMessage0(Mono.just(m)).subscribe();
     /** mqtt client connection */
     private Connection connection;
     /** mqtt channel hash code */
@@ -126,27 +128,12 @@ public class MqttSession {
 
         if (retry) {
             //待发送的mqtt消息
-            MqttMessage reply = getReplyMqttMessage(mqttMessage);
-
-            Runnable retryTask = () -> sendMessage0(Mono.just(reply)).subscribe();
-            Runnable cleaner = () -> {
-                //完全释放
-                if (reply instanceof ByteBufHolder) {
-                    ByteBufHolder holderReply = (ByteBufHolder) reply;
-                    try {
-                        while (holderReply.refCnt() > 0) {
-                            ReactorNetty.safeRelease(reply);
-                        }
-                    } catch (Exception e) {
-                        //do nothing
-                    }
-                }
-            };
+            MqttMessage retryMessage = PublishRetry.getReplyMqttMessage(mqttMessage);
 
             RetryService retryService = brokerContext.getRetryService();
             //开启retry task, 最大重试次数为5, 间隔3s
-            long uuid = genMqttMessageRetryId(mqttMessageType, MqttMessageHelper.getMessageId(mqttMessage));
-            retryService.execRetry(new PublishRetry(uuid, retryTask, cleaner, retryService));
+            long uuid = genMqttMessageRetryId(mqttMessageType, MqttMessageHelper.getMessageId(retryMessage));
+            retryService.execRetry(new PublishRetry(uuid, retryMessage, retryMqttMessageTask, retryService));
         }
 
         return sendMessage0(Mono.just(mqttMessage));
@@ -170,21 +157,6 @@ public class MqttSession {
         MqttMessage mqttMessage = inflightWindow.returnQuota();
         if (Objects.nonNull(mqttMessage)) {
             sendMessage(mqttMessage, mqttMessage.fixedHeader().qosLevel().value() > 0).subscribe();
-        }
-    }
-
-    /**
-     * 获取要发送的mqtt消息
-     *
-     * @param mqttMessage mqtt消息
-     * @return 要发送的mqtt消息
-     */
-    private MqttMessage getReplyMqttMessage(MqttMessage mqttMessage) {
-        if (mqttMessage instanceof MqttPublishMessage) {
-            // TODO: 2022/11/14
-            return ((MqttPublishMessage) mqttMessage).copy().retain(PublishRetry.DEFAULT_MAX_RETRY_TIMES);
-        } else {
-            return mqttMessage;
         }
     }
 
