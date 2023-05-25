@@ -35,10 +35,6 @@ public class KafkaBridge extends NoErrorBridge {
     private static Map<String, Object> getDefaultProps(String name, String bootstrapServers) {
         Map<String, Object> props = new HashMap<>();
         props.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
-        props.put(ProducerConfig.CLIENT_ID_CONFIG, name + "-kafka-producer");
-        props.put(ProducerConfig.ACKS_CONFIG, "all");
-        props.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class);
-        props.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, StringSerializer.class);
         return props;
     }
 
@@ -62,6 +58,11 @@ public class KafkaBridge extends NoErrorBridge {
 
     public KafkaBridge(String name, Map<String, Object> props) {
         super(name);
+        //overwrite
+        props.put(ProducerConfig.CLIENT_ID_CONFIG, name + "-kafka-producer");
+        props.put(ProducerConfig.ACKS_CONFIG, "all");
+        props.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class);
+        props.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, StringSerializer.class);
         sender = KafkaSender.create(SenderOptions.create(props));
     }
 
