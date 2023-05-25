@@ -430,6 +430,16 @@ public class StandaloneKvStore implements ClusterStore {
     }
 
     @Override
+    public void addCore(String nodeAddress) {
+        //do nothing
+    }
+
+    @Override
+    public void removeCore(String nodeAddress) {
+        //do nothing
+    }
+
+    @Override
     public Mono<Void> shutdown() {
         checkInit();
         return db.doOnNext(this::shutdown0)

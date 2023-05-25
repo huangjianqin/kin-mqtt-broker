@@ -43,16 +43,22 @@ public final class Cluster {
                 new StandaloneKvStore(this);
         this.brokerManager = this.cluster ? new GossipBrokerManager(this,
                 node -> {
+                    String storeAddress = node.getStoreAddress();
                     if (node.isCore()) {
-                        return;
+                        clusterStore.addCore(storeAddress);
                     }
-                    clusterStore.addReplicator(node.getStoreAddress());
+                    else{
+                        clusterStore.addReplicator(storeAddress);
+                    }
                 },
                 node -> {
+                    String storeAddress = node.getStoreAddress();
                     if (node.isCore()) {
-                        return;
+                        clusterStore.removeCore(storeAddress);
                     }
-                    clusterStore.removeReplicator(node.getStoreAddress());
+                    else{
+                        clusterStore.removeReplicator(storeAddress);
+                    }
                 }) :
                 StandaloneBrokerManager.INSTANCE;
         this.sessionStore = new DefaultMqttSessionStore(this.clusterStore);

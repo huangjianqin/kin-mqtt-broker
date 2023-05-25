@@ -92,10 +92,13 @@ public class RaftKvStore implements ClusterStore {
                     onReady();
 
                     for (MqttBrokerNode node : cluster.getBrokerManager().getClusterBrokerNodes()) {
+                        String storeAddress = node.getStoreAddress();
                         if (node.isCore()) {
-                            continue;
+                            addCore(storeAddress);
                         }
-                        addReplicator(node.getStoreAddress());
+                        else{
+                            addReplicator(storeAddress);
+                        }
                     }
                 }
 
@@ -485,7 +488,7 @@ public class RaftKvStore implements ClusterStore {
         }
 
         long regionId = regionEngine.getRegion().getId();
-        log.info("raft kv store region-{} ready to add learner '{}'", regionId, nodeAddress);
+        log.info("raft kv store region-{} ready to add replicator node '{}'", regionId, nodeAddress);
 
         PeerId newLearnerPeerId = PeerId.parsePeer(nodeAddress);
         boolean learnerExists = false;
@@ -499,7 +502,7 @@ public class RaftKvStore implements ClusterStore {
         }
 
         if (learnerExists) {
-            log.info("raft kv store region-{} learner '{}' exists", regionId, nodeAddress);
+            log.info("raft kv store region-{} replicator node '{}' exists", regionId, nodeAddress);
         } else {
             node.addLearners(Collections.singletonList(newLearnerPeerId), status -> {
                 if (!status.isOk()) {
@@ -509,7 +512,7 @@ public class RaftKvStore implements ClusterStore {
                             .subscribe(t -> addReplicator(nodeAddress, regionEngine));
                     return;
                 }
-                log.info("raft kv store region-{} add learner '{}' result: {}", regionId, nodeAddress, status);
+                log.info("raft kv store region-{} add replicator node '{}' result: {}", regionId, nodeAddress, status);
             });
         }
     }
@@ -543,7 +546,7 @@ public class RaftKvStore implements ClusterStore {
         }
 
         long regionId = regionEngine.getRegion().getId();
-        log.info("raft kv store region-{} ready to remove learner '{}'", regionId, nodeAddress);
+        log.info("raft kv store region-{} ready to remove replicator node '{}'", regionId, nodeAddress);
 
         PeerId targetLearnerPeerId = PeerId.parsePeer(nodeAddress);
         boolean learnerExists = false;
@@ -565,10 +568,126 @@ public class RaftKvStore implements ClusterStore {
                             .subscribe(t -> removeReplicator(nodeAddress, regionEngine));
                     return;
                 }
-                log.info("raft kv store region-{} remove learner '{}' result: {}", regionId, nodeAddress, status);
+                log.info("raft kv store region-{} remove replicator node '{}' result: {}", regionId, nodeAddress, status);
             });
         } else {
-            log.info("raft kv store region-{} learner '{}' not exists", regionId, nodeAddress);
+            log.info("raft kv store region-{} replicator node '{}' not exists", regionId, nodeAddress);
+        }
+    }
+
+    @Override
+    public void addCore(String nodeAddress) {
+        checkInit();
+        kvStore.doOnNext(s -> {
+                    for (RegionEngine regionEngine : s.getStoreEngine().getAllRegionEngines()) {
+                        addCore(nodeAddress, regionEngine);
+                    }
+                })
+                .subscribe();
+    }
+
+    /**
+     * 添加core
+     *
+     * @param nodeAddress  core node address
+     * @param regionEngine kv store region engine
+     */
+    private void addCore(String nodeAddress, RegionEngine regionEngine) {
+        if (regionEngine == null) {
+            return;
+        }
+
+        Node node = regionEngine.getNode();
+
+        if (!node.isLeader()) {
+            return;
+        }
+
+        long regionId = regionEngine.getRegion().getId();
+        log.info("raft kv store region-{} ready to add core node '{}'", regionId, nodeAddress);
+
+        PeerId newPeerId = PeerId.parsePeer(nodeAddress);
+        boolean exists = false;
+        for (PeerId peerId : node.listPeers()) {
+            if (!peerId.equals(newPeerId)) {
+                continue;
+            }
+
+            exists = true;
+            break;
+        }
+
+        if (exists) {
+            log.info("raft kv store region-{} core node '{}' exists", regionId, nodeAddress);
+        } else {
+            node.addPeer(newPeerId, status -> {
+                if (!status.isOk()) {
+                    // TODO: 2023/5/19 确认延迟时间
+                    Mono.delay(Duration.ofMillis(1000))
+                            .subscribeOn(brokerContext.getMqttBizScheduler())
+                            .subscribe(t -> addCore(nodeAddress, regionEngine));
+                    return;
+                }
+                log.info("raft kv store region-{} add core node '{}' result: {}", regionId, nodeAddress, status);
+            });
+        }
+    }
+
+    @Override
+    public void removeCore(String nodeAddress) {
+        checkInit();
+        kvStore.doOnNext(s -> {
+                    for (RegionEngine regionEngine : s.getStoreEngine().getAllRegionEngines()) {
+                        removeCore(nodeAddress, regionEngine);
+                    }
+                })
+                .subscribe();
+    }
+
+    /**
+     * 移除core
+     *
+     * @param nodeAddress  core node address
+     * @param regionEngine kv store region engine
+     */
+    private void removeCore(String nodeAddress, RegionEngine regionEngine) {
+        if (regionEngine == null) {
+            return;
+        }
+
+        Node node = regionEngine.getNode();
+
+        if (!node.isLeader()) {
+            return;
+        }
+
+        long regionId = regionEngine.getRegion().getId();
+        log.info("raft kv store region-{} ready to remove core node '{}'", regionId, nodeAddress);
+
+        PeerId targetPeerId = PeerId.parsePeer(nodeAddress);
+        boolean exists = false;
+        for (PeerId peerId : node.listPeers()) {
+            if (!peerId.equals(targetPeerId)) {
+                continue;
+            }
+
+            exists = true;
+            break;
+        }
+
+        if (exists) {
+            node.removePeer(targetPeerId, status -> {
+                if (!status.isOk()) {
+                    // TODO: 2023/5/19 确认延迟时间
+                    Mono.delay(Duration.ofMillis(1000))
+                            .subscribeOn(brokerContext.getMqttBizScheduler())
+                            .subscribe(t -> removeCore(nodeAddress, regionEngine));
+                    return;
+                }
+                log.info("raft kv store region-{} remove core node '{}' result: {}", regionId, nodeAddress, status);
+            });
+        } else {
+            log.info("raft kv store region-{} core node '{}' not exists", regionId, nodeAddress);
         }
     }
 

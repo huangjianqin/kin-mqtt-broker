@@ -131,6 +131,20 @@ public interface ClusterStore {
     void removeReplicator(String nodeAddress);
 
     /**
+     * 添加core
+     *
+     * @param nodeAddress core node address
+     */
+    void addCore(String nodeAddress);
+
+    /**
+     * 移除core
+     *
+     * @param nodeAddress core node address
+     */
+    void removeCore(String nodeAddress);
+
+    /**
      * shutdown
      */
     Mono<Void> shutdown();
