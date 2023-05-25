@@ -27,7 +27,7 @@ public class RabbitMQBridge extends NoErrorBridge {
     private final Sender sender;
 
     public RabbitMQBridge(SenderOptions senderOptions) {
-        this(DEFAULT_NAME, senderOptions);
+        this(BridgeType.RABBITMQ.getDefaultName(), senderOptions);
     }
 
     public RabbitMQBridge(String name, SenderOptions senderOptions) {

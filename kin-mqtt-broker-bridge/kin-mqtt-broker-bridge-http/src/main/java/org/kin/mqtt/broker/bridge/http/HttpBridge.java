@@ -23,6 +23,10 @@ public class HttpBridge extends NoErrorBridge {
     /** reactor http client */
     private final HttpClient httpClient;
 
+    public HttpBridge() {
+        this(BridgeType.HTTP.getDefaultName());
+    }
+
     public HttpBridge(String name) {
         super(name);
         // TODO: 2023/3/30 设置http client

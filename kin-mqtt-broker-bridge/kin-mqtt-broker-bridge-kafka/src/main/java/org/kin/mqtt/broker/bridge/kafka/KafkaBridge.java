@@ -49,11 +49,11 @@ public class KafkaBridge extends NoErrorBridge {
     }
 
     public KafkaBridge(String bootstrapServers) {
-        this(DEFAULT_NAME, bootstrapServers);
+        this(BridgeType.KAFKA.getDefaultName(), bootstrapServers);
     }
 
     public KafkaBridge(Map<String, Object> props) {
-        this(DEFAULT_NAME, props);
+        this(BridgeType.KAFKA.getDefaultName(), props);
     }
 
     public KafkaBridge(String name, String bootstrapServers) {

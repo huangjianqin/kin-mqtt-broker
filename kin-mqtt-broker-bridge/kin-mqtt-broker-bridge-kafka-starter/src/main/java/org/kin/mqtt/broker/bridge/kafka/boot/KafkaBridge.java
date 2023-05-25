@@ -24,7 +24,7 @@ public class KafkaBridge extends NoErrorBridge {
     private final ReactiveKafkaProducerTemplate<String, String> sender;
 
     public KafkaBridge(ReactiveKafkaProducerTemplate<String, String> sender) {
-        this.sender = sender;
+        this(BridgeType.KAFKA.getDefaultName(), sender);
     }
 
     public KafkaBridge(String name, ReactiveKafkaProducerTemplate<String, String> sender) {

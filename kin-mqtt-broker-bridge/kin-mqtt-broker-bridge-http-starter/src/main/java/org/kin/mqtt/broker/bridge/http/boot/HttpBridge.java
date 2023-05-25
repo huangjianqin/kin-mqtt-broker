@@ -25,7 +25,7 @@ public class HttpBridge extends NoErrorBridge {
     }
 
     public HttpBridge(WebClient webClient) {
-        this(DEFAULT_NAME, webClient);
+        this(BridgeType.HTTP.getDefaultName(), webClient);
     }
 
     public HttpBridge(String name) {

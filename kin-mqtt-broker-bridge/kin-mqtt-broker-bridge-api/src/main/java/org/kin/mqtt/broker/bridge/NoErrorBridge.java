@@ -11,9 +11,6 @@ import reactor.core.publisher.Mono;
  * @date 2022/11/22
  */
 public abstract class NoErrorBridge extends NamedBridge implements LoggerOprs {
-    protected NoErrorBridge() {
-    }
-
     protected NoErrorBridge(String name) {
         super(name);
     }

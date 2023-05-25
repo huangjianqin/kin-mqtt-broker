@@ -11,8 +11,6 @@ import reactor.core.publisher.Mono;
  * @date 2022/11/21
  */
 public interface Bridge extends Closeable {
-    /** 默认Bridge name */
-    String DEFAULT_NAME = "default";
 
     /**
      * 传输数据
@@ -33,9 +31,7 @@ public interface Bridge extends Closeable {
      * 数据桥接名字
      * @return Bridge name, Bridge唯一标识
      */
-    default String name() {
-        return DEFAULT_NAME;
-    }
+    String name();
 
     @Override
     default void close() {

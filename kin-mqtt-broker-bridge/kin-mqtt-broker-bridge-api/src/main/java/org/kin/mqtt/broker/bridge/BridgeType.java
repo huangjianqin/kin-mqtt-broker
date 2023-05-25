@@ -8,14 +8,20 @@ package org.kin.mqtt.broker.bridge;
  */
 public enum BridgeType {
     /** http 传输 */
-    HTTP,
+    HTTP("default_http_bridge"),
     /** 传输到kafka topic */
-    KAFKA,
-    /** 传输到rabbitmq topic */
-    RABBITMQ,
+    KAFKA("default_kafka_bridge"),
+    /** 传输到rabbitmq queue */
+    RABBITMQ("default_rabbitmq_bridge"),
     ;
 
     public static BridgeType[] VALUES = values();
+
+    private String defaultName;
+
+    BridgeType(String defaultName) {
+        this.defaultName = defaultName;
+    }
 
     /**
      * 获取数据桥接类型名字获取{@link  BridgeType}枚举
@@ -31,5 +37,9 @@ public enum BridgeType {
         }
 
         throw new IllegalArgumentException(String.format("can not find bridge type for name '%s'", name));
+    }
+
+    public String getDefaultName() {
+        return defaultName;
     }
 }

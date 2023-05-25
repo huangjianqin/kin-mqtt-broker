@@ -8,10 +8,6 @@ public abstract class NamedBridge implements Bridge {
     /** bridge name */
     private final String name;
 
-    public NamedBridge() {
-        this(DEFAULT_NAME);
-    }
-
     public NamedBridge(String name) {
         this.name = name;
     }

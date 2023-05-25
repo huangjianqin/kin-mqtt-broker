@@ -1,6 +1,6 @@
 package org.kin.mqtt.broker.example;
 
-import org.kin.mqtt.broker.bridge.Bridge;
+import org.kin.mqtt.broker.bridge.BridgeType;
 import org.kin.mqtt.broker.core.MqttBroker;
 import org.kin.mqtt.broker.rule.RuleDefinition;
 import org.kin.mqtt.broker.rule.action.bridge.definition.HttpBridgeActionDefinition;
@@ -25,7 +25,7 @@ public class HttpActionRuleRegister implements ApplicationRunner {
                 .desc("message from '" + topic + "' transmit to web")
                 .sql("select * from `" + topic + "`")
                 .actionDefs(HttpBridgeActionDefinition.builder()
-                        .bridgeName(Bridge.DEFAULT_NAME)
+                        .bridgeName(BridgeType.HTTP.getDefaultName())
                         .uri("localhost:10000/mqtt/receive")
                         .build())
                 .build();
