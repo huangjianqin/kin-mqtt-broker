@@ -68,10 +68,7 @@ public final class Cluster {
      * 初始化集群环境
      */
     public Mono<Void> init() {
-        //先初始化cluster store
-        return clusterStore.init()
-                //然后初始化mqtt broker manager
-                .then(brokerManager.init())
+        return Mono.when(clusterStore.init(), brokerManager.init())
                 .then(Mono.fromRunnable(() -> {
                     //注册内部consumer
                     ReactorEventBus eventBus = brokerContext.getEventBus();

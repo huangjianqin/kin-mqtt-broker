@@ -134,8 +134,10 @@ public class RaftKvStore implements ClusterStore {
         }
 
         if (cluster.isCore()) {
+            log.info(getClass().getSimpleName() + " play core node");
             initCoreStore(kvStore, brokerConfig);
         } else {
+            log.info(getClass().getSimpleName() + " play replicator node");
             initReplicatorStore(kvStore, brokerConfig);
         }
 

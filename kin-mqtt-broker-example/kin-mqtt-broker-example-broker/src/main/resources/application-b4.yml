@@ -1,0 +1,55 @@
+org:
+  kin:
+    mqtt:
+      broker:
+        port: 1886
+        auth:
+          users:
+            java: '12345'
+        broker-id: B4
+        cluster:
+          host: localhost
+          seeds: 'localhost:5001:15001,localhost:5002:15002,localhost:5003:15003'
+          port: 5004
+          storePort: 15004
+        data-path: datas/b4
+        rules:
+          - name: http_route
+            desc: "message from `example` route to http"
+            sql: "select * from `example`"
+            actions:
+              - type: http_bridge
+                args:
+                  bridgeName: local_http_route
+                  uri: "localhost:10000/mqtt/receive"
+server:
+  port: 8004
+
+# management
+management:
+  server:
+    port: ${server.port}
+  endpoints:
+    web:
+      exposure:
+        include: "*"
+  metrics:
+    enable:
+      http: false
+    export:
+      prometheus:
+        enabled: true
+  trace:
+    http:
+      enabled: false
+
+spring:
+  netty:
+    leak-detection: paranoid
+
+logging:
+  level:
+    com:
+      alipay: WARN
+    io:
+      scalecube: WARN

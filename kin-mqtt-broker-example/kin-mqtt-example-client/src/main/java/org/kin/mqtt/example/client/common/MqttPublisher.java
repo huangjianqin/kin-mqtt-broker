@@ -76,6 +76,6 @@ public class MqttPublisher {
         //0 at most
         //1 at least
         //2 exactly
-        publisher.publish(Brokers.B1, Topics.EXAMPLE, "Sample Message", 2);
+        publisher.publish(Brokers.B1, Topics.EXAMPLE, "Sample Message for p1-", 2);
     }
 }
