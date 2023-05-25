@@ -15,6 +15,7 @@ import java.util.*;
 
 /**
  * action工具类
+ * 使用者自定义action实现时, 也要注册自定义action加载逻辑, 那么最后在yaml配上action type和对应action definition的参数即可加载和应用自定义action实现
  * @author huangjianqin
  * @date 2022/12/16
  */
@@ -62,7 +63,6 @@ public class Actions {
      * 注册{@link Action}实现
      * 通过{@link  ActionFactory}实现类泛型获取{@link ActionDefinition}实现类信息, 注意, 此处{@link  ActionFactory}实现类不能是匿名内部类和lambda
      * 自定义{@link Action}实现, 可通过该方法注册自定义{@link Action}构建逻辑
-     * TODO README
      *
      * @param factories {@link Action}实现构造逻辑
      */
