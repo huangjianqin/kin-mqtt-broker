@@ -38,7 +38,7 @@ public class HttpBridge extends NoErrorBridge {
     }
 
     @Override
-    public Mono<Void> transmit0(ContextAttrs attrs) {
+    protected Mono<Void> transmit0(ContextAttrs attrs) {
         String uri = attrs.removeAttr(BridgeAttrNames.HTTP_URI);
         Map<String, Object> oHeaders = attrs.removeAttr(BridgeAttrNames.HTTP_HEADERS);
 
