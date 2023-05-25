@@ -17,8 +17,8 @@ public class MqttBrokerConfig {
     private int wsPort;
     /** websocket握手地址 */
     private String wsPath = "/";
-    /** 最大消息大小, 默认4MB */
-    private int messageMaxSize = 4194304;
+    /** 最大消息大小, 默认8MB */
+    private int messageMaxSize = 8388608;
     /** 底层tcp连接是否启动ssl */
     private boolean ssl;
     /** 证书 */
