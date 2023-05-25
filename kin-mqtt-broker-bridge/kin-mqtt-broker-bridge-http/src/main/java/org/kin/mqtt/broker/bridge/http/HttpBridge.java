@@ -10,7 +10,9 @@ import org.kin.mqtt.broker.rule.ContextAttrs;
 import reactor.core.publisher.Mono;
 import reactor.netty.ByteBufFlux;
 import reactor.netty.http.client.HttpClient;
+import reactor.netty.resources.ConnectionProvider;
 
+import java.time.Duration;
 import java.util.Map;
 
 /**
@@ -29,8 +31,11 @@ public class HttpBridge extends NoErrorBridge {
 
     public HttpBridge(String name) {
         super(name);
-        // TODO: 2023/3/30 设置http client
-        this.httpClient = HttpClient.create();
+        this.httpClient = HttpClient.create(ConnectionProvider.create(BridgeType.HTTP.getDefaultName()))
+                .keepAlive(true)
+                .noProxy()
+                .followRedirect(false)
+                .compress(true);
     }
 
     @Override
@@ -39,11 +44,11 @@ public class HttpBridge extends NoErrorBridge {
         Map<String, Object> oHeaders = attrs.removeAttr(BridgeAttrNames.HTTP_HEADERS);
 
         return httpClient
-                .compress(true)
                 .headers(headers -> {
                     oHeaders.forEach(headers::set);
                     headers.set(HttpHeaderNames.CONTENT_TYPE, HttpHeaderValues.APPLICATION_JSON);
                 })
+                .responseTimeout(Duration.ofSeconds(5))
                 .post()
                 .uri(uri)
                 .send(ByteBufFlux.fromString(Mono.just(JSON.write(attrs))))
