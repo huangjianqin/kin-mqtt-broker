@@ -1,5 +1,6 @@
 package org.kin.mqtt.broker.bridge.rabbitmq;
 
+import com.rabbitmq.client.Connection;
 import com.rabbitmq.client.ConnectionFactory;
 import org.kin.framework.utils.JSON;
 import org.kin.framework.utils.StringUtils;
@@ -48,7 +49,9 @@ public class RabbitMQBridge extends NoErrorBridge {
         connectionFactory.useNio();
         connectionFactory.setAutomaticRecoveryEnabled(true);
         connectionFactory.setTopologyRecoveryEnabled(true);
-        connectionFactory.setNetworkRecoveryInterval(3000);
+        connectionFactory.setConnectionTimeout(180_000);
+        connectionFactory.setNetworkRecoveryInterval(5_000);
+        connectionFactory.setChannelRpcTimeout(3_000);
         connectionFactory.setHost(host);
         connectionFactory.setPort(port);
         if (StringUtils.isNotBlank(user)) {
@@ -57,8 +60,13 @@ public class RabbitMQBridge extends NoErrorBridge {
         if (StringUtils.isNotBlank(password)) {
             connectionFactory.setPassword(password);
         }
+
+        //共享connection
+        Mono<Connection> connectionMono = Mono.fromCallable(connectionFactory::newConnection);
+
         return new SenderOptions()
-                .connectionFactory(connectionFactory);
+                .connectionMono(connectionMono)
+                .channelPool(ChannelPoolFactory.createChannelPool(connectionMono));
     }
 
     @Override
