@@ -244,7 +244,6 @@ public class MqttSession {
                     }
                 }, expireTimeMs, TimeUnit.MILLISECONDS);
             }
-            messageContext.getMessage().retain();
             qos2MessageCache.put(messageId, new MqttQos2PubMessage(messageContext, expireTimeout));
         });
     }
