@@ -3,9 +3,11 @@ package org.kin.mqtt.broker.boot;
 import org.kin.framework.utils.JSON;
 import org.kin.mqtt.broker.Constants;
 import org.kin.mqtt.broker.core.MqttBrokerConfig;
+import org.kin.mqtt.broker.core.cluster.ClusterConfig;
 import org.kin.mqtt.broker.rule.action.ActionType;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
+import javax.annotation.PostConstruct;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -18,10 +20,30 @@ import java.util.stream.Collectors;
  */
 @ConfigurationProperties(Constants.COMMON_PROPERTIES_PREFIX)
 public class MqttBrokerProperties extends MqttBrokerConfig {
+    /**
+     * mqtt broker集群化配置
+     * 单独重新定义是为了兼容spring-boot-configuration-processor无法解析父类中static class和非基础类
+     */
+    private Cluster cluster = Cluster.DEFAULT;
     /** 规则链定义 */
     private List<RuleDefinition> rules;
 
+    @PostConstruct
+    public void init(){
+        setCluster(this.cluster);
+    }
+
     //setter && getter
+    @Override
+    public Cluster getCluster() {
+        return cluster;
+    }
+
+    public void setCluster(Cluster cluster) {
+        this.cluster = cluster;
+        super.setCluster(this.cluster);
+    }
+
     public List<RuleDefinition> getRules() {
         return rules;
     }
@@ -31,6 +53,11 @@ public class MqttBrokerProperties extends MqttBrokerConfig {
     }
 
     //----------------------------------------------------------------------------------------------------------------
+    public static class Cluster extends ClusterConfig {
+        /** 默认mqtt broker集群化配置 */
+        public static final Cluster DEFAULT = new Cluster();
+    }
+
     public static class RuleDefinition {
         /** 规则名 */
         private String name;
