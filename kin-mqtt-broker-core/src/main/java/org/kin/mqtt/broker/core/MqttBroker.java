@@ -1,6 +1,7 @@
 package org.kin.mqtt.broker.core;
 
 import org.kin.framework.Closeable;
+import org.kin.framework.JvmCloseCleaner;
 import reactor.core.Disposable;
 import reactor.core.publisher.Mono;
 import reactor.netty.DisposableServer;
@@ -39,6 +40,9 @@ public class MqttBroker implements Closeable {
                 }
             }).subscribe();
         }
+
+        //shutdown hook
+        JvmCloseCleaner.instance().add(this);
     }
 
     @Override
