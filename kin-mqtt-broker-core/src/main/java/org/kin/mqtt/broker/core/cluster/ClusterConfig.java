@@ -40,6 +40,13 @@ public class ClusterConfig {
     /** cluster store用到的cpu processor数量 */
     private int storeProcessors = SysUtils.CPU_NUM;
 
+    public static ClusterConfig create() {
+        return new ClusterConfig();
+    }
+
+    protected ClusterConfig() {
+    }
+
     /**
      * 判断是否开启集群模式
      * @return  true, 则是开启集群模式
@@ -113,10 +120,6 @@ public class ClusterConfig {
     }
 
     //----------------------------------------------------------------------------------------------------------------
-    public static ClusterConfig create() {
-        return new ClusterConfig();
-    }
-
     /**
      * 暴露host
      */
