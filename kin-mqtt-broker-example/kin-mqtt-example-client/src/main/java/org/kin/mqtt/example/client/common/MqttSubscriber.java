@@ -8,6 +8,7 @@ import org.eclipse.paho.mqttv5.client.persist.MemoryPersistence;
 import org.eclipse.paho.mqttv5.common.MqttException;
 import org.eclipse.paho.mqttv5.common.MqttSubscription;
 import org.kin.mqtt.broker.example.Brokers;
+import org.kin.mqtt.broker.example.Clients;
 import org.kin.mqtt.broker.example.Topics;
 
 import java.io.IOException;
@@ -82,7 +83,7 @@ public class MqttSubscriber {
     public static void main(String[] args) throws InterruptedException, IOException {
         CountDownLatch latch = new CountDownLatch(1);
 
-        MqttSubscriber subscriber = new MqttSubscriber("Subscriber");
+        MqttSubscriber subscriber = new MqttSubscriber(Clients.SUBSCRIBER);
 
         ForkJoinPool.commonPool().execute(() -> {
             try {

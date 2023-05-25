@@ -1,6 +1,7 @@
 package org.kin.mqtt.example.client.delay;
 
 import org.kin.mqtt.broker.example.Brokers;
+import org.kin.mqtt.broker.example.Clients;
 import org.kin.mqtt.broker.example.Topics;
 import org.kin.mqtt.example.client.common.MqttPublisher;
 
@@ -10,7 +11,7 @@ import org.kin.mqtt.example.client.common.MqttPublisher;
  */
 public class MqttDelayPublisher {
     public static void main(String[] args) {
-        MqttPublisher publisher = new MqttPublisher("DelayPublisher");
+        MqttPublisher publisher = new MqttPublisher(Clients.DELAY_PUBLISHER);
         //0 at most
         //1 at least
         //2 exactly

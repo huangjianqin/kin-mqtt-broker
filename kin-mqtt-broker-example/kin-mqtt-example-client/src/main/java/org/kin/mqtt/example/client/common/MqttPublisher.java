@@ -7,6 +7,7 @@ import org.eclipse.paho.mqttv5.client.persist.MemoryPersistence;
 import org.eclipse.paho.mqttv5.common.MqttException;
 import org.eclipse.paho.mqttv5.common.MqttMessage;
 import org.kin.mqtt.broker.example.Brokers;
+import org.kin.mqtt.broker.example.Clients;
 import org.kin.mqtt.broker.example.Topics;
 
 import java.nio.charset.StandardCharsets;
@@ -72,10 +73,10 @@ public class MqttPublisher {
     }
 
     public static void main(String[] args) {
-        MqttPublisher publisher = new MqttPublisher("Publisher");
+        MqttPublisher publisher = new MqttPublisher(Clients.PUBLISHER);
         //0 at most
         //1 at least
         //2 exactly
-        publisher.publish(Brokers.B1, Topics.EXAMPLE, "Sample Message for p1-", 2);
+        publisher.publish(Brokers.B1, Topics.EXAMPLE, "Sample Message for B1-", 2);
     }
 }

@@ -1,6 +1,7 @@
 package org.kin.mqtt.example.client.common;
 
 import org.kin.mqtt.broker.example.Brokers;
+import org.kin.mqtt.broker.example.Clients;
 import org.kin.mqtt.broker.example.Topics;
 
 /**
@@ -9,10 +10,10 @@ import org.kin.mqtt.broker.example.Topics;
  */
 public class MqttPublisher2 {
     public static void main(String[] args) {
-        MqttPublisher publisher = new MqttPublisher("Publisher2");
+        MqttPublisher publisher = new MqttPublisher(Clients.PUBLISHER);
         //0 at most
         //1 at least
         //2 exactly
-        publisher.publish(Brokers.B2, Topics.EXAMPLE, "Sample Message for p2-", 2);
+        publisher.publish(Brokers.B2, Topics.EXAMPLE, "Sample Message for B2-", 2);
     }
 }

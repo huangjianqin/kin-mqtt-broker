@@ -1,6 +1,7 @@
-package org.kin.mqtt.example.client.share;
+package org.kin.mqtt.example.client.sharetopic;
 
 import org.kin.mqtt.broker.example.Brokers;
+import org.kin.mqtt.broker.example.Clients;
 import org.kin.mqtt.broker.example.Topics;
 import org.kin.mqtt.example.client.common.MqttSubscriber;
 
@@ -10,17 +11,17 @@ import java.util.concurrent.ForkJoinPool;
 
 /**
  * @author huangjianqin
- * @date 2022/12/31
+ * @date 2022/12/22
  */
-public class MqttShareSubscriber2 {
+public class MqttShareTopicSubscriber1 {
     public static void main(String[] args) throws InterruptedException, IOException {
         CountDownLatch latch = new CountDownLatch(1);
-        MqttSubscriber subscriber = new MqttSubscriber("ShareSubscriber2");
+        MqttSubscriber subscriber = new MqttSubscriber(Clients.SHARE_TOPIC_SUBSCRIBER);
         String topic = "$share/g1/" + Topics.EXAMPLE;
 
         ForkJoinPool.commonPool().execute(() -> {
             try {
-                subscriber.subscribe(Brokers.B2, topic, latch);
+                subscriber.subscribe(Brokers.B1, topic, latch);
             } catch (InterruptedException e) {
                 throw new RuntimeException(e);
             }

@@ -28,8 +28,19 @@ public class MqttBrokerApplication {
     }
 
     @Bean
-    public ApplicationRunner sendMqttMessageLoop(@Autowired MqttBroker mqttBroker,
+    public ApplicationRunner sendMqttMessageLoop1(@Autowired MqttBroker mqttBroker,
                                                  @Autowired MqttMessageSender mqttMessageSender) {
+        return sendMqttMessageLoop(Clients.SUBSCRIBER, mqttBroker, mqttMessageSender);
+    }
+
+    @Bean
+    public ApplicationRunner sendMqttMessageLoop2(@Autowired MqttBroker mqttBroker,
+                                                 @Autowired MqttMessageSender mqttMessageSender) {
+        return sendMqttMessageLoop(Clients.SHARE_SESSION_SUBSCRIBER, mqttBroker, mqttMessageSender);
+    }
+
+
+    private ApplicationRunner sendMqttMessageLoop(String targetClientId, MqttBroker mqttBroker, MqttMessageSender mqttMessageSender) {
         return args -> ForkJoinPool.commonPool().execute(() -> {
             int messageId = 1;
             while (true) {
@@ -44,7 +55,7 @@ public class MqttBrokerApplication {
                 ByteBuf byteBuf = Unpooled.buffer(bytes.length);
                 byteBuf.writeBytes(bytes);
 
-                mqttMessageSender.sendMessage("Subscriber", Topics.BROKER_LOOP, MqttQoS.AT_LEAST_ONCE, byteBuf)
+                mqttMessageSender.sendMessage(targetClientId, Topics.BROKER_LOOP, MqttQoS.AT_LEAST_ONCE, byteBuf)
                         .subscribe();
             }
         });

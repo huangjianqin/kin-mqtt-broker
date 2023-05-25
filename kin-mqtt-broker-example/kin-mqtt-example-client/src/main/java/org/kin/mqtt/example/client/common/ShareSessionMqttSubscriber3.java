@@ -19,20 +19,20 @@ import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.TimeUnit;
 
 /**
- * 自动断开broker连接, 然后重新连接该broker的subscriber
+ * 跨broker节点共享session的subscriber
  *
  * @author huangjianqin
- * @date 2022/12/22
+ * @date 2023/4/22
  */
-public class AutoReconnectMqttSubscriber {
+public class ShareSessionMqttSubscriber3 {
     public static void main(String[] args) throws InterruptedException, IOException {
         CountDownLatch latch = new CountDownLatch(1);
 
-        MqttSubscriber subscriber = new MqttSubscriber(Clients.AUTO_RECONNECT_SUBSCRIBER);
+        MqttSubscriber subscriber = new MqttSubscriber(Clients.SHARE_SESSION_SUBSCRIBER);
 
         ForkJoinPool.commonPool().execute(() -> {
             try {
-                subscriber.subscribe(Brokers.B1, Topics.EXAMPLE, latch);
+                subscriber.subscribe(Brokers.B3, Topics.EXAMPLE, latch);
             } catch (InterruptedException e) {
                 throw new RuntimeException(e);
             }
@@ -60,20 +60,6 @@ public class AutoReconnectMqttSubscriber {
             MqttClient client = null;
             try {
                 client = init(null, broker, topic);
-
-                //5s秒后断开, 模拟断线
-                //要保证client已经注册订阅listener后断线重连, 不然会有异常
-                //比如, session有效, 但重启subscriber进程, 即全新mqtt client, 没有任何已注册的订阅listener, 那么client会拒绝处理任何publish message
-                Thread.sleep(5_000);
-                client.disconnect();
-                System.out.println(broker + " disconnected");
-                System.out.println("--------------------------------------------------------------------------");
-
-                //1秒后重连
-                Thread.sleep(1_000);
-                //模拟等待session过期
-//            Thread.sleep(3_000);
-                client = init(client, broker, topic);
 
                 latch.await();
 
@@ -107,10 +93,13 @@ public class AutoReconnectMqttSubscriber {
                 }
                 MqttConnectionOptions connOpts = new MqttConnectionOptions();
                 connOpts.setCleanStart(false);
-                //设置session有效期为5min
-                connOpts.setSessionExpiryInterval(TimeUnit.MINUTES.toSeconds(5));
+                //设置session有效期为1min
+                connOpts.setSessionExpiryInterval(TimeUnit.MINUTES.toSeconds(1));
                 connOpts.setUserName("java");
                 connOpts.setPassword("12345".getBytes(StandardCharsets.UTF_8));
+                //设置3个broker, 断连后重连
+                connOpts.setAutomaticReconnect(true);
+                connOpts.setServerURIs(Brokers.ALL);
                 System.out.println("connecting to broker: " + broker);
                 IMqttToken connAck = client.connectWithResult(connOpts);
                 System.out.println(broker + " connected ");

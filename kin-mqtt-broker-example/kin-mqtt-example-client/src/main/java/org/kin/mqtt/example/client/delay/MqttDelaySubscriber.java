@@ -1,6 +1,7 @@
 package org.kin.mqtt.example.client.delay;
 
 import org.kin.mqtt.broker.example.Brokers;
+import org.kin.mqtt.broker.example.Clients;
 import org.kin.mqtt.broker.example.Topics;
 import org.kin.mqtt.example.client.common.MqttSubscriber;
 
@@ -15,7 +16,7 @@ import java.util.concurrent.ForkJoinPool;
 public class MqttDelaySubscriber {
     public static void main(String[] args) throws InterruptedException, IOException {
         CountDownLatch latch = new CountDownLatch(1);
-        MqttSubscriber subscriber = new MqttSubscriber("DelaySubscriber");
+        MqttSubscriber subscriber = new MqttSubscriber(Clients.DELAY_SUBSCRIBER);
 
         ForkJoinPool.commonPool().execute(() -> {
             try {
