@@ -21,7 +21,7 @@ org:
               - type: http_bridge
                 args:
                   bridgeName: local_http_route
-                  uri: "localhost:10000/mqtt/receive"
+                  uri: "localhost:13000/mqtt/receive"
 server:
   port: 8003
 

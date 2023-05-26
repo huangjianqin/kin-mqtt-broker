@@ -21,19 +21,7 @@
 
         <dependency>
             <groupId>org.kin</groupId>
-            <artifactId>kin-mqtt-broker-bridge-http-starter</artifactId>
-            <version>${project.version}</version>
-        </dependency>
-
-        <dependency>
-            <groupId>org.kin</groupId>
             <artifactId>kin-mqtt-broker-bridge-kafka</artifactId>
-            <version>${project.version}</version>
-        </dependency>
-
-        <dependency>
-            <groupId>org.kin</groupId>
-            <artifactId>kin-mqtt-broker-bridge-kafka-starter</artifactId>
             <version>${project.version}</version>
         </dependency>
 

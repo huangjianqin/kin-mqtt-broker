@@ -6,6 +6,7 @@ import org.kin.framework.utils.JSON;
 import org.kin.framework.utils.StringUtils;
 import org.kin.mqtt.broker.bridge.BridgeAttrNames;
 import org.kin.mqtt.broker.bridge.NoErrorBridge;
+import org.kin.mqtt.broker.bridge.definition.RabbitMQBridgeDefinition;
 import org.kin.mqtt.broker.rule.ContextAttrs;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -31,6 +32,11 @@ public class RabbitMQBridge extends NoErrorBridge {
         sender = RabbitFlux.createSender(senderOptions);
     }
 
+    public RabbitMQBridge(RabbitMQBridgeDefinition definition) {
+        super(definition.getName());
+        sender = RabbitFlux.createSender(toSenderOptions(definition));
+    }
+
     public static SenderOptions getDefaultSenderOptions(int port) {
         return getDefaultSenderOptions("localhost", port, null, null);
     }
@@ -40,20 +46,29 @@ public class RabbitMQBridge extends NoErrorBridge {
     }
 
     public static SenderOptions getDefaultSenderOptions(String host, int port, String user, String password) {
+        return toSenderOptions(RabbitMQBridgeDefinition.builder()
+                .host(host)
+                .port(port)
+                .userName(user)
+                .password(password)
+                .build());
+    }
+
+    private static SenderOptions toSenderOptions(RabbitMQBridgeDefinition definition) {
         ConnectionFactory connectionFactory = new ConnectionFactory();
         connectionFactory.useNio();
         connectionFactory.setAutomaticRecoveryEnabled(true);
         connectionFactory.setTopologyRecoveryEnabled(true);
-        connectionFactory.setConnectionTimeout(180_000);
-        connectionFactory.setNetworkRecoveryInterval(5_000);
-        connectionFactory.setChannelRpcTimeout(3_000);
-        connectionFactory.setHost(host);
-        connectionFactory.setPort(port);
-        if (StringUtils.isNotBlank(user)) {
-            connectionFactory.setUsername(user);
+        connectionFactory.setConnectionTimeout(definition.getConnectionTimeout());
+        connectionFactory.setNetworkRecoveryInterval(definition.getReconnectInterval());
+        connectionFactory.setChannelRpcTimeout(definition.getRpcTimeout());
+        connectionFactory.setHost(definition.getHost());
+        connectionFactory.setPort(definition.getPort());
+        if (StringUtils.isNotBlank(definition.getUserName())) {
+            connectionFactory.setUsername(definition.getUserName());
         }
-        if (StringUtils.isNotBlank(password)) {
-            connectionFactory.setPassword(password);
+        if (StringUtils.isNotBlank(definition.getPassword())) {
+            connectionFactory.setPassword(definition.getPassword());
         }
 
         //共享connection
@@ -61,7 +76,7 @@ public class RabbitMQBridge extends NoErrorBridge {
 
         return new SenderOptions()
                 .connectionMono(connectionMono)
-                .channelPool(ChannelPoolFactory.createChannelPool(connectionMono));
+                .channelPool(ChannelPoolFactory.createChannelPool(connectionMono, new ChannelPoolOptions().maxCacheSize(definition.getPoolSize())));
     }
 
     @Override

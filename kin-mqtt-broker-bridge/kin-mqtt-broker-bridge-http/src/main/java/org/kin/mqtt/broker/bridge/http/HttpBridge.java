@@ -5,6 +5,7 @@ import io.netty.handler.codec.http.HttpHeaderValues;
 import org.kin.framework.utils.JSON;
 import org.kin.mqtt.broker.bridge.BridgeAttrNames;
 import org.kin.mqtt.broker.bridge.NoErrorBridge;
+import org.kin.mqtt.broker.bridge.definition.HttpBridgeDefinition;
 import org.kin.mqtt.broker.rule.ContextAttrs;
 import reactor.core.publisher.Mono;
 import reactor.netty.ByteBufFlux;
@@ -12,6 +13,7 @@ import reactor.netty.http.client.HttpClient;
 import reactor.netty.resources.ConnectionProvider;
 
 import java.time.Duration;
+import java.util.Collections;
 import java.util.Map;
 
 /**
@@ -25,12 +27,21 @@ public class HttpBridge extends NoErrorBridge {
     private final HttpClient httpClient;
 
     public HttpBridge(String name) {
+        this(name, Collections.emptyMap());
+    }
+
+    public HttpBridge(String name, Map<String, String> cHeaders) {
         super(name);
         this.httpClient = HttpClient.create(ConnectionProvider.create(name))
                 .keepAlive(true)
                 .noProxy()
                 .followRedirect(false)
-                .compress(true);
+                .compress(true)
+                .headers(headers -> cHeaders.forEach(headers::set));
+    }
+
+    public HttpBridge(HttpBridgeDefinition definition){
+        this(definition.getName(), definition.getHeaders());
     }
 
     @Override

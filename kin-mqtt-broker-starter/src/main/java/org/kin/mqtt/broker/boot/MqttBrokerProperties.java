@@ -2,16 +2,14 @@ package org.kin.mqtt.broker.boot;
 
 import org.kin.framework.utils.JSON;
 import org.kin.mqtt.broker.Constants;
+import org.kin.mqtt.broker.bridge.Bridges;
 import org.kin.mqtt.broker.core.MqttBrokerConfig;
 import org.kin.mqtt.broker.core.cluster.ClusterConfig;
 import org.kin.mqtt.broker.rule.action.Actions;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
 import javax.annotation.PostConstruct;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 
 /**
@@ -26,10 +24,12 @@ public class MqttBrokerProperties extends MqttBrokerConfig {
      */
     private Cluster cluster = Cluster.DEFAULT;
     /** 规则链定义 */
-    private List<RuleDefinition> rules;
+    private List<RuleDefinition> rules = Collections.emptyList();
+    /** 桥接定义 */
+    private List<BridgeDefinition> bridges = Collections.emptyList();
 
     @PostConstruct
-    public void init(){
+    public void init() {
         setCluster(this.cluster);
     }
 
@@ -50,6 +50,14 @@ public class MqttBrokerProperties extends MqttBrokerConfig {
 
     public void setRules(List<RuleDefinition> rules) {
         this.rules = rules;
+    }
+
+    public List<BridgeDefinition> getBridges() {
+        return bridges;
+    }
+
+    public void setBridges(List<BridgeDefinition> bridges) {
+        this.bridges = bridges;
     }
 
     //----------------------------------------------------------------------------------------------------------------
@@ -114,7 +122,7 @@ public class MqttBrokerProperties extends MqttBrokerConfig {
 
     public static class ActionDefinition {
         private String type;
-        private Map<String, String> args = new LinkedHashMap<>();
+        private Map<String, Object> args = new LinkedHashMap<>();
 
         /** 转换成{@link  org.kin.mqtt.broker.rule.action.ActionDefinition}实例 */
         public org.kin.mqtt.broker.rule.action.ActionDefinition toActionDefinition() {
@@ -130,11 +138,38 @@ public class MqttBrokerProperties extends MqttBrokerConfig {
             this.type = type;
         }
 
-        public Map<String, String> getArgs() {
+        public Map<String, Object> getArgs() {
             return args;
         }
 
-        public void setArgs(Map<String, String> args) {
+        public void setArgs(Map<String, Object> args) {
+            this.args = args;
+        }
+    }
+
+    public static class BridgeDefinition {
+        private String type;
+        private Map<String, Object> args = new LinkedHashMap<>();
+
+        /** 转换成{@link  org.kin.mqtt.broker.bridge.definition.BridgeDefinition}实例 */
+        public org.kin.mqtt.broker.bridge.definition.BridgeDefinition toBridgeDefinition() {
+            return JSON.convert(args, Bridges.getDefinitionClassByName(type));
+        }
+
+        //setter && getter
+        public String getType() {
+            return type;
+        }
+
+        public void setType(String type) {
+            this.type = type;
+        }
+
+        public Map<String, Object> getArgs() {
+            return args;
+        }
+
+        public void setArgs(Map<String, Object> args) {
             this.args = args;
         }
     }

@@ -9,7 +9,6 @@ import org.kin.mqtt.broker.core.MqttBroker;
 import org.kin.mqtt.broker.core.MqttBrokerBootstrap;
 import org.kin.mqtt.broker.core.MqttMessageSender;
 import org.kin.mqtt.broker.core.event.MqttEventConsumer;
-import org.kin.mqtt.broker.rule.RuleDefinition;
 import org.kin.mqtt.broker.store.MqttMessageStore;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
@@ -55,14 +54,7 @@ public class MqttBrokerAutoConfiguration {
             bootstrap.messageStore(messageStore);
         }
 
-        List<RuleDefinition> ruleDefinitions = getRuleDefinitions();
-        if(CollectionUtils.isNonEmpty(ruleDefinitions)){
-            //先检查一遍
-            for (RuleDefinition definition : ruleDefinitions) {
-                definition.check();
-            }
-            bootstrap.rules(ruleDefinitions);
-        }
+        bootstrap.rules(getRuleDefinitions());
 
         if (CollectionUtils.isNonEmpty(bridges)) {
             bootstrap.bridges(bridges);
@@ -78,6 +70,11 @@ public class MqttBrokerAutoConfiguration {
             bootstrap.eventConsumers(consumers);
         }
 
+        bootstrap.bridges(mqttBrokerProperties.getBridges()
+                .stream()
+                .map(MqttBrokerProperties.BridgeDefinition::toBridgeDefinition)
+                .collect(Collectors.toList()));
+
         return bootstrap.start();
     }
 
@@ -88,10 +85,5 @@ public class MqttBrokerAutoConfiguration {
     @Bean
     public MqttMessageSender mqttMessageSender(@Autowired MqttBroker mqttBroker) {
         return mqttBroker.getMqttMessageSender();
-    }
-
-    @Bean
-    public ActionFactoryRegister actionFactoryRegister() {
-        return new ActionFactoryRegister();
     }
 }

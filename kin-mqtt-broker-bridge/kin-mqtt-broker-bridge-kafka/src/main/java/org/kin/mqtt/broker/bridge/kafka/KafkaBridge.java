@@ -7,6 +7,7 @@ import org.apache.kafka.common.serialization.StringSerializer;
 import org.kin.framework.utils.JSON;
 import org.kin.mqtt.broker.bridge.BridgeAttrNames;
 import org.kin.mqtt.broker.bridge.NoErrorBridge;
+import org.kin.mqtt.broker.bridge.definition.KafkaBridgeDefinition;
 import org.kin.mqtt.broker.rule.ContextAttrs;
 import org.kin.mqtt.broker.rule.RuleCtxAttrNames;
 import reactor.core.publisher.Mono;
@@ -55,6 +56,10 @@ public class KafkaBridge extends NoErrorBridge {
         props.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class);
         props.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, StringSerializer.class);
         sender = KafkaSender.create(SenderOptions.create(props));
+    }
+
+    public KafkaBridge(KafkaBridgeDefinition definition) {
+        this(definition.getName(), definition.getProps());
     }
 
     @Override

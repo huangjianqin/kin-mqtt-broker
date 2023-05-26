@@ -13,8 +13,12 @@ org:
             actions:
               - type: http_bridge
                 args:
-                  bridgeName: local_http_route
-                  uri: "localhost:10000/mqtt/receive"
+                  bridgeName: default_http_bridge
+                  uri: "localhost:13000/mqtt/receive"
+        bridges:
+          - type: http
+            args:
+              name: default_http_bridge
 
 server:
   port: 8000
