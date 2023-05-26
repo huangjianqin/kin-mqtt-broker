@@ -1,7 +1,6 @@
 package org.kin.mqtt.broker.rule.action.bridge;
 
 import org.kin.mqtt.broker.bridge.BridgeAttrNames;
-import org.kin.mqtt.broker.bridge.BridgeType;
 import org.kin.mqtt.broker.rule.RuleContext;
 import org.kin.mqtt.broker.rule.action.bridge.definition.RabbitMQBridgeActionDefinition;
 
@@ -10,7 +9,6 @@ import org.kin.mqtt.broker.rule.action.bridge.definition.RabbitMQBridgeActionDef
  *
  * @author huangjianqin
  * @date 2022/12/11
- * @see org.kin.mqtt.broker.bridge.BridgeType#RABBITMQ
  */
 public class RabbitMQBridgeAction extends BridgeAction<RabbitMQBridgeActionDefinition> {
     public RabbitMQBridgeAction(RabbitMQBridgeActionDefinition definition) {
@@ -20,10 +18,5 @@ public class RabbitMQBridgeAction extends BridgeAction<RabbitMQBridgeActionDefin
     @Override
     protected void preTransmit(RuleContext context) {
         context.getAttrs().updateAttr(BridgeAttrNames.RABBITMQ_QUEUE, definition.getQueue());
-    }
-
-    @Override
-    protected BridgeType type() {
-        return BridgeType.RABBITMQ;
     }
 }

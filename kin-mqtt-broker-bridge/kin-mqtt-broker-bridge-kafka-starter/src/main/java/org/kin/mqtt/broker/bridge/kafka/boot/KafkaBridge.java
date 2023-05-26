@@ -6,7 +6,6 @@ import org.apache.kafka.clients.producer.RecordMetadata;
 import org.apache.kafka.common.serialization.StringSerializer;
 import org.kin.framework.utils.JSON;
 import org.kin.mqtt.broker.bridge.BridgeAttrNames;
-import org.kin.mqtt.broker.bridge.BridgeType;
 import org.kin.mqtt.broker.bridge.NoErrorBridge;
 import org.kin.mqtt.broker.rule.ContextAttrs;
 import org.kin.mqtt.broker.rule.RuleCtxAttrNames;
@@ -52,16 +51,8 @@ public class KafkaBridge extends NoErrorBridge {
         return props;
     }
 
-    public KafkaBridge() {
-        this(DEFAULT_BOOTSTRAP_SERVERS);
-    }
-
-    public KafkaBridge(String bootstrapServers) {
-        this(BridgeType.KAFKA.getDefaultName(), bootstrapServers);
-    }
-
-    public KafkaBridge(Map<String, Object> props) {
-        this(BridgeType.KAFKA.getDefaultName(), props);
+    public KafkaBridge(String name) {
+        this(name, DEFAULT_BOOTSTRAP_SERVERS);
     }
 
     public KafkaBridge(String name, String bootstrapServers) {
@@ -70,10 +61,6 @@ public class KafkaBridge extends NoErrorBridge {
 
     public KafkaBridge(String name, Map<String, Object> props) {
         this(name, new ReactiveKafkaProducerTemplate<>(SenderOptions.create(getDefaultProps(name, props))));
-    }
-
-    public KafkaBridge(ReactiveKafkaProducerTemplate<String, String> sender) {
-        this(BridgeType.KAFKA.getDefaultName(), sender);
     }
 
     public KafkaBridge(String name, ReactiveKafkaProducerTemplate<String, String> sender) {
@@ -102,10 +89,5 @@ public class KafkaBridge extends NoErrorBridge {
                                     Instant.ofEpochMilli(metadata.timestamp()));
                         }))
                 .then();
-    }
-
-    @Override
-    public BridgeType type() {
-        return BridgeType.KAFKA;
     }
 }

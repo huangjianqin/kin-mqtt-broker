@@ -7,7 +7,7 @@ import org.kin.mqtt.broker.core.MqttBrokerContext;
 import org.kin.mqtt.broker.core.message.MqttMessageReplica;
 import org.kin.mqtt.broker.rule.action.Action;
 import org.kin.mqtt.broker.rule.action.ActionDefinition;
-import org.kin.mqtt.broker.rule.action.ActionFactories;
+import org.kin.mqtt.broker.rule.action.Actions;
 import org.kin.mqtt.broker.utils.TopicUtils;
 import org.kin.reactor.sql.ReactorSql;
 import org.slf4j.Logger;
@@ -81,7 +81,7 @@ public class Rule implements Disposable {
         Set<ActionDefinition> actionDefs = definition.getActionDefs();
         List<Action> actions = new CopyOnWriteArrayList<>();
         for (ActionDefinition actionDefinition : actionDefs) {
-            actions.add(ActionFactories.createAction(actionDefinition));
+            actions.add(Actions.createAction(actionDefinition));
         }
         this.actions = actions;
         //准备执行sql
@@ -117,7 +117,7 @@ public class Rule implements Disposable {
      */
     public void addAction(ActionDefinition actionDefinition) {
         definition.addAction(actionDefinition);
-        actions.add(ActionFactories.createAction(actionDefinition));
+        actions.add(Actions.createAction(actionDefinition));
     }
 
     /**

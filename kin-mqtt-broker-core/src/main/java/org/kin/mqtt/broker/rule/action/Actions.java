@@ -2,6 +2,7 @@ package org.kin.mqtt.broker.rule.action;
 
 import org.kin.framework.collection.CopyOnWriteMap;
 import org.kin.framework.utils.ClassUtils;
+import org.kin.mqtt.broker.core.Type;
 import org.kin.mqtt.broker.rule.action.bridge.HttpBridgeAction;
 import org.kin.mqtt.broker.rule.action.bridge.KafkaBridgeAction;
 import org.kin.mqtt.broker.rule.action.bridge.MqttTopicAction;
@@ -14,16 +15,20 @@ import org.kin.mqtt.broker.rule.action.bridge.definition.RabbitMQBridgeActionDef
 import java.util.*;
 
 /**
- * {@link ActionFactory}工具类
- * 使用者自定义{@link Action}实现时, 也要注册自定义{@link Action}加载逻辑, 那么最后在yaml配上action type和对应action definition的参数即可加载和应用自定义{@link Action}实现
+ * {@link Action}工具类
  * @author huangjianqin
  * @date 2022/12/16
  */
-public class ActionFactories {
-    private ActionFactories() {
+public class Actions {
+    private Actions() {
     }
 
     private static Map<Class<? extends ActionDefinition>, ActionFactory<? extends ActionDefinition, ? extends Action>> ACTIONS = new CopyOnWriteMap<>();
+    /**
+     * 关联action type name和{@link ActionDefinition}
+     * key -> action type name, value -> {@link ActionDefinition}
+     */
+    private static final Map<String, Class<? extends ActionDefinition>> NAME_2_DEFINITION = new CopyOnWriteMap<>();
 
     static {
         registerActionFactory(HttpBridgeActionDefinition.class, (ActionFactory<HttpBridgeActionDefinition, HttpBridgeAction>) HttpBridgeAction::new);
@@ -42,10 +47,22 @@ public class ActionFactories {
         Class<? extends ActionDefinition> claxx = actionDefinition.getClass();
         ActionFactory<ActionDefinition, Action> factory = (ActionFactory<ActionDefinition, Action>) ACTIONS.get(claxx);
         if (Objects.isNull(factory)) {
-            throw new IllegalStateException(String.format("is not support action definition '%s'", claxx.getName()));
+            throw new IllegalStateException(String.format("action definition '%s' is not support", claxx.getName()));
         }
 
         return factory.create(actionDefinition);
+    }
+
+    /**
+     * 根据action type获取{@link ActionDefinition}类型
+     * @return {@link ActionDefinition}类型
+     */
+    public static Class<? extends ActionDefinition> getDefinitionClassByName(String typeName){
+        Class<? extends ActionDefinition> adClass = NAME_2_DEFINITION.get(typeName.toLowerCase());
+        if (adClass == null) {
+            throw new IllegalArgumentException(String.format("can not find action definition class associated with " + typeName));
+        }
+        return adClass;
     }
 
     /**
@@ -55,7 +72,8 @@ public class ActionFactories {
      *
      * @param factories {@link Action}实现构造逻辑
      */
-    public static void registerActionFactories(ActionFactory<? extends ActionDefinition, ? extends Action>... factories) {
+    @SuppressWarnings("rawtypes")
+    public static void registerActionFactories(ActionFactory... factories) {
         registerActionFactories(Arrays.asList(factories));
     }
 
@@ -66,9 +84,10 @@ public class ActionFactories {
      *
      * @param factories {@link Action}实现构造逻辑
      */
-    @SuppressWarnings("unchecked")
-    public static void registerActionFactories(Collection<ActionFactory<? extends ActionDefinition, ? extends Action>> factories) {
-        Map<Class<? extends ActionDefinition>, ActionFactory<? extends ActionDefinition, ? extends Action>> map = new HashMap<>();
+    @SuppressWarnings({"unchecked", "rawtypes"})
+    public static void registerActionFactories(Collection<ActionFactory> factories) {
+        Map<Class<? extends ActionDefinition>, ActionFactory<? extends ActionDefinition, ? extends Action>> definition2Factory = new HashMap<>();
+        Map<String, Class<? extends ActionDefinition>> name2definition = new HashMap<>();
         for (ActionFactory<? extends ActionDefinition, ? extends Action> factory : factories) {
             List<Class<?>> genericTypes = ClassUtils.getSuperInterfacesGenericRawTypes(ActionFactory.class, factory.getClass());
             Class<? extends ActionDefinition> adClass = (Class<? extends ActionDefinition>) genericTypes.get(0);
@@ -76,10 +95,18 @@ public class ActionFactories {
             if (ACTIONS.containsKey(adClass)) {
                 throw new IllegalStateException(String.format("action with '%s' definition has registered", adClass.getName()));
             }
-            map.put(adClass, factory);
+
+            Type typeAnno = adClass.getAnnotation(Type.class);
+            if (typeAnno == null) {
+                throw new IllegalArgumentException("can not find Type annotation on action definition class");
+            }
+
+            name2definition.put(typeAnno.value().toLowerCase(), adClass);
+            definition2Factory.put(adClass, factory);
         }
 
-        ACTIONS.putAll(map);
+        NAME_2_DEFINITION.putAll(name2definition);
+        ACTIONS.putAll(definition2Factory);
     }
 
     /**
@@ -93,6 +120,13 @@ public class ActionFactories {
         if (ACTIONS.containsKey(adClass)) {
             throw new IllegalStateException(String.format("action with '%s' definition has registered", adClass.getName()));
         }
+
+        Type typeAnno = adClass.getAnnotation(Type.class);
+        if (typeAnno == null) {
+            throw new IllegalArgumentException("can not find Type annotation on action definition class");
+        }
+
+        NAME_2_DEFINITION.put(typeAnno.value().toLowerCase(), adClass);
         ACTIONS.put(adClass, factory);
     }
 }

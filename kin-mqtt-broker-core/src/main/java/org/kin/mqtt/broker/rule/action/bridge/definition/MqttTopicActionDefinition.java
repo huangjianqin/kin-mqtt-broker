@@ -3,7 +3,9 @@ package org.kin.mqtt.broker.rule.action.bridge.definition;
 import com.google.common.base.Preconditions;
 import io.netty.handler.codec.mqtt.MqttQoS;
 import org.kin.framework.utils.StringUtils;
+import org.kin.mqtt.broker.core.Type;
 import org.kin.mqtt.broker.rule.action.ActionDefinition;
+import org.kin.mqtt.broker.rule.action.ActionType;
 import org.kin.mqtt.broker.rule.action.bridge.MqttTopicAction;
 
 import java.util.Objects;
@@ -15,6 +17,7 @@ import java.util.Objects;
  * @date 2022/12/11
  * @see MqttTopicAction
  */
+@Type(ActionType.MQTT_TOPIC)
 public class MqttTopicActionDefinition implements ActionDefinition {
     /** 要转发的topic */
     private String topic;

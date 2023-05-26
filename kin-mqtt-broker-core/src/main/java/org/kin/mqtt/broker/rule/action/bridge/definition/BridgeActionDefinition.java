@@ -16,6 +16,11 @@ public abstract class BridgeActionDefinition implements ActionDefinition {
     /** bridge name */
     private String bridgeName;
 
+    @Override
+    public void check() {
+        Preconditions.checkArgument(StringUtils.isNotBlank(bridgeName), "bridge name must not blank");
+    }
+
     /** builder **/
     public static abstract class Builder<BRD extends BridgeActionDefinition, B extends Builder<BRD, B>> {
         protected BRD definition;

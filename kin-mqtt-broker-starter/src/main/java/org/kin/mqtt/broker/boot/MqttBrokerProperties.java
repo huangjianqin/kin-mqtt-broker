@@ -4,7 +4,7 @@ import org.kin.framework.utils.JSON;
 import org.kin.mqtt.broker.Constants;
 import org.kin.mqtt.broker.core.MqttBrokerConfig;
 import org.kin.mqtt.broker.core.cluster.ClusterConfig;
-import org.kin.mqtt.broker.rule.action.ActionType;
+import org.kin.mqtt.broker.rule.action.Actions;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
 import javax.annotation.PostConstruct;
@@ -118,7 +118,7 @@ public class MqttBrokerProperties extends MqttBrokerConfig {
 
         /** 转换成{@link  org.kin.mqtt.broker.rule.action.ActionDefinition}实例 */
         public org.kin.mqtt.broker.rule.action.ActionDefinition toActionDefinition() {
-            return JSON.convert(args, ActionType.findByName(type).getDefinitionClass());
+            return JSON.convert(args, Actions.getDefinitionClassByName(type));
         }
 
         //setter && getter

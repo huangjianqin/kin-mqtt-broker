@@ -2,6 +2,8 @@ package org.kin.mqtt.broker.rule.action.bridge.definition;
 
 import com.google.common.base.Preconditions;
 import org.kin.framework.utils.StringUtils;
+import org.kin.mqtt.broker.core.Type;
+import org.kin.mqtt.broker.rule.action.ActionType;
 import org.kin.mqtt.broker.rule.action.bridge.HttpBridgeAction;
 
 import java.util.Collections;
@@ -15,9 +17,10 @@ import java.util.Objects;
  * @date 2022/12/11
  * @see HttpBridgeAction
  */
+@Type(ActionType.HTTP_BRIDGE)
 public class HttpBridgeActionDefinition extends BridgeActionDefinition {
     private String uri;
-    private Map<String, Object> headers = Collections.emptyMap();
+    private Map<String, String> headers = Collections.emptyMap();
 
     private HttpBridgeActionDefinition() {
     }
@@ -28,6 +31,7 @@ public class HttpBridgeActionDefinition extends BridgeActionDefinition {
 
     @Override
     public void check() {
+        super.check();
         Preconditions.checkArgument(StringUtils.isNotBlank(uri), "http uri must be not blank");
     }
 
@@ -42,7 +46,7 @@ public class HttpBridgeActionDefinition extends BridgeActionDefinition {
             return this;
         }
 
-        public Builder headers(Map<String, Object> headers) {
+        public Builder headers(Map<String, String> headers) {
             definition.headers = headers;
             return this;
         }
@@ -57,11 +61,11 @@ public class HttpBridgeActionDefinition extends BridgeActionDefinition {
         this.uri = uri;
     }
 
-    public Map<String, Object> getHeaders() {
+    public Map<String, String> getHeaders() {
         return headers;
     }
 
-    public void setHeaders(Map<String, Object> headers) {
+    public void setHeaders(Map<String, String> headers) {
         this.headers = headers;
     }
 

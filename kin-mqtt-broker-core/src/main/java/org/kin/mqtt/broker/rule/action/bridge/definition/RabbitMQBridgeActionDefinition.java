@@ -2,6 +2,8 @@ package org.kin.mqtt.broker.rule.action.bridge.definition;
 
 import com.google.common.base.Preconditions;
 import org.kin.framework.utils.StringUtils;
+import org.kin.mqtt.broker.core.Type;
+import org.kin.mqtt.broker.rule.action.ActionType;
 import org.kin.mqtt.broker.rule.action.bridge.RabbitMQBridgeAction;
 
 import java.util.Objects;
@@ -13,6 +15,7 @@ import java.util.Objects;
  * @date 2022/12/11
  * @see RabbitMQBridgeAction
  */
+@Type(ActionType.RABBIT_MQ_BRIDGE)
 public class RabbitMQBridgeActionDefinition extends BridgeActionDefinition {
     /** rabbitmq queue */
     private String queue;
@@ -26,6 +29,7 @@ public class RabbitMQBridgeActionDefinition extends BridgeActionDefinition {
 
     @Override
     public void check() {
+        super.check();
         Preconditions.checkArgument(StringUtils.isNotBlank(queue), "rabbitMQ queue must be not blank");
     }
 

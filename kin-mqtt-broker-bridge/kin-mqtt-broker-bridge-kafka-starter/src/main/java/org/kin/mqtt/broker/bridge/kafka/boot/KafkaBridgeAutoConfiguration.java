@@ -31,6 +31,7 @@ public class KafkaBridgeAutoConfiguration {
      */
     @Bean
     public Bridge kafkaBridge(@Autowired ReactiveKafkaProducerTemplate<String, String> sender) {
-        return new KafkaBridge(sender);
+        String name = "_default_kafka_bridge";
+        return new KafkaBridge(name, sender);
     }
 }

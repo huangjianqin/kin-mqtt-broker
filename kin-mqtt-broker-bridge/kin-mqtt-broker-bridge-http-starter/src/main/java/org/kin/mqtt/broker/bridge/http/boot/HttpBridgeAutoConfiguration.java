@@ -21,9 +21,10 @@ public class HttpBridgeAutoConfiguration {
      */
     @Bean
     public Bridge httpBridge(@Autowired(required = false) WebClient webClient) {
+        String name = "_default_http_bridge";
         if (Objects.nonNull(webClient)) {
-            return new HttpBridge(webClient);
+            return new HttpBridge(name, webClient);
         }
-        return new HttpBridge();
+        return new HttpBridge(name);
     }
 }

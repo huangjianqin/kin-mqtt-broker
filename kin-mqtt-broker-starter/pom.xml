@@ -32,12 +32,6 @@
             <version>${project.version}</version>
         </dependency>
 
-        <dependency>
-            <groupId>org.kin</groupId>
-            <artifactId>kin-mqtt-broker-bridge-rabbitmq</artifactId>
-            <version>${project.version}</version>
-        </dependency>
-
         <!-- actuator -->
         <dependency>
             <groupId>org.springframework.boot</groupId>

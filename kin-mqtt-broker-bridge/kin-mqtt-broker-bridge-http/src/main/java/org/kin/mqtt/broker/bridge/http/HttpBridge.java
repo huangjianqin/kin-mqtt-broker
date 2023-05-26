@@ -4,7 +4,6 @@ import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpHeaderValues;
 import org.kin.framework.utils.JSON;
 import org.kin.mqtt.broker.bridge.BridgeAttrNames;
-import org.kin.mqtt.broker.bridge.BridgeType;
 import org.kin.mqtt.broker.bridge.NoErrorBridge;
 import org.kin.mqtt.broker.rule.ContextAttrs;
 import reactor.core.publisher.Mono;
@@ -25,13 +24,9 @@ public class HttpBridge extends NoErrorBridge {
     /** reactor http client */
     private final HttpClient httpClient;
 
-    public HttpBridge() {
-        this(BridgeType.HTTP.getDefaultName());
-    }
-
     public HttpBridge(String name) {
         super(name);
-        this.httpClient = HttpClient.create(ConnectionProvider.create(BridgeType.HTTP.getDefaultName()))
+        this.httpClient = HttpClient.create(ConnectionProvider.create(name))
                 .keepAlive(true)
                 .noProxy()
                 .followRedirect(false)
@@ -54,10 +49,5 @@ public class HttpBridge extends NoErrorBridge {
                 .send(ByteBufFlux.fromString(Mono.just(JSON.write(attrs))))
                 .response()
                 .then();
-    }
-
-    @Override
-    public BridgeType type() {
-        return BridgeType.HTTP;
     }
 }

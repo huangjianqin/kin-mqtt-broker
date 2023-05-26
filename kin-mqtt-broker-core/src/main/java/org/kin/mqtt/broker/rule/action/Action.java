@@ -6,6 +6,8 @@ import reactor.core.publisher.Mono;
 /**
  * 动作接口
  *
+ * 使用者自定义{@link Action}实现时, 要使用{@link Actions#registerActionFactory(Class, ActionFactory)}注册加载逻辑
+ *
  * @author huangjianqin
  * @date 2022/12/16
  */

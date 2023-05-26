@@ -2,7 +2,6 @@ package org.kin.mqtt.broker.bridge.http.boot;
 
 import org.kin.framework.utils.JSON;
 import org.kin.mqtt.broker.bridge.BridgeAttrNames;
-import org.kin.mqtt.broker.bridge.BridgeType;
 import org.kin.mqtt.broker.bridge.NoErrorBridge;
 import org.kin.mqtt.broker.rule.ContextAttrs;
 import org.springframework.http.MediaType;
@@ -19,14 +18,6 @@ import java.util.Map;
  */
 public class HttpBridge extends NoErrorBridge {
     private final WebClient webClient;
-
-    public HttpBridge() {
-        this(WebClient.create());
-    }
-
-    public HttpBridge(WebClient webClient) {
-        this(BridgeType.HTTP.getDefaultName(), webClient);
-    }
 
     public HttpBridge(String name) {
         this(name, WebClient.create());
@@ -51,10 +42,5 @@ public class HttpBridge extends NoErrorBridge {
                 .retrieve()
                 .toBodilessEntity()
                 .then();
-    }
-
-    @Override
-    public BridgeType type() {
-        return BridgeType.HTTP;
     }
 }

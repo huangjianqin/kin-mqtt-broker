@@ -1,7 +1,6 @@
 package org.kin.mqtt.broker.rule.action.bridge;
 
 import org.kin.mqtt.broker.bridge.Bridge;
-import org.kin.mqtt.broker.bridge.BridgeType;
 import org.kin.mqtt.broker.core.MqttBrokerContext;
 import org.kin.mqtt.broker.rule.RuleContext;
 import org.kin.mqtt.broker.rule.action.Action;
@@ -28,12 +27,11 @@ public abstract class BridgeAction<BAD extends BridgeActionDefinition> implement
     @Override
     public Mono<Void> execute(RuleContext context) {
         MqttBrokerContext brokerContext = context.getBrokerContext();
-        BridgeType bridgeType = type();
         String bridgeName = definition.getBridgeName();
         Bridge bridge = brokerContext.getBridgeManager().getBridge(bridgeName);
         if (Objects.isNull(bridge)) {
             //找不到指定桥接实现, 则直接complete, 中断
-            return Mono.error(new IllegalStateException(String.format("can not find bridge '%s' for type '%s'", bridgeType, bridgeName)));
+            return Mono.error(new IllegalStateException(String.format("can not find bridge '%s'", bridgeName)));
         }
         preTransmit(context);
         return bridge.transmit(context.getAttrs());
@@ -52,13 +50,6 @@ public abstract class BridgeAction<BAD extends BridgeActionDefinition> implement
     protected void preTransmit(RuleContext context) {
         //default do nothing
     }
-
-    /**
-     * 指定桥接类型
-     *
-     * @return 桥接类型
-     */
-    protected abstract BridgeType type();
 
     @Override
     public String toString() {

@@ -5,7 +5,6 @@ import com.rabbitmq.client.ConnectionFactory;
 import org.kin.framework.utils.JSON;
 import org.kin.framework.utils.StringUtils;
 import org.kin.mqtt.broker.bridge.BridgeAttrNames;
-import org.kin.mqtt.broker.bridge.BridgeType;
 import org.kin.mqtt.broker.bridge.NoErrorBridge;
 import org.kin.mqtt.broker.rule.ContextAttrs;
 import org.slf4j.Logger;
@@ -26,10 +25,6 @@ public class RabbitMQBridge extends NoErrorBridge {
 
     /** rabbit mq sender */
     private final Sender sender;
-
-    public RabbitMQBridge(SenderOptions senderOptions) {
-        this(BridgeType.RABBITMQ.getDefaultName(), senderOptions);
-    }
 
     public RabbitMQBridge(String name, SenderOptions senderOptions) {
         super(name);
@@ -85,11 +80,6 @@ public class RabbitMQBridge extends NoErrorBridge {
                     }
                 })
                 .then();
-    }
-
-    @Override
-    public BridgeType type() {
-        return BridgeType.RABBITMQ;
     }
 
     @Override
