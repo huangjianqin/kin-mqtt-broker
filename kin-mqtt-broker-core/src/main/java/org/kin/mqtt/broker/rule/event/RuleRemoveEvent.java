@@ -1,8 +1,10 @@
 package org.kin.mqtt.broker.rule.event;
 
+import org.kin.framework.utils.CollectionUtils;
 import org.kin.mqtt.broker.core.cluster.event.MqttClusterEvent;
 
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 
 /**
@@ -20,7 +22,7 @@ public class RuleRemoveEvent extends AbstractRuleEvent implements MqttClusterEve
 
     public static RuleRemoveEvent of(List<String> ruleNames) {
         RuleRemoveEvent inst = new RuleRemoveEvent();
-        inst.ruleNames = ruleNames;
+        inst.ruleNames = CollectionUtils.isNonEmpty(ruleNames) ? ruleNames : Collections.emptyList();
         return inst;
     }
 }

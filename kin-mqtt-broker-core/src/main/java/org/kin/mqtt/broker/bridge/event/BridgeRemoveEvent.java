@@ -1,8 +1,10 @@
 package org.kin.mqtt.broker.bridge.event;
 
+import org.kin.framework.utils.CollectionUtils;
 import org.kin.mqtt.broker.core.cluster.event.MqttClusterEvent;
 
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 
 /**
@@ -15,14 +17,12 @@ public class BridgeRemoveEvent extends AbstractBridgeEvent implements MqttCluste
     private static final long serialVersionUID = 1048367402310871011L;
 
     public static BridgeRemoveEvent of(String... bridgeNames) {
-        BridgeRemoveEvent inst = new BridgeRemoveEvent();
-        inst.bridgeNames = Arrays.asList(bridgeNames);
-        return inst;
+        return of(Arrays.asList(bridgeNames));
     }
 
     public static BridgeRemoveEvent of(List<String> bridgeNames) {
         BridgeRemoveEvent inst = new BridgeRemoveEvent();
-        inst.bridgeNames = bridgeNames;
+        inst.bridgeNames = CollectionUtils.isNonEmpty(bridgeNames) ? bridgeNames : Collections.emptyList();
         return inst;
     }
 }

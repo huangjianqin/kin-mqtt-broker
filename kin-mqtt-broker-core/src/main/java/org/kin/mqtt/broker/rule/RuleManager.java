@@ -271,6 +271,10 @@ public class RuleManager {
      * @param names 规则名数组
      */
     private void syncRules(List<String> names) {
+        if (CollectionUtils.isEmpty(names)) {
+            return;
+        }
+
         List<String> keys = names.stream().map(ClusterStoreKeys::getRuleKey).collect(Collectors.toList());
         String desc = StringUtils.mkString(names);
 

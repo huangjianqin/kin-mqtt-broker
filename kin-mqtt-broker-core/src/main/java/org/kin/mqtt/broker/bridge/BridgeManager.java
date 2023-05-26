@@ -4,6 +4,7 @@ import org.kin.framework.Closeable;
 import org.kin.framework.collection.CopyOnWriteMap;
 import org.kin.framework.collection.Tuple;
 import org.kin.framework.reactor.event.ReactorEventBus;
+import org.kin.framework.utils.CollectionUtils;
 import org.kin.framework.utils.JSON;
 import org.kin.framework.utils.StringUtils;
 import org.kin.mqtt.broker.bridge.definition.BridgeDefinition;
@@ -116,7 +117,9 @@ public class BridgeManager implements Closeable {
             newBridgeNames.add(name);
             addBridge0(definition);
         }
-        brokerContext.broadcastClusterEvent(BridgeAddEvent.of(newBridgeNames));
+        if (CollectionUtils.isNonEmpty(newBridgeNames)) {
+            brokerContext.broadcastClusterEvent(BridgeAddEvent.of(newBridgeNames));
+        }
     }
 
     /**
@@ -179,6 +182,8 @@ public class BridgeManager implements Closeable {
     public boolean removeBridge(String bridgeName) {
         Bridge removed = bridgeMap.remove(bridgeName);
         if (Objects.nonNull(removed)) {
+            delDefinition(bridgeName);
+
             brokerContext.broadcastClusterEvent(BridgeRemoveEvent.of(bridgeName));
             removed.close();
         }
@@ -193,6 +198,17 @@ public class BridgeManager implements Closeable {
     private void persistDefinition(BridgeDefinition definition) {
         ClusterStore clusterStore = brokerContext.getClusterStore();
         clusterStore.put(ClusterStoreKeys.getBridgeKey(definition.getName()), new BridgeDefinitionDelegate(definition))
+                .subscribe();
+    }
+
+    /**
+     * 移除bridge配置
+     *
+     * @param bridgeName bridge name
+     */
+    private void delDefinition(String bridgeName) {
+        ClusterStore clusterStore = brokerContext.getClusterStore();
+        clusterStore.delete(ClusterStoreKeys.getBridgeKey(bridgeName))
                 .subscribe();
     }
 
@@ -212,15 +228,19 @@ public class BridgeManager implements Closeable {
      * @param names 桥接名列表
      */
     private void syncBridges(List<String> names) {
-        String nameDesc = StringUtils.mkString(names);
+        if (CollectionUtils.isEmpty(names)) {
+            return;
+        }
+
+        String desc = StringUtils.mkString(names);
         List<String> keys = names.stream().map(ClusterStoreKeys::getBridgeKey).collect(Collectors.toList());
 
         ClusterStore clusterStore = brokerContext.getClusterStore();
         clusterStore.multiGet(keys, BridgeDefinitionDelegate.class)
                 .doOnNext(t -> onLoadFromClusterStore(t.second().getDelegate()))
                 .subscribe(null,
-                        t -> log.error("sync bridge '{}' error", nameDesc, t),
-                        () -> log.error("sync bridge '{}' finished", nameDesc));
+                        t -> log.error("sync bridge '{}' error", desc, t),
+                        () -> log.error("sync bridge '{}' finished", desc));
     }
 
     /**
