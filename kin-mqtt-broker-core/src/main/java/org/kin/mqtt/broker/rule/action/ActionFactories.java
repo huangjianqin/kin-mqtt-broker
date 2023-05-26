@@ -14,7 +14,7 @@ import org.kin.mqtt.broker.rule.action.bridge.definition.RabbitMQBridgeActionDef
 import java.util.*;
 
 /**
- * action工具类
+ * {@link ActionFactory}工具类
  * 使用者自定义action实现时, 也要注册自定义action加载逻辑, 那么最后在yaml配上action type和对应action definition的参数即可加载和应用自定义action实现
  * @author huangjianqin
  * @date 2022/12/16
