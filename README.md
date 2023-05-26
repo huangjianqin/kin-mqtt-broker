@@ -62,7 +62,7 @@ mqtt broker实现, 高性能, 易扩展, 高伸缩性
 对于不同类型的数据, 有不一样的一致性语义:
 
 * 对于会话, 保证强一致性, 仅mqtt client登录时需要获取session信息(read index), 其余场景都是异步持久化会话信息
-* 对于规则等配置, 保证最终一致性, 底层基于gossip事件通知各broker, 有一定的滞后性
+* 对于规则,桥接等配置, 保证最终一致性, 底层基于gossip事件通知各broker, 有一定的滞后性
 * 对于broker订阅, 为了减少对mqtt业务的影响, broker的订阅变化也是基于gossip事件通知各broker,
   各broker从jraft-rheakv访问最新的订阅数据并缓存
 
