@@ -1,6 +1,6 @@
 package org.kin.mqtt.broker.rule.action;
 
-import org.jctools.maps.NonBlockingHashMap;
+import org.kin.framework.collection.CopyOnWriteMap;
 import org.kin.framework.utils.ClassUtils;
 import org.kin.mqtt.broker.rule.action.bridge.HttpBridgeAction;
 import org.kin.mqtt.broker.rule.action.bridge.KafkaBridgeAction;
@@ -19,17 +19,17 @@ import java.util.*;
  * @author huangjianqin
  * @date 2022/12/16
  */
-public class Actions {
-    private Actions() {
+public class ActionFactories {
+    private ActionFactories() {
     }
 
-    private static Map<Class<? extends ActionDefinition>, ActionFactory<? extends ActionDefinition, ? extends Action>> ACTIONS = new NonBlockingHashMap<>();
+    private static Map<Class<? extends ActionDefinition>, ActionFactory<? extends ActionDefinition, ? extends Action>> ACTIONS = new CopyOnWriteMap<>();
 
     static {
-        registerAction(HttpBridgeActionDefinition.class, (ActionFactory<HttpBridgeActionDefinition, HttpBridgeAction>) HttpBridgeAction::new);
-        registerAction(KafkaBridgeActionDefinition.class, (ActionFactory<KafkaBridgeActionDefinition, KafkaBridgeAction>) KafkaBridgeAction::new);
-        registerAction(MqttTopicActionDefinition.class, (ActionFactory<MqttTopicActionDefinition, MqttTopicAction>) MqttTopicAction::new);
-        registerAction(RabbitMQBridgeActionDefinition.class, (ActionFactory<RabbitMQBridgeActionDefinition, RabbitMQBridgeAction>) RabbitMQBridgeAction::new);
+        registerActionFactory(HttpBridgeActionDefinition.class, (ActionFactory<HttpBridgeActionDefinition, HttpBridgeAction>) HttpBridgeAction::new);
+        registerActionFactory(KafkaBridgeActionDefinition.class, (ActionFactory<KafkaBridgeActionDefinition, KafkaBridgeAction>) KafkaBridgeAction::new);
+        registerActionFactory(MqttTopicActionDefinition.class, (ActionFactory<MqttTopicActionDefinition, MqttTopicAction>) MqttTopicAction::new);
+        registerActionFactory(RabbitMQBridgeActionDefinition.class, (ActionFactory<RabbitMQBridgeActionDefinition, RabbitMQBridgeAction>) RabbitMQBridgeAction::new);
     }
 
     /**
@@ -55,8 +55,8 @@ public class Actions {
      *
      * @param factories {@link Action}实现构造逻辑
      */
-    public static void registerAction(ActionFactory<? extends ActionDefinition, ? extends Action>... factories) {
-        registerAction(Arrays.asList(factories));
+    public static void registerActionFactories(ActionFactory<? extends ActionDefinition, ? extends Action>... factories) {
+        registerActionFactories(Arrays.asList(factories));
     }
 
     /**
@@ -67,7 +67,7 @@ public class Actions {
      * @param factories {@link Action}实现构造逻辑
      */
     @SuppressWarnings("unchecked")
-    public static void registerAction(Collection<ActionFactory<? extends ActionDefinition, ? extends Action>> factories) {
+    public static void registerActionFactories(Collection<ActionFactory<? extends ActionDefinition, ? extends Action>> factories) {
         Map<Class<? extends ActionDefinition>, ActionFactory<? extends ActionDefinition, ? extends Action>> map = new HashMap<>();
         for (ActionFactory<? extends ActionDefinition, ? extends Action> factory : factories) {
             List<Class<?>> genericTypes = ClassUtils.getSuperInterfacesGenericRawTypes(ActionFactory.class, factory.getClass());
@@ -89,7 +89,7 @@ public class Actions {
      * @param adClass action定义class
      * @param factory {@link Action}实现构造逻辑
      */
-    public static void registerAction(Class<? extends ActionDefinition> adClass, ActionFactory<? extends ActionDefinition, ? extends Action> factory) {
+    public static void registerActionFactory(Class<? extends ActionDefinition> adClass, ActionFactory<? extends ActionDefinition, ? extends Action> factory) {
         if (ACTIONS.containsKey(adClass)) {
             throw new IllegalStateException(String.format("action with '%s' definition has registered", adClass.getName()));
         }
