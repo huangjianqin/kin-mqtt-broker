@@ -3,7 +3,9 @@ package org.kin.mqtt.broker.rule;
 import org.jctools.maps.NonBlockingHashMap;
 import org.kin.framework.collection.Tuple;
 import org.kin.framework.reactor.event.ReactorEventBus;
+import org.kin.framework.utils.CollectionUtils;
 import org.kin.framework.utils.JSON;
+import org.kin.framework.utils.StringUtils;
 import org.kin.mqtt.broker.core.MqttBrokerContext;
 import org.kin.mqtt.broker.core.cluster.ClusterStore;
 import org.kin.mqtt.broker.core.cluster.ClusterStoreKeys;
@@ -123,8 +125,16 @@ public class RuleManager {
      * @param definitions 规则定义list
      */
     public void addRules(Collection<RuleDefinition> definitions) {
-        for (RuleDefinition definition : definitions) {
-            addRule(definition);
+        List<String> names = new ArrayList<>(definitions.size());
+        try {
+            for (RuleDefinition definition : definitions) {
+                addRule0(definition);
+                names.add(definition.getName());
+            }
+        } finally {
+            if (CollectionUtils.isNonEmpty(names)) {
+                brokerContext.broadcastClusterEvent(RuleAddEvent.of(names));
+            }
         }
     }
 
@@ -134,8 +144,16 @@ public class RuleManager {
      * @param definitions 规则定义array
      */
     public void addRules(RuleDefinition... definitions) {
-        for (RuleDefinition definition : definitions) {
-            addRule(definition);
+        List<String> names = new ArrayList<>(definitions.length);
+        try {
+            for (RuleDefinition definition : definitions) {
+                addRule0(definition);
+                names.add(definition.getName());
+            }
+        } finally {
+            if (CollectionUtils.isNonEmpty(names)) {
+                brokerContext.broadcastClusterEvent(RuleAddEvent.of(names));
+            }
         }
     }
 
@@ -145,6 +163,11 @@ public class RuleManager {
      * @param definition 规则定义
      */
     public void addRule(RuleDefinition definition) {
+        addRule0(definition);
+        brokerContext.broadcastClusterEvent(RuleAddEvent.of(definition.getName()));
+    }
+
+    private void addRule0(RuleDefinition definition) {
         definition.check();
 
         String name = definition.getName();
@@ -156,14 +179,12 @@ public class RuleManager {
         persistDefinition(definition);
 
         log.debug("add rule '{}' success", name);
-
-        brokerContext.broadcastClusterEvent(RuleAddEvent.of(name));
     }
 
     /**
      * 更新规则
      *
-     * @param definition 新规则定义
+     * @param nDefinition 新规则定义
      */
     public void updateRule(RuleDefinition nDefinition) {
         nDefinition.check();
@@ -211,7 +232,7 @@ public class RuleManager {
         }
 
         removed.dispose();
-        delRuleDefinition(removed.getDefinition());
+        delDefinition(removed.getDefinition());
 
         log.debug("remove rule '{}' success", name);
 
@@ -220,9 +241,10 @@ public class RuleManager {
 
     /**
      * 移除持久化规则定义
+     *
      * @param definition 规则定义
      */
-    private void delRuleDefinition(RuleDefinition definition){
+    private void delDefinition(RuleDefinition definition) {
         ClusterStore clusterStore = brokerContext.getClusterStore();
         clusterStore.delete(ClusterStoreKeys.getRuleKey(definition.getName()))
                 .subscribe();
@@ -245,14 +267,19 @@ public class RuleManager {
 
     /**
      * 同步规则变化
-     * @param name  规则名
+     *
+     * @param names 规则名数组
      */
-    private void syncRule(String name){
+    private void syncRules(List<String> names) {
+        List<String> keys = names.stream().map(ClusterStoreKeys::getRuleKey).collect(Collectors.toList());
+        String desc = StringUtils.mkString(names);
+
         ClusterStore clusterStore = brokerContext.getClusterStore();
-        clusterStore.get(ClusterStoreKeys.getRuleKey(name), RuleDefinition.class)
-                .doOnNext(rd -> addOrMergeRule(rd, false))
-                .subscribe(v -> log.error("sync rule '{}' finished", name),
-                        t -> log.error("sync rule '{}' error", name, t));
+        clusterStore.multiGet(keys, RuleDefinition.class)
+                .doOnNext(t -> addOrMergeRule(t.second(), false))
+                .subscribe(null,
+                        t -> log.error("sync rule '{}' error", desc, t),
+                        () -> log.error("sync rule '{}' finished", desc));
     }
 
     /**
@@ -308,7 +335,7 @@ public class RuleManager {
      *
      * @return 所有规则定义
      */
-    public Collection<RuleDefinition> getAllRuleDefinition() {
+    public Collection<RuleDefinition> getAllRuleDefinitions() {
         return rules.values().stream().map(Rule::getDefinition).collect(Collectors.toList());
     }
 
@@ -329,7 +356,7 @@ public class RuleManager {
     private class RuleAddEventConsumer implements MqttEventConsumer<RuleAddEvent> {
         @Override
         public void consume(ReactorEventBus eventBus, RuleAddEvent event) {
-            syncRule(event.getRuleName());
+            syncRules(event.getRuleNames());
         }
     }
 
@@ -339,7 +366,7 @@ public class RuleManager {
     private class RuleChangedEventConsumer implements MqttEventConsumer<RuleChangedEvent> {
         @Override
         public void consume(ReactorEventBus eventBus, RuleChangedEvent event) {
-            syncRule(event.getRuleName());
+            syncRules(event.getRuleNames());
         }
     }
 
@@ -349,7 +376,7 @@ public class RuleManager {
     private class RuleRemoveEventConsumer implements MqttEventConsumer<RuleRemoveEvent> {
         @Override
         public void consume(ReactorEventBus eventBus, RuleRemoveEvent event) {
-            syncRule(event.getRuleName());
+            syncRules(event.getRuleNames());
         }
     }
 }
