@@ -1,4 +1,4 @@
-package org.kin.mqtt.broker.core.cluster.event;
+package org.kin.mqtt.broker.bridge.event;
 
 import org.kin.mqtt.broker.core.event.MqttEvent;
 

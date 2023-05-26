@@ -1,4 +1,6 @@
-package org.kin.mqtt.broker.core.cluster.event;
+package org.kin.mqtt.broker.rule.event;
+
+import org.kin.mqtt.broker.core.cluster.event.MqttClusterEvent;
 
 /**
  * 规则移除事件

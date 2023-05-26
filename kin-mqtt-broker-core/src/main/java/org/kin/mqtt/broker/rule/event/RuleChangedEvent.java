@@ -1,7 +1,10 @@
-package org.kin.mqtt.broker.core.cluster.event;
+package org.kin.mqtt.broker.rule.event;
+
+import org.kin.mqtt.broker.core.cluster.event.MqttClusterEvent;
 
 /**
  * 规则变化事件
+ *
  * @author huangjianqin
  * @date 2023/5/22
  */
