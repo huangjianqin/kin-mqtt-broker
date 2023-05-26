@@ -50,6 +50,10 @@ public class MqttBrokerApplication {
                     throw new RuntimeException(e);
                 }
 
+                if (mqttBroker.isStopped()) {
+                    return;
+                }
+
                 String s = "broker-" + mqttBroker.getBrokerId() + " loop:" + messageId++;
                 byte[] bytes = s.getBytes(StandardCharsets.UTF_8);
                 ByteBuf byteBuf = Unpooled.buffer(bytes.length);

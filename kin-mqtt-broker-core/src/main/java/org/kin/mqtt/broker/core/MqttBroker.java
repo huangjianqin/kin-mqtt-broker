@@ -20,6 +20,8 @@ public class MqttBroker implements Closeable {
     private final MqttMessageSender mqttMessageSender;
     /** mqtt broker disposables */
     private final List<Disposable> disposables = new LinkedList<>();
+    /** mqtt broker 是否stopped */
+    private volatile boolean stopped;
 
     /**
      * @param context                  mqtt broker context
@@ -47,6 +49,11 @@ public class MqttBroker implements Closeable {
 
     @Override
     public synchronized void close() {
+        if (stopped) {
+            return;
+        }
+
+        stopped = true;
         for (Disposable disposable : disposables) {
             disposable.dispose();
         }
@@ -63,5 +70,9 @@ public class MqttBroker implements Closeable {
 
     public String getBrokerId() {
         return getContext().getBrokerId();
+    }
+
+    public boolean isStopped() {
+        return stopped;
     }
 }
