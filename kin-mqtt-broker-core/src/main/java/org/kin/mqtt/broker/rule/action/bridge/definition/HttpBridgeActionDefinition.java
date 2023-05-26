@@ -19,6 +19,7 @@ import java.util.Objects;
  */
 @Type(ActionType.HTTP_BRIDGE)
 public class HttpBridgeActionDefinition extends BridgeActionDefinition {
+    private static final long serialVersionUID = 7899648292497899671L;
     private String uri;
     private Map<String, String> headers = Collections.emptyMap();
 

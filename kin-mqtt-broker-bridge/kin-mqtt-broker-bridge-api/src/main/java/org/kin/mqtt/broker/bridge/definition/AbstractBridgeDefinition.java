@@ -10,6 +10,7 @@ import java.util.Objects;
  * @date 2023/5/26
  */
 public abstract class AbstractBridgeDefinition implements BridgeDefinition{
+    private static final long serialVersionUID = 8711308396094343662L;
     /** bridge name */
     private String name;
 

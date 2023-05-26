@@ -13,6 +13,7 @@ import java.util.Objects;
  * @date 2022/12/11
  */
 public abstract class BridgeActionDefinition implements ActionDefinition {
+    private static final long serialVersionUID = -218843737076088494L;
     /** bridge name */
     private String bridgeName;
 

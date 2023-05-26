@@ -10,6 +10,7 @@ import org.kin.mqtt.broker.core.Type;
  */
 @Type("rabbitMQ")
 public class RabbitMQBridgeDefinition extends AbstractBridgeDefinition {
+    private static final long serialVersionUID = -2880098627036254119L;
     /** host */
     private String host;
     /** port */

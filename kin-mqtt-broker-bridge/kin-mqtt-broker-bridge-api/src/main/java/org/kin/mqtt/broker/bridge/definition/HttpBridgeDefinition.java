@@ -13,6 +13,7 @@ import java.util.Map;
  */
 @Type(BridgeType.HTTP)
 public class HttpBridgeDefinition extends AbstractBridgeDefinition{
+    private static final long serialVersionUID = 3360786248837195583L;
     /** 默认headers */
     private Map<String, String> headers = Collections.emptyMap();
 

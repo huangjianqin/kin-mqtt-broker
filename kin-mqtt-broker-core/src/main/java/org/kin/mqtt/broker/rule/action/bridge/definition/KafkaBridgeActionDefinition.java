@@ -17,6 +17,7 @@ import java.util.Objects;
  */
 @Type(ActionType.KAFKA_BRIDGE)
 public class KafkaBridgeActionDefinition extends BridgeActionDefinition {
+    private static final long serialVersionUID = -8284203371705407110L;
     /** kafka topic */
     private String topic;
 

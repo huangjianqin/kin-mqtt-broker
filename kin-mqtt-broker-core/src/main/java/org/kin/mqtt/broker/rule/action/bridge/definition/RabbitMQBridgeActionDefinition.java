@@ -17,6 +17,7 @@ import java.util.Objects;
  */
 @Type(ActionType.RABBIT_MQ_BRIDGE)
 public class RabbitMQBridgeActionDefinition extends BridgeActionDefinition {
+    private static final long serialVersionUID = -3680050474039592067L;
     /** rabbitmq queue */
     private String queue;
 

@@ -53,6 +53,7 @@ public class BridgeManager implements Closeable {
         ClusterStore clusterStore = brokerContext.getClusterStore();
         clusterStore.scanRaw(ClusterStoreKeys.BRIDGE_KEY_PREFIX)
                 .doOnNext(t -> onLoadFromClusterStore(t, cName2Definition))
+                .doOnComplete(() -> onFinishLoadFromClusterStore(cName2Definition))
                 .subscribe(v -> log.info("init bridge manager finished"),
                         t -> log.error("init bridge manager error", t));
 
@@ -74,7 +75,7 @@ public class BridgeManager implements Closeable {
         }
 
         //持久化bridge配置
-        BridgeDefinition definition = JSON.read(tuple.second(), BridgeDefinition.class);
+        BridgeDefinition definition = toBridgeDefinition(tuple.second());
         String name = definition.getName();
         //新bridge配置
         BridgeDefinition cDefinition = cName2Definition.get(name);
@@ -91,10 +92,24 @@ public class BridgeManager implements Closeable {
 
         Bridge bridge = Bridges.createBridge(fDefinition);
         bridgeMap.put(name, new BridgeContext(fDefinition, bridge));
-        if(cDefinition != definition){
+        if (cDefinition != definition) {
             //新配置, 需更新db中的bridge配置
-            brokerContext.broadcastClusterEvent(BridgeAddEvent.of(name));
             persistDefinition(fDefinition);
+            brokerContext.broadcastClusterEvent(BridgeAddEvent.of(name));
+        }
+    }
+
+    /**
+     * 从cluster store加载bridge完成后, 把{@code cName2Definition}中有的, {@link #bridgeMap}中没有的加载
+     */
+    private void onFinishLoadFromClusterStore(Map<String, BridgeDefinition> cName2Definition) {
+        for (BridgeDefinition definition : cName2Definition.values()) {
+            String name = definition.getName();
+            if (bridgeMap.containsKey(name)) {
+                continue;
+            }
+
+            addBridge0(definition);
         }
     }
 
@@ -110,6 +125,11 @@ public class BridgeManager implements Closeable {
         if (bridgeMap.containsKey(bridgeName)) {
             throw new IllegalArgumentException(String.format("bridge name '%s' conflict!!", bridgeName));
         }
+        addBridge0(definition);
+    }
+
+    private void addBridge0(BridgeDefinition definition) {
+        String bridgeName = definition.getName();
 
         Bridge bridge = Bridges.createBridge(definition);
         bridgeMap.put(bridgeName, new BridgeContext(definition, bridge));
@@ -161,22 +181,34 @@ public class BridgeManager implements Closeable {
 
     /**
      * 持久化bridge配置
+     *
      * @param definition bridge配置
      */
-    private void persistDefinition(BridgeDefinition definition){
+    private void persistDefinition(BridgeDefinition definition) {
         ClusterStore clusterStore = brokerContext.getClusterStore();
-        clusterStore.put(ClusterStoreKeys.getBridgeKey(definition.getName()), definition)
+        clusterStore.put(ClusterStoreKeys.getBridgeKey(definition.getName()), new BridgeDefinitionDelegate(definition))
                 .subscribe();
     }
 
     /**
-     * 同步桥接变化
-     * @param name  规则名
+     * 将序列化后的字节数组转换为{@link BridgeDefinition}实例
+     *
+     * @param bytes 序列化后的字节数组
+     * @return {@link BridgeDefinition}实例
      */
-    private void syncBridge(String name){
+    private BridgeDefinition toBridgeDefinition(byte[] bytes) {
+        return ((BridgeDefinitionDelegate) JSON.read(bytes, BridgeDefinitionDelegate.class)).getDelegate();
+    }
+
+    /**
+     * 同步桥接变化
+     *
+     * @param name 规则名
+     */
+    private void syncBridge(String name) {
         ClusterStore clusterStore = brokerContext.getClusterStore();
-        clusterStore.get(ClusterStoreKeys.getRuleKey(name), BridgeDefinition.class)
-                .doOnNext(this::syncBridge0)
+        clusterStore.get(ClusterStoreKeys.getRuleKey(name), BridgeDefinitionDelegate.class)
+                .doOnNext(bdd -> syncBridge0(bdd.getDelegate()))
                 .subscribe(v -> log.error("sync bridge '{}' finished", name),
                         t -> log.error("sync bridge '{}' error", name, t));
     }

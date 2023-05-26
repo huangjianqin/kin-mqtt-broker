@@ -13,6 +13,7 @@ import java.util.Map;
  */
 @Type("kafka")
 public class KafkaBridgeDefinition extends AbstractBridgeDefinition{
+    private static final long serialVersionUID = 8486488039099728706L;
     private Map<String, Object> props = new HashMap<>();
 
     public static Builder builder() {

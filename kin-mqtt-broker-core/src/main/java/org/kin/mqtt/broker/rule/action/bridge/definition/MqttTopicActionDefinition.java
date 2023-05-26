@@ -19,6 +19,7 @@ import java.util.Objects;
  */
 @Type(ActionType.MQTT_TOPIC)
 public class MqttTopicActionDefinition implements ActionDefinition {
+    private static final long serialVersionUID = 4014461797177714118L;
     /** 要转发的topic */
     private String topic;
     /** qos */
