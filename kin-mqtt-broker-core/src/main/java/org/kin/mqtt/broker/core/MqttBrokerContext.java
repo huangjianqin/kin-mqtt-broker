@@ -56,7 +56,7 @@ public class MqttBrokerContext implements Closeable {
     /** 规则链执行 */
     private final RuleEngine ruleEngine = new RuleEngine(ruleManager);
     /** 数据桥接实现管理 */
-    private final BridgeManager bridgeManager = new BridgeManager();
+    private final BridgeManager bridgeManager;
     /** 访问控制权限管理 */
     private final AclService aclService;
     /** 事件总线 */
@@ -75,14 +75,12 @@ public class MqttBrokerContext implements Closeable {
         this.authService = authService;
         this.cluster = new Cluster(this);
         this.messageStore = messageStore;
+        this.bridgeManager = new BridgeManager(this);
         this.aclService = aclService;
         this.eventBus = new DefaultReactorEventBus(true, mqttBizScheduler);
         for (Object eventConsumer : eventConsumers) {
             this.eventBus.register(eventConsumer);
         }
-
-        //init
-        bridgeManager.initBrokerContext(this);
     }
 
     @Override

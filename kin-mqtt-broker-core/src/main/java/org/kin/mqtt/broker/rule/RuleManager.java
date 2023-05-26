@@ -48,7 +48,8 @@ public class RuleManager {
         clusterStore.scanRaw(ClusterStoreKeys.RULE_KEY_PREFIX)
                 .doOnNext(this::onLoadFromClusterStore)
                 .doOnComplete(() -> onFinishLoadFromClusterStore(ruleDefinitions))
-                .subscribe(null, t -> log.error("init rule manager error", t));
+                .subscribe(v -> log.info("init rule manager finished"),
+                        t -> log.error("init rule manager error", t));
 
         //注册内部consumer
         ReactorEventBus eventBus = brokerContext.getEventBus();
@@ -63,6 +64,7 @@ public class RuleManager {
     private void onLoadFromClusterStore(Tuple<String, byte[]> tuple){
         String key = tuple.first();
         if(!ClusterStoreKeys.isRuleKey(key)){
+            //过滤非法key
             return;
         }
 
@@ -103,7 +105,7 @@ public class RuleManager {
         }
 
         rules.put(name, new Rule(definition));
-        persistRuleDefinition(definition);
+        persistDefinition(definition);
         if (oldRule != null) {
             oldRule.dispose();
         }
@@ -146,22 +148,51 @@ public class RuleManager {
 
         String name = definition.getName();
         if (rules.containsKey(name)) {
-            throw new IllegalStateException(String.format("rule '%s' has registered", name));
+            throw new IllegalArgumentException(String.format("rule '%s' has registered", name));
         }
 
         rules.put(name, new Rule(definition));
-        persistRuleDefinition(definition);
+        persistDefinition(definition);
 
         log.debug("add rule '{}' success", name);
 
-        brokerContext.broadcastClusterEvent(RuleAddEvent.of(definition.getName()));
+        brokerContext.broadcastClusterEvent(RuleAddEvent.of(name));
+    }
+
+    /**
+     * 更新规则
+     *
+     * @param definition 新规则定义
+     */
+    public void updateRule(RuleDefinition nDefinition) {
+        nDefinition.check();
+
+        String name = nDefinition.getName();
+        Rule oldRule = rules.get(name);
+        if (Objects.isNull(oldRule)) {
+            throw new IllegalArgumentException(String.format("rule '%s' has registered", name));
+        }
+
+        if (nDefinition.equals(oldRule.getDefinition())) {
+            throw new IllegalArgumentException("rule definition is complete same, " + nDefinition);
+        }
+
+        //dispose old rule
+        oldRule.dispose();
+
+        rules.put(name, new Rule(nDefinition));
+        persistDefinition(nDefinition);
+
+        log.debug("add rule '{}' success", name);
+
+        brokerContext.broadcastClusterEvent(RuleAddEvent.of(name));
     }
 
     /**
      * 持久化规则定义
      * @param definition 规则定义
      */
-    private void persistRuleDefinition(RuleDefinition definition){
+    private void persistDefinition(RuleDefinition definition){
         ClusterStore clusterStore = brokerContext.getClusterStore();
         clusterStore.put(ClusterStoreKeys.getRuleKey(definition.getName()), definition)
                 .subscribe();
@@ -219,7 +250,8 @@ public class RuleManager {
         ClusterStore clusterStore = brokerContext.getClusterStore();
         clusterStore.get(ClusterStoreKeys.getRuleKey(name), RuleDefinition.class)
                 .doOnNext(rd -> addOrMergeRule(rd, false))
-                .subscribe(null, t -> log.error("sync rule '{}' error", name, t));
+                .subscribe(v -> log.error("sync rule '{}' finished", name),
+                        t -> log.error("sync rule '{}' error", name, t));
     }
 
     /**
@@ -231,7 +263,7 @@ public class RuleManager {
     public void addAction(String name, ActionDefinition actionDefinition) {
         Rule rule = getRuleOrThrow(name);
         rule.addAction(actionDefinition);
-        persistRuleDefinition(rule.getDefinition());
+        persistDefinition(rule.getDefinition());
 
         log.debug("add action to rule '{}' success, {}", name, actionDefinition);
 
@@ -248,7 +280,7 @@ public class RuleManager {
         Rule rule = getRuleOrThrow(name);
         boolean result = rule.removeAction(actionDefinition);
         if (result) {
-            persistRuleDefinition(rule.getDefinition());
+            persistDefinition(rule.getDefinition());
             log.debug("remove action from rule '{}' success, {}", name, actionDefinition);
             brokerContext.broadcastClusterEvent(RuleChangedEvent.of(name));
         }

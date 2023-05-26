@@ -3,7 +3,6 @@ package org.kin.mqtt.broker.boot;
 import org.kin.framework.utils.CollectionUtils;
 import org.kin.mqtt.broker.acl.AclService;
 import org.kin.mqtt.broker.auth.AuthService;
-import org.kin.mqtt.broker.bridge.Bridge;
 import org.kin.mqtt.broker.core.Interceptor;
 import org.kin.mqtt.broker.core.MqttBroker;
 import org.kin.mqtt.broker.core.MqttBrokerBootstrap;
@@ -38,7 +37,6 @@ public class MqttBrokerAutoConfiguration {
                                  @Autowired(required = false) List<Interceptor> interceptors,
                                  @Autowired(required = false) AuthService authService,
                                  @Autowired(required = false) MqttMessageStore messageStore,
-                                 @Autowired(required = false) List<Bridge> bridges,
                                  @Autowired(required = false) AclService aclService) {
         MqttBrokerBootstrap bootstrap = MqttBrokerBootstrap.create(mqttBrokerProperties);
 
@@ -55,11 +53,6 @@ public class MqttBrokerAutoConfiguration {
         }
 
         bootstrap.rules(getRuleDefinitions());
-
-        if (CollectionUtils.isNonEmpty(bridges)) {
-            bootstrap.bridges(bridges);
-        }
-
         if (Objects.nonNull(aclService)) {
             bootstrap.aclService(aclService);
         }

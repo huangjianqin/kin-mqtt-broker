@@ -11,14 +11,11 @@ import io.netty.handler.codec.mqtt.MqttMessage;
 import io.netty.handler.codec.mqtt.MqttPublishMessage;
 import io.netty.handler.traffic.ChannelTrafficShapingHandler;
 import org.kin.framework.reactor.event.EventConsumer;
-import org.kin.framework.utils.CollectionUtils;
 import org.kin.framework.utils.SysUtils;
 import org.kin.mqtt.broker.acl.AclService;
 import org.kin.mqtt.broker.acl.NoneAclService;
 import org.kin.mqtt.broker.auth.AuthService;
 import org.kin.mqtt.broker.auth.NoneAuthService;
-import org.kin.mqtt.broker.bridge.Bridge;
-import org.kin.mqtt.broker.bridge.Bridges;
 import org.kin.mqtt.broker.bridge.definition.BridgeDefinition;
 import org.kin.mqtt.broker.core.event.MqttEventConsumer;
 import org.kin.mqtt.broker.core.handler.ByteBuf2WsFrameEncoder;
@@ -60,8 +57,6 @@ public class MqttBrokerBootstrap extends ServerTransport<MqttBrokerBootstrap> {
     private MqttMessageStore messageStore = new DefaultMqttMessageStore();
     /** 规则链定义 */
     private List<RuleDefinition> ruleDefinitions = new LinkedList<>();
-    /** 数据桥接实现 */
-    private final List<Bridge> bridges = new LinkedList();
     /** 访问控制权限管理 */
     private AclService aclService = NoneAclService.INSTANCE;
     /** 事件consumer */
@@ -152,22 +147,6 @@ public class MqttBrokerBootstrap extends ServerTransport<MqttBrokerBootstrap> {
     }
 
     /**
-     * 数据桥接定义
-     */
-    public MqttBrokerBootstrap bridge(Bridge bridge) {
-        bridges.add(bridge);
-        return this;
-    }
-
-    /**
-     * 数据桥接定义
-     */
-    public MqttBrokerBootstrap bridges(List<Bridge> bridges) {
-        bridges.forEach(this::bridge);
-        return this;
-    }
-
-    /**
      * 访问控制权限管理
      */
     public MqttBrokerBootstrap aclService(AclService aclService) {
@@ -235,11 +214,13 @@ public class MqttBrokerBootstrap extends ServerTransport<MqttBrokerBootstrap> {
                 authService, messageStore, aclService, shareSubLoadBalance, eventConsumers);
 
         //初始化cluster component和创建bridges
-        return Mono.when(brokerContext.getCluster().init(), Mono.fromRunnable(this::createBridges))
-                //加载并apply rule
-                .then(Mono.fromRunnable(() -> brokerContext.getRuleManager().init(ruleDefinitions)))
-                //初始化bridge component
-                .then(Mono.fromRunnable(() -> addBridges(brokerContext)))
+        return brokerContext.getCluster().init()
+                .then(Mono.fromRunnable(() -> {
+                    //加载rule定义并apply rule
+                    brokerContext.getRuleManager().init(ruleDefinitions);
+                    //加载bridge配置并apply bridge
+                    brokerContext.getBridgeManager().init(bridgeDefinitions);
+                }))
                 //初始化mqtt broker
                 .then(Mono.fromCallable(() -> initMqttBroker(brokerContext)))
                 .block();
@@ -248,18 +229,11 @@ public class MqttBrokerBootstrap extends ServerTransport<MqttBrokerBootstrap> {
     /**
      * 内部配置检查
      */
-    private void check(){
+    private void check() {
         //检查bridge name是否会重复
         Set<String> bridgeNames = new HashSet<>();
         for (BridgeDefinition bd : bridgeDefinitions) {
             String name = bd.getName();
-            if (!bridgeNames.add(name)) {
-                throw new MqttBrokerException(String.format("duplicate bridge name '%s'", name));
-            }
-        }
-
-        for (Bridge bridge : bridges) {
-            String name = bridge.name();
             if (!bridgeNames.add(name)) {
                 throw new MqttBrokerException(String.format("duplicate bridge name '%s'", name));
             }
@@ -427,27 +401,6 @@ public class MqttBrokerBootstrap extends ServerTransport<MqttBrokerBootstrap> {
         new OnlineClientNumPublisher(brokerContext);
     }
 
-    /**
-     * 基于{@link BridgeDefinition}创建{@link Bridge}实例
-     */
-    private void createBridges(){
-        if(CollectionUtils.isEmpty(bridgeDefinitions)){
-            return;
-        }
-
-        for (BridgeDefinition definition : bridgeDefinitions) {
-            Bridge bridge = Bridges.createBridge(definition);
-            bridge(bridge);
-        }
-    }
-
-    /**
-     * 注册{@link  Bridge}实现
-     */
-    private void addBridges(MqttBrokerContext brokerContext) {
-        bridges.forEach(b -> brokerContext.getBridgeManager().addBridge(b));
-    }
-
     //getter
     public MqttBrokerConfig getConfig() {
         return config;
@@ -471,10 +424,6 @@ public class MqttBrokerBootstrap extends ServerTransport<MqttBrokerBootstrap> {
 
     public AclService getAclService() {
         return aclService;
-    }
-
-    public List<Bridge> getBridges() {
-        return bridges;
     }
 
     public List<MqttEventConsumer> getEventConsumers() {

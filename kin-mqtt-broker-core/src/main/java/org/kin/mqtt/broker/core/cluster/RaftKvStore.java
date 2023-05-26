@@ -32,7 +32,7 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 import static io.scalecube.reactor.RetryNonSerializedEmitFailureHandler.RETRY_NON_SERIALIZED;
-import static org.kin.mqtt.broker.core.cluster.ClusterStoreKeys.RULE_KEY_PREFIX;
+import static org.kin.mqtt.broker.core.cluster.ClusterStoreKeys.BRIDGE_KEY_PREFIX;
 import static org.kin.mqtt.broker.core.cluster.ClusterStoreKeys.SESSION_KEY_PREFIX;
 
 /**
@@ -193,7 +193,7 @@ public class RaftKvStore implements ClusterStore {
                         .withKvRpcCoreThreads(storeProcessors * 4)
                         .withRegionEngineOptionsList(MultiRegionEngineOptionsConfigured.newConfigured()
                                 //region1: rule
-                                .withStartKey(1L, RULE_KEY_PREFIX)
+                                .withStartKey(1L, BRIDGE_KEY_PREFIX)
                                 //region2: session + broker topic subscription
                                 .withStartKey(2L, SESSION_KEY_PREFIX)
                                 .config())
@@ -260,7 +260,7 @@ public class RaftKvStore implements ClusterStore {
                         .withKvRpcCoreThreads(storeProcessors * 2)
                         .withRegionEngineOptionsList(MultiRegionEngineOptionsConfigured.newConfigured()
                                 //region1: rule
-                                .withStartKey(1L, RULE_KEY_PREFIX)
+                                .withStartKey(1L, BRIDGE_KEY_PREFIX)
                                 //region2: session + broker topic subscription
                                 .withStartKey(2L, SESSION_KEY_PREFIX)
                                 .config())
@@ -273,7 +273,7 @@ public class RaftKvStore implements ClusterStore {
                         .withRegionRouteTableOptionsList(MultiRegionRouteTableOptionsConfigured
                                 .newConfigured()
                                 //region1: rule
-                                .withStartKey(1L, RULE_KEY_PREFIX)
+                                .withStartKey(1L, BRIDGE_KEY_PREFIX)
                                 //region2: session + broker topic subscription
                                 .withStartKey(2L, SESSION_KEY_PREFIX)
                                 .config())
