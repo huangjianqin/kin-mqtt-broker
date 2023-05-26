@@ -22,13 +22,7 @@
         <!-- 默认依赖所有内置的bridge依赖 -->
         <dependency>
             <groupId>org.kin</groupId>
-            <artifactId>kin-mqtt-broker-bridge-http-starter</artifactId>
-            <version>${project.version}</version>
-        </dependency>
-
-        <dependency>
-            <groupId>org.kin</groupId>
-            <artifactId>kin-mqtt-broker-bridge-kafka-starter</artifactId>
+            <artifactId>kin-mqtt-broker-bridge-starter-all</artifactId>
             <version>${project.version}</version>
         </dependency>
 
