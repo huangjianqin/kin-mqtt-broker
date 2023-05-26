@@ -9,10 +9,12 @@ import java.util.Objects;
  * @author huangjianqin
  * @date 2023/5/26
  */
-public abstract class AbstractBridgeDefinition implements BridgeDefinition{
+public abstract class AbstractBridgeDefinition implements BridgeDefinition {
     private static final long serialVersionUID = 8711308396094343662L;
     /** bridge name */
     private String name;
+    /** bridge描述 */
+    private String desc;
 
     @Override
     public void check() {
@@ -33,6 +35,12 @@ public abstract class AbstractBridgeDefinition implements BridgeDefinition{
             return (BDB) this;
         }
 
+        @SuppressWarnings("unchecked")
+        public BDB desc(String desc) {
+            definition.setDesc(desc);
+            return (BDB) this;
+        }
+
         public BD build() {
             definition.check();
             return definition;
@@ -49,21 +57,30 @@ public abstract class AbstractBridgeDefinition implements BridgeDefinition{
         this.name = name;
     }
 
+    public String getDesc() {
+        return desc;
+    }
+
+    public void setDesc(String desc) {
+        this.desc = desc;
+    }
+
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
+        if (!(o instanceof AbstractBridgeDefinition)) return false;
         AbstractBridgeDefinition that = (AbstractBridgeDefinition) o;
-        return Objects.equals(name, that.name);
+        return Objects.equals(name, that.name) && Objects.equals(desc, that.desc);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(name);
+        return Objects.hash(name, desc);
     }
 
     @Override
     public String toString() {
-        return "name='" + name + '\'';
+        return "name='" + name + '\'' +
+                ", desc='" + desc + '\'';
     }
 }

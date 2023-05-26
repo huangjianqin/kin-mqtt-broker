@@ -48,8 +48,9 @@ public class RuleManager {
         clusterStore.scanRaw(ClusterStoreKeys.RULE_KEY_PREFIX)
                 .doOnNext(this::onLoadFromClusterStore)
                 .doOnComplete(() -> onFinishLoadFromClusterStore(ruleDefinitions))
-                .subscribe(v -> log.info("init rule manager finished"),
-                        t -> log.error("init rule manager error", t));
+                .subscribe(null,
+                        t -> log.error("init rule manager error", t),
+                        () -> log.info("init rule manager finished"));
 
         //注册内部consumer
         ReactorEventBus eventBus = brokerContext.getEventBus();

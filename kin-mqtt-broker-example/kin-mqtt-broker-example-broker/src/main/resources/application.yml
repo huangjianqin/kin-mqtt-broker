@@ -19,6 +19,7 @@ org:
           - type: http
             args:
               name: default_http_bridge
+              desc: "default http bridge"
 
 server:
   port: 8000

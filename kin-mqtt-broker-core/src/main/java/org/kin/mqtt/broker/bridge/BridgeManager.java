@@ -54,8 +54,9 @@ public class BridgeManager implements Closeable {
         clusterStore.scanRaw(ClusterStoreKeys.BRIDGE_KEY_PREFIX)
                 .doOnNext(t -> onLoadFromClusterStore(t, cName2Definition))
                 .doOnComplete(() -> onFinishLoadFromClusterStore(cName2Definition))
-                .subscribe(v -> log.info("init bridge manager finished"),
-                        t -> log.error("init bridge manager error", t));
+                .subscribe(null,
+                        t -> log.error("init bridge manager error", t),
+                        () -> log.info("init bridge manager finished"));
 
         //注册内部consumer
         ReactorEventBus eventBus = brokerContext.getEventBus();
