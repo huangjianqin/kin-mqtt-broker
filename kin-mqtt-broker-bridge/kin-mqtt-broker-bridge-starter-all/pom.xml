@@ -10,7 +10,6 @@
     </parent>
 
     <artifactId>kin-mqtt-broker-bridge-starter-all</artifactId>
-    <packaging>pom</packaging>
 
     <dependencies>
         <dependency>
