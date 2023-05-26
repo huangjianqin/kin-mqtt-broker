@@ -55,8 +55,8 @@ public class Actions {
      *
      * @param factories {@link Action}实现构造逻辑
      */
-    public static void registerActionsByGeneric(ActionFactory<? extends ActionDefinition, ? extends Action>... factories) {
-        registerActionsByGeneric(Arrays.asList(factories));
+    public static void registerAction(ActionFactory<? extends ActionDefinition, ? extends Action>... factories) {
+        registerAction(Arrays.asList(factories));
     }
 
     /**
@@ -67,7 +67,7 @@ public class Actions {
      * @param factories {@link Action}实现构造逻辑
      */
     @SuppressWarnings("unchecked")
-    public static void registerActionsByGeneric(Collection<ActionFactory<? extends ActionDefinition, ? extends Action>> factories) {
+    public static void registerAction(Collection<ActionFactory<? extends ActionDefinition, ? extends Action>> factories) {
         Map<Class<? extends ActionDefinition>, ActionFactory<? extends ActionDefinition, ? extends Action>> map = new HashMap<>();
         for (ActionFactory<? extends ActionDefinition, ? extends Action> factory : factories) {
             List<Class<?>> genericTypes = ClassUtils.getSuperInterfacesGenericRawTypes(ActionFactory.class, factory.getClass());

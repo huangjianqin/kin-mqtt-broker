@@ -89,4 +89,9 @@ public class MqttBrokerAutoConfiguration {
     public MqttMessageSender mqttMessageSender(@Autowired MqttBroker mqttBroker) {
         return mqttBroker.getMqttMessageSender();
     }
+
+    @Bean
+    public ActionFactoryRegister actionFactoryRegister() {
+        return new ActionFactoryRegister();
+    }
 }
