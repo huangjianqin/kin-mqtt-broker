@@ -32,7 +32,7 @@ public class KafkaBridge extends NoErrorBridge {
     /**
      * 获取默认的kafka broker配置
      */
-    private static Map<String, Object> getDefaultProps(String name, String bootstrapServers) {
+    private static Map<String, Object> getDefaultProps(String bootstrapServers) {
         Map<String, Object> props = new HashMap<>();
         props.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
         return props;
@@ -53,7 +53,7 @@ public class KafkaBridge extends NoErrorBridge {
     }
 
     public KafkaBridge(String name, String bootstrapServers) {
-        this(name, getDefaultProps(name, bootstrapServers));
+        this(name, getDefaultProps(bootstrapServers));
     }
 
     public KafkaBridge(String name, Map<String, Object> props) {
