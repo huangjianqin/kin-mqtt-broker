@@ -1,5 +1,8 @@
 package org.kin.mqtt.broker.core.cluster.event;
 
+import java.util.Arrays;
+import java.util.List;
+
 /**
  * 移除数据桥接事件
  *
@@ -9,9 +12,15 @@ package org.kin.mqtt.broker.core.cluster.event;
 public class BridgeRemoveEvent extends AbstractBridgeEvent implements MqttClusterEvent {
     private static final long serialVersionUID = 1048367402310871011L;
 
-    public static BridgeRemoveEvent of(String bridgeName) {
+    public static BridgeRemoveEvent of(String... bridgeNames) {
         BridgeRemoveEvent inst = new BridgeRemoveEvent();
-        inst.bridgeName = bridgeName;
+        inst.bridgeNames = Arrays.asList(bridgeNames);
+        return inst;
+    }
+
+    public static BridgeRemoveEvent of(List<String> bridgeNames) {
+        BridgeRemoveEvent inst = new BridgeRemoveEvent();
+        inst.bridgeNames = bridgeNames;
         return inst;
     }
 }

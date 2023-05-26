@@ -5,6 +5,7 @@ import org.kin.framework.collection.CopyOnWriteMap;
 import org.kin.framework.collection.Tuple;
 import org.kin.framework.reactor.event.ReactorEventBus;
 import org.kin.framework.utils.JSON;
+import org.kin.framework.utils.StringUtils;
 import org.kin.mqtt.broker.bridge.definition.BridgeDefinition;
 import org.kin.mqtt.broker.core.MqttBrokerContext;
 import org.kin.mqtt.broker.core.cluster.ClusterStore;
@@ -19,6 +20,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.annotation.Nullable;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -101,17 +103,20 @@ public class BridgeManager implements Closeable {
     }
 
     /**
-     * 从cluster store加载bridge完成后, 把{@code cName2Definition}中有的, {@link #bridgeMap}中没有的加载
+     * 从cluster store加载bridge完成后, 把{@code name2Definition}中有的, {@link #bridgeMap}中没有的加载
      */
-    private void onFinishLoadFromClusterStore(Map<String, BridgeDefinition> cName2Definition) {
-        for (BridgeDefinition definition : cName2Definition.values()) {
+    private void onFinishLoadFromClusterStore(Map<String, BridgeDefinition> name2Definition) {
+        List<String> newBridgeNames = new ArrayList<>(name2Definition.size());
+        for (BridgeDefinition definition : name2Definition.values()) {
             String name = definition.getName();
             if (bridgeMap.containsKey(name)) {
                 continue;
             }
 
+            newBridgeNames.add(name);
             addBridge0(definition);
         }
+        brokerContext.broadcastClusterEvent(BridgeAddEvent.of(newBridgeNames));
     }
 
     /**
@@ -127,6 +132,7 @@ public class BridgeManager implements Closeable {
             throw new IllegalArgumentException(String.format("bridge name '%s' conflict!!", bridgeName));
         }
         addBridge0(definition);
+        brokerContext.broadcastClusterEvent(BridgeAddEvent.of(bridgeName));
     }
 
     private void addBridge0(BridgeDefinition definition) {
@@ -135,7 +141,6 @@ public class BridgeManager implements Closeable {
         Bridge bridge = Bridges.createBridge(definition);
         bridgeMap.put(bridgeName, new BridgeContext(definition, bridge));
         persistDefinition(definition);
-        brokerContext.broadcastClusterEvent(BridgeAddEvent.of(bridgeName));
     }
 
     /**
@@ -204,21 +209,26 @@ public class BridgeManager implements Closeable {
     /**
      * 同步桥接变化
      *
-     * @param name 规则名
+     * @param names 桥接名列表
      */
-    private void syncBridge(String name) {
+    private void syncBridges(List<String> names) {
+        String nameDesc = StringUtils.mkString(names);
+        List<String> keys = names.stream().map(ClusterStoreKeys::getBridgeKey).collect(Collectors.toList());
+
         ClusterStore clusterStore = brokerContext.getClusterStore();
-        clusterStore.get(ClusterStoreKeys.getRuleKey(name), BridgeDefinitionDelegate.class)
-                .doOnNext(bdd -> syncBridge0(bdd.getDelegate()))
-                .subscribe(v -> log.error("sync bridge '{}' finished", name),
-                        t -> log.error("sync bridge '{}' error", name, t));
+        clusterStore.multiGet(keys, BridgeDefinitionDelegate.class)
+                .doOnNext(t -> onLoadFromClusterStore(t.second().getDelegate()))
+                .subscribe(null,
+                        t -> log.error("sync bridge '{}' error", nameDesc, t),
+                        () -> log.error("sync bridge '{}' finished", nameDesc));
     }
 
     /**
-     * 同步桥接变化
-     * @param definition    桥接配置
+     * 从cluster store加载bridge definition并apply
+     *
+     * @param definition 桥接配置
      */
-    private void syncBridge0(BridgeDefinition definition){
+    private void onLoadFromClusterStore(BridgeDefinition definition) {
         definition.check();
 
         String bridgeName = definition.getName();
@@ -258,7 +268,7 @@ public class BridgeManager implements Closeable {
     private class BridgeAddEventConsumer implements MqttEventConsumer<BridgeAddEvent> {
         @Override
         public void consume(ReactorEventBus eventBus, BridgeAddEvent event) {
-            syncBridge(event.getBridgeName());
+            syncBridges(event.getBridgeNames());
         }
     }
 
@@ -268,7 +278,7 @@ public class BridgeManager implements Closeable {
     private class BridgeChangedEventConsumer implements MqttEventConsumer<BridgeChangedEvent> {
         @Override
         public void consume(ReactorEventBus eventBus, BridgeChangedEvent event) {
-            syncBridge(event.getBridgeName());
+            syncBridges(event.getBridgeNames());
         }
     }
 
@@ -278,7 +288,7 @@ public class BridgeManager implements Closeable {
     private class BridgeRemoveEventConsumer implements MqttEventConsumer<BridgeRemoveEvent> {
         @Override
         public void consume(ReactorEventBus eventBus, BridgeRemoveEvent event) {
-            syncBridge(event.getBridgeName());
+            syncBridges(event.getBridgeNames());
         }
     }
 }
