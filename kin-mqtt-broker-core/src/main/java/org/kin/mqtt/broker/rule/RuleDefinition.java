@@ -1,14 +1,9 @@
 package org.kin.mqtt.broker.rule;
 
-import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.google.common.base.Preconditions;
 import org.kin.framework.utils.StringUtils;
 import org.kin.mqtt.broker.rule.action.ActionDefinition;
-import org.kin.mqtt.broker.rule.action.bridge.definition.HttpBridgeActionDefinition;
-import org.kin.mqtt.broker.rule.action.bridge.definition.KafkaBridgeActionDefinition;
-import org.kin.mqtt.broker.rule.action.bridge.definition.MqttTopicActionDefinition;
-import org.kin.mqtt.broker.rule.action.bridge.definition.RabbitMQBridgeActionDefinition;
 
 import java.util.*;
 import java.util.concurrent.CopyOnWriteArraySet;
@@ -27,11 +22,7 @@ public class RuleDefinition {
     /** sql */
     private String sql;
     /** 绑定的动作 */
-    @JsonTypeInfo(use = JsonTypeInfo.Id.NAME)
-    @JsonSubTypes({@JsonSubTypes.Type(name = "http", value = HttpBridgeActionDefinition.class),
-            @JsonSubTypes.Type(name = "kafka", value = KafkaBridgeActionDefinition.class),
-            @JsonSubTypes.Type(name = "mqttTopic", value = MqttTopicActionDefinition.class),
-            @JsonSubTypes.Type(name = "rabbitMQ", value = RabbitMQBridgeActionDefinition.class)})
+    @JsonTypeInfo(use = JsonTypeInfo.Id.CLASS)
     private Set<ActionDefinition> actionDefs = new CopyOnWriteArraySet<>();
 
     private RuleDefinition() {

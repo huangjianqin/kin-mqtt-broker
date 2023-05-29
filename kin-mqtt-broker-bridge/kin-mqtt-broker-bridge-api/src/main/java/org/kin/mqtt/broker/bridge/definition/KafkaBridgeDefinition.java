@@ -4,6 +4,7 @@ import org.kin.mqtt.broker.core.Type;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Objects;
 
 /**
  * kafka bridge配置定义
@@ -45,6 +46,20 @@ public class KafkaBridgeDefinition extends AbstractBridgeDefinition{
 
     public void setProps(Map<String, Object> props) {
         this.props = props;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        if (!super.equals(o)) return false;
+        KafkaBridgeDefinition that = (KafkaBridgeDefinition) o;
+        return Objects.equals(props, that.props);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(super.hashCode(), props);
     }
 
     @Override

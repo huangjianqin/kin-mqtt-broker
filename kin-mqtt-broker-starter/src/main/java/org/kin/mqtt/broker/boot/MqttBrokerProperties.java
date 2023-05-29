@@ -153,7 +153,10 @@ public class MqttBrokerProperties extends MqttBrokerConfig {
 
         /** 转换成{@link  org.kin.mqtt.broker.bridge.definition.BridgeDefinition}实例 */
         public org.kin.mqtt.broker.bridge.definition.BridgeDefinition toBridgeDefinition() {
-            return JSON.convert(args, Bridges.getDefinitionClassByName(type));
+            Class<? extends org.kin.mqtt.broker.bridge.definition.BridgeDefinition> definitionClass = Bridges.getDefinitionClassByName(type);
+            Map<String, Object> argsWithType = new LinkedHashMap<>(args);
+            argsWithType.put("@class", definitionClass.getName());
+            return JSON.convert(argsWithType, definitionClass);
         }
 
         //setter && getter

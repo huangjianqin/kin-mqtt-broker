@@ -2,6 +2,8 @@ package org.kin.mqtt.broker.bridge.definition;
 
 import org.kin.mqtt.broker.core.Type;
 
+import java.util.Objects;
+
 /**
  * rabbitMQ bridge配置定义
  *
@@ -143,6 +145,24 @@ public class RabbitMQBridgeDefinition extends AbstractBridgeDefinition {
 
     public void setPoolSize(int poolSize) {
         this.poolSize = poolSize;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        if (!super.equals(o)) return false;
+        RabbitMQBridgeDefinition that = (RabbitMQBridgeDefinition) o;
+        return port == that.port && connectionTimeout == that.connectionTimeout &&
+                reconnectInterval == that.reconnectInterval && rpcTimeout == that.rpcTimeout &&
+                poolSize == that.poolSize && Objects.equals(host, that.host) &&
+                Objects.equals(userName, that.userName) && Objects.equals(password, that.password);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(super.hashCode(), host, port, userName, password,
+                connectionTimeout, reconnectInterval, rpcTimeout, poolSize);
     }
 
     @Override

@@ -88,8 +88,7 @@ public class BridgeManager implements Closeable {
         if (cDefinition == null) {
             //应用持久化bridge配置
             fDefinition = definition;
-        }
-        else{
+        } else {
             //应用新bridge配置
             fDefinition = cDefinition;
         }
@@ -160,7 +159,7 @@ public class BridgeManager implements Closeable {
             throw new IllegalArgumentException(String.format("can not find registered bridge named '%s'", bridgeName));
         }
 
-        if(nDefinition.equals(bridgeContext.getDefinition())){
+        if (nDefinition.equals(bridgeContext.getDefinition())) {
             throw new IllegalArgumentException("bridge definition is complete same, " + nDefinition);
         }
 
@@ -197,7 +196,7 @@ public class BridgeManager implements Closeable {
      */
     private void persistDefinition(BridgeDefinition definition) {
         ClusterStore clusterStore = brokerContext.getClusterStore();
-        clusterStore.put(ClusterStoreKeys.getBridgeKey(definition.getName()), new BridgeDefinitionDelegate(definition))
+        clusterStore.put(ClusterStoreKeys.getBridgeKey(definition.getName()), definition)
                 .subscribe();
     }
 
@@ -219,7 +218,7 @@ public class BridgeManager implements Closeable {
      * @return {@link BridgeDefinition}实例
      */
     private BridgeDefinition toBridgeDefinition(byte[] bytes) {
-        return ((BridgeDefinitionDelegate) JSON.read(bytes, BridgeDefinitionDelegate.class)).getDelegate();
+        return JSON.read(bytes, BridgeDefinition.class);
     }
 
     /**
@@ -236,8 +235,8 @@ public class BridgeManager implements Closeable {
         List<String> keys = names.stream().map(ClusterStoreKeys::getBridgeKey).collect(Collectors.toList());
 
         ClusterStore clusterStore = brokerContext.getClusterStore();
-        clusterStore.multiGet(keys, BridgeDefinitionDelegate.class)
-                .doOnNext(t -> onLoadFromClusterStore(t.second().getDelegate()))
+        clusterStore.multiGet(keys, BridgeDefinition.class)
+                .doOnNext(t -> onLoadFromClusterStore(t.second()))
                 .subscribe(null,
                         t -> log.error("sync bridge '{}' error", desc, t),
                         () -> log.error("sync bridge '{}' finished", desc));
