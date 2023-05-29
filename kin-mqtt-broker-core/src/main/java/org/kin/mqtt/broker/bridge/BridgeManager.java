@@ -15,8 +15,6 @@ import org.kin.mqtt.broker.core.MqttBrokerContext;
 import org.kin.mqtt.broker.core.cluster.ClusterStore;
 import org.kin.mqtt.broker.core.cluster.ClusterStoreKeys;
 import org.kin.mqtt.broker.core.event.MqttEventConsumer;
-import org.kin.mqtt.broker.rule.Rule;
-import org.kin.mqtt.broker.rule.RuleDefinition;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -69,7 +67,7 @@ public class BridgeManager implements Closeable {
     }
 
     /**
-     * 从cluster store加载到rule后, 将{@link RuleDefinition}转换成{@link Rule}实例
+     * 从cluster store加载到rule后, 对比启动bridge配置, 若有变化, 则存储新bridge, 并广播集群其余broker节点
      */
     private void onLoadFromClusterStore(Tuple<String, byte[]> tuple, Map<String, BridgeDefinition> cName2Definition) {
         String key = tuple.first();
@@ -95,7 +93,7 @@ public class BridgeManager implements Closeable {
 
         Bridge bridge = Bridges.createBridge(fDefinition);
         bridgeMap.put(name, new BridgeContext(fDefinition, bridge));
-        if (cDefinition != definition) {
+        if (!fDefinition.equals(definition)) {
             //新配置, 需更新db中的bridge配置
             persistDefinition(fDefinition);
             brokerContext.broadcastClusterEvent(BridgeAddEvent.of(name));
@@ -103,7 +101,7 @@ public class BridgeManager implements Closeable {
     }
 
     /**
-     * 从cluster store加载bridge完成后, 把{@code name2Definition}中有的, {@link #bridgeMap}中没有的加载
+     * 从cluster store加载bridge完成后, 把{@code name2Definition}中有的, {@link #bridgeMap}中没有的bridge配置加载
      */
     private void onFinishLoadFromClusterStore(Map<String, BridgeDefinition> name2Definition) {
         List<String> newBridgeNames = new ArrayList<>(name2Definition.size());
@@ -236,18 +234,18 @@ public class BridgeManager implements Closeable {
 
         ClusterStore clusterStore = brokerContext.getClusterStore();
         clusterStore.multiGet(keys, BridgeDefinition.class)
-                .doOnNext(t -> onLoadFromClusterStore(t.second()))
+                .doOnNext(t -> syncBridge(t.second()))
                 .subscribe(null,
                         t -> log.error("sync bridge '{}' error", desc, t),
                         () -> log.error("sync bridge '{}' finished", desc));
     }
 
     /**
-     * 从cluster store加载bridge definition并apply
+     * 集群广播bridge变化, 本broker收到事件通知后, 从cluster store加载bridge definition并apply
      *
      * @param definition 桥接配置
      */
-    private void onLoadFromClusterStore(BridgeDefinition definition) {
+    private void syncBridge(BridgeDefinition definition) {
         definition.check();
 
         String bridgeName = definition.getName();

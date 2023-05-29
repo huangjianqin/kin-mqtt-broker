@@ -32,7 +32,7 @@ public class RuleManager {
     /** broker context */
     private final MqttBrokerContext brokerContext;
     /** key -> rule name, value -> {@link Rule} */
-    private final Map<String, Rule> rules = new NonBlockingHashMap<>();
+    private final Map<String, Rule> ruleMap = new NonBlockingHashMap<>();
 
     public RuleManager(MqttBrokerContext brokerContext) {
         this.brokerContext = brokerContext;
@@ -45,10 +45,12 @@ public class RuleManager {
      * 2. 对比当前rule与启动rule配置, 若有变化, 则更新
      */
     public void init(List<RuleDefinition> ruleDefinitions){
+        //配置的bridge
+        Map<String, RuleDefinition> cName2Definition = ruleDefinitions.stream().collect(Collectors.toMap(RuleDefinition::getName, d -> d));
         //异步加载
         ClusterStore clusterStore = brokerContext.getClusterStore();
         clusterStore.scanRaw(ClusterStoreKeys.RULE_KEY_PREFIX)
-                .doOnNext(this::onLoadFromClusterStore)
+                .doOnNext(t -> onLoadFromClusterStore(t, cName2Definition))
                 .doOnComplete(() -> onFinishLoadFromClusterStore(ruleDefinitions))
                 .subscribe(null,
                         t -> log.error("init rule manager error", t),
@@ -62,60 +64,54 @@ public class RuleManager {
     }
 
     /**
-     * 从cluster store加载到rule后, 将{@link RuleDefinition}转换成{@link Rule}实例
+     * 从cluster store加载到rule后, 对比启动rule配置, 若有变化, 则存储新rule, 并广播集群其余broker节点
      */
-    private void onLoadFromClusterStore(Tuple<String, byte[]> tuple){
+    private void onLoadFromClusterStore(Tuple<String, byte[]> tuple, Map<String, RuleDefinition> cName2Definition){
         String key = tuple.first();
         if(!ClusterStoreKeys.isRuleKey(key)){
             //过滤非法key
             return;
         }
 
+        //持久化rule配置
         RuleDefinition definition = JSON.read(tuple.second(), RuleDefinition.class);
-        rules.put(definition.getName(), new Rule(definition));
+        String name = definition.getName();
+        //新rule配置
+        RuleDefinition cDefinition = cName2Definition.get(name);
+        //最终配置
+        RuleDefinition fDefinition;
+        if (cDefinition == null) {
+            //应用持久化bridge配置
+            fDefinition = definition;
+        } else {
+            //应用新bridge配置
+            fDefinition = cDefinition;
+        }
+
+        ruleMap.put(name, new Rule(fDefinition));
+        if (!fDefinition.equals(definition)) {
+            //新配置, 需更新db中的rule配置
+            persistDefinition(fDefinition);
+            brokerContext.broadcastClusterEvent(RuleAddEvent.of(name));
+        }
     }
 
     /**
-     * 从cluster store加载rule完成后, 对比启动rule配置, 若有变化, 则更新rule
+     * 从cluster store加载rule完成后, 把{@code ruleDefinitions}中有的, {@link #ruleMap}中没有的rule配置加载
      */
     private void onFinishLoadFromClusterStore(List<RuleDefinition> ruleDefinitions){
+        List<String> newRuleNames = new ArrayList<>(ruleDefinitions.size());
         for (RuleDefinition definition : ruleDefinitions) {
             String name = definition.getName();
-            try {
-                log.debug("add or merge rule '{}'...", name);
-                addOrMergeRule(definition, true);
-            } catch (Exception e) {
-                log.error("add or merge rule '{}' error", name, e);
+            if (ruleMap.containsKey(name)) {
+                continue;
             }
+
+            newRuleNames.add(name);
+            addRule1(definition);
         }
-    }
-
-    /**
-     * 添加或覆盖规则
-     *
-     * @param definition 规则定义
-     * @param clusterSync  是否需要集群间同步
-     */
-    private void addOrMergeRule(RuleDefinition definition, boolean clusterSync) {
-        definition.check();
-
-        String name = definition.getName();
-        Rule oldRule = rules.get(name);
-        if (oldRule!=null && oldRule.getDefinition().equals(definition)) {
-            //rule没有变化
-            log.debug("add or merge rule '{}' fail, due to rule has no changed", name);
-            return;
-        }
-
-        rules.put(name, new Rule(definition));
-        persistDefinition(definition);
-        if (oldRule != null) {
-            oldRule.dispose();
-        }
-        log.debug("add or merge rule '{}' success", name);
-
-        if(clusterSync){
-            brokerContext.broadcastClusterEvent(RuleAddEvent.of(definition.getName()));
+        if (CollectionUtils.isNonEmpty(newRuleNames)) {
+            brokerContext.broadcastClusterEvent(RuleAddEvent.of(newRuleNames));
         }
     }
 
@@ -171,11 +167,17 @@ public class RuleManager {
         definition.check();
 
         String name = definition.getName();
-        if (rules.containsKey(name)) {
+        if (ruleMap.containsKey(name)) {
             throw new IllegalArgumentException(String.format("rule '%s' has registered", name));
         }
 
-        rules.put(name, new Rule(definition));
+        addRule1(definition);
+    }
+
+    private void addRule1(RuleDefinition definition) {
+        String name = definition.getName();
+
+        ruleMap.put(name, new Rule(definition));
         persistDefinition(definition);
 
         log.debug("add rule '{}' success", name);
@@ -190,7 +192,7 @@ public class RuleManager {
         nDefinition.check();
 
         String name = nDefinition.getName();
-        Rule oldRule = rules.get(name);
+        Rule oldRule = ruleMap.get(name);
         if (Objects.isNull(oldRule)) {
             throw new IllegalArgumentException(String.format("rule '%s' has registered", name));
         }
@@ -202,7 +204,7 @@ public class RuleManager {
         //dispose old rule
         oldRule.dispose();
 
-        rules.put(name, new Rule(nDefinition));
+        ruleMap.put(name, new Rule(nDefinition));
         persistDefinition(nDefinition);
 
         log.debug("add rule '{}' success", name);
@@ -226,7 +228,7 @@ public class RuleManager {
      * @param name 规则名
      */
     public void removeRule(String name) {
-        Rule removed = rules.remove(name);
+        Rule removed = ruleMap.remove(name);
         if (Objects.isNull(removed)) {
             throw new IllegalStateException(String.format("can not find rule '%s'", name));
         }
@@ -257,7 +259,7 @@ public class RuleManager {
      * @return {@link Rule}实例
      */
     private Rule getRuleOrThrow(String name) {
-        Rule rule = rules.get(name);
+        Rule rule = ruleMap.get(name);
         if (Objects.isNull(rule)) {
             throw new IllegalStateException(String.format("can not find rule '%s'", name));
         }
@@ -280,10 +282,29 @@ public class RuleManager {
 
         ClusterStore clusterStore = brokerContext.getClusterStore();
         clusterStore.multiGet(keys, RuleDefinition.class)
-                .doOnNext(t -> addOrMergeRule(t.second(), false))
+                .doOnNext(t -> syncRule(t.second()))
                 .subscribe(null,
                         t -> log.error("sync rule '{}' error", desc, t),
                         () -> log.error("sync rule '{}' finished", desc));
+    }
+
+    /**
+     * 集群广播rule变化, 本broker收到事件通知后, 从cluster store加载rule definition并apply
+     *
+     * @param definition rule配置
+     */
+    private void syncRule(RuleDefinition definition) {
+        definition.check();
+
+        String name = definition.getName();
+        Rule oldRule = ruleMap.get(name);
+        if (Objects.nonNull(oldRule)) {
+            //old rule dispose
+            oldRule.dispose();
+        }
+
+        ruleMap.put(name, new Rule(definition));
+        persistDefinition(definition);
     }
 
     /**
@@ -327,7 +348,7 @@ public class RuleManager {
      */
     @Nullable
     public RuleDefinition getRuleDefinition(String name) {
-        Rule rule = rules.get(name);
+        Rule rule = ruleMap.get(name);
         if (Objects.nonNull(rule)) {
             return rule.getDefinition();
         }
@@ -340,7 +361,7 @@ public class RuleManager {
      * @return 所有规则定义
      */
     public Collection<RuleDefinition> getAllRuleDefinitions() {
-        return rules.values().stream().map(Rule::getDefinition).collect(Collectors.toList());
+        return ruleMap.values().stream().map(Rule::getDefinition).collect(Collectors.toList());
     }
 
     /**
@@ -349,7 +370,7 @@ public class RuleManager {
      * @return 所有规则实现
      */
     public Collection<Rule> getAllRule() {
-        return new ArrayList<>(rules.values());
+        return new ArrayList<>(ruleMap.values());
     }
 
     //--------------------------------------------------------internal mqtt event consumer
