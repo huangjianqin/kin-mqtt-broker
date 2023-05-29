@@ -29,6 +29,7 @@ import java.io.File;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.Lock;
@@ -248,11 +249,11 @@ public class StandaloneKvStore implements ClusterStore {
                 List<byte[]> rawList = idb.multiGetAsList(bKeys);
 
                 int index = 0;
-                for (byte[] value : rawList) {
+                for (byte[] bValue : rawList) {
                     String key = keys.get(index);
                     index++;
 
-                    sink.next(new Tuple<>(key, JSON.read(value, type)));
+                    sink.next(new Tuple<>(key, Objects.nonNull(bValue)? JSON.read(bValue, type): null));
                 }
             } catch (Exception e) {
                 onError(String.format("[MULTI-GET] keys '%s'", keys), e);
@@ -358,7 +359,8 @@ public class StandaloneKvStore implements ClusterStore {
                     if (endBKey != null && BytesUtil.compare(key, endBKey) >= 0) {
                         break;
                     }
-                    sink.next(new Tuple<>(toSKey(key), JSON.read(it.value(), type)));
+                    byte[] bValue = it.value();
+                    sink.next(new Tuple<>(toSKey(key), Objects.nonNull(bValue)? JSON.read(bValue, type): null));
                     it.next();
                 }
             } catch (Exception e) {

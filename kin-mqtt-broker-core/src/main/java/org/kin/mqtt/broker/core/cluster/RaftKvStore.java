@@ -366,7 +366,7 @@ public class RaftKvStore implements ClusterStore {
                         ByteArray bKey = entry.getKey();
                         byte[] bValue = entry.getValue();
 
-                        tuples.add(new Tuple<>(toSKey(bKey), JSON.read(bValue, type)));
+                        tuples.add(new Tuple<>(toSKey(bKey), Objects.nonNull(bValue)? JSON.read(bValue, type): null));
                     }
 
                     return Flux.fromIterable(tuples);
@@ -430,7 +430,8 @@ public class RaftKvStore implements ClusterStore {
                 .flatMapMany(list -> {
                     List<Tuple<String, T>> tuples = new ArrayList<>(list.size());
                     for (KVEntry entry : list) {
-                        tuples.add(new Tuple<>(toSKey(entry.getKey()), JSON.read(entry.getValue(), type)));
+                        byte[] bValue = entry.getValue();
+                        tuples.add(new Tuple<>(toSKey(entry.getKey()), Objects.nonNull(bValue)? JSON.read(bValue, type): null));
                     }
 
                     return Flux.fromIterable(tuples);

@@ -73,8 +73,13 @@ public class RuleManager {
             return;
         }
 
+        byte[] bytes = tuple.second();
+        if (Objects.isNull(bytes)){
+            return;
+        }
+
         //持久化rule配置
-        RuleDefinition definition = JSON.read(tuple.second(), RuleDefinition.class);
+        RuleDefinition definition = JSON.read(bytes, RuleDefinition.class);
         String name = definition.getName();
         //新rule配置
         RuleDefinition cDefinition = cName2Definition.get(name);
@@ -293,7 +298,10 @@ public class RuleManager {
      *
      * @param definition rule配置
      */
-    private void syncRule(RuleDefinition definition) {
+    private void syncRule(@Nullable RuleDefinition definition) {
+        if (Objects.isNull(definition)){
+            return;
+        }
         definition.check();
 
         String name = definition.getName();

@@ -76,8 +76,13 @@ public class BridgeManager implements Closeable {
             return;
         }
 
+        byte[] bytes = tuple.second();
+        if(Objects.isNull(bytes)){
+           return;
+        }
+
         //持久化bridge配置
-        BridgeDefinition definition = toBridgeDefinition(tuple.second());
+        BridgeDefinition definition = toBridgeDefinition(bytes);
         String name = definition.getName();
         //新bridge配置
         BridgeDefinition cDefinition = cName2Definition.get(name);
@@ -245,7 +250,11 @@ public class BridgeManager implements Closeable {
      *
      * @param definition 桥接配置
      */
-    private void syncBridge(BridgeDefinition definition) {
+    private void syncBridge(@Nullable BridgeDefinition definition) {
+        if (Objects.isNull(definition)){
+            return;
+        }
+
         definition.check();
 
         String bridgeName = definition.getName();
