@@ -29,6 +29,12 @@
             <artifactId>kin-mqtt-broker-auth-user-starter</artifactId>
             <version>${project.version}</version>
         </dependency>
+
+        <dependency>
+            <groupId>org.kin</groupId>
+            <artifactId>kin-mqtt-broker-bridge-http-starter</artifactId>
+            <version>${project.version}</version>
+        </dependency>
     </dependencies>
 
 </project>

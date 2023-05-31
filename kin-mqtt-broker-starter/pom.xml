@@ -18,13 +18,7 @@
             <version>${project.version}</version>
         </dependency>
 
-        <!-- mqtt broker组件依赖, auth, store, acl请使用者按需依赖 -->
-        <!-- 默认依赖所有内置的bridge依赖 -->
-        <dependency>
-            <groupId>org.kin</groupId>
-            <artifactId>kin-mqtt-broker-bridge-starter-all</artifactId>
-            <version>${project.version}</version>
-        </dependency>
+        <!-- mqtt broker组件依赖, auth, store, acl, bridge请使用者按需依赖 -->
 
         <!-- actuator -->
         <dependency>

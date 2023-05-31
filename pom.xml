@@ -16,6 +16,7 @@
         <module>kin-mqtt-broker-common</module>
         <module>kin-mqtt-broker-bridge</module>
         <module>kin-mqtt-broker-acl</module>
+        <module>kin-mqtt-broker-bom</module>
     </modules>
     <packaging>pom</packaging>
 

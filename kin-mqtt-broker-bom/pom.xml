@@ -1,0 +1,138 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <parent>
+        <groupId>org.kin</groupId>
+        <artifactId>kin-mqtt-broker-parent</artifactId>
+        <version>${revision}</version>
+    </parent>
+    <artifactId>kin-mqtt-broker-bom</artifactId>
+    <packaging>pom</packaging>
+
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>org.kin</groupId>
+                <artifactId>kin-mqtt-broker-acl-api</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>org.kin</groupId>
+                <artifactId>kin-mqtt-broker-acl-db-starter</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>org.kin</groupId>
+                <artifactId>kin-mqtt-broker-auth-api</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>org.kin</groupId>
+                <artifactId>kin-mqtt-broker-auth-db-starter</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>org.kin</groupId>
+                <artifactId>kin-mqtt-broker-auth-http-starter</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>org.kin</groupId>
+                <artifactId>kin-mqtt-broker-auth-user-starter</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>org.kin</groupId>
+                <artifactId>kin-mqtt-broker-bridge-all</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>org.kin</groupId>
+                <artifactId>kin-mqtt-broker-bridge-api</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>org.kin</groupId>
+                <artifactId>kin-mqtt-broker-bridge-http</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>org.kin</groupId>
+                <artifactId>kin-mqtt-broker-bridge-http-starter</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>org.kin</groupId>
+                <artifactId>kin-mqtt-broker-bridge-kafka</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>org.kin</groupId>
+                <artifactId>kin-mqtt-broker-bridge-kafka-starter</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>org.kin</groupId>
+                <artifactId>kin-mqtt-broker-bridge-rabbitmq</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>org.kin</groupId>
+                <artifactId>kin-mqtt-broker-bridge-starter-all</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>org.kin</groupId>
+                <artifactId>kin-mqtt-broker-common</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>org.kin</groupId>
+                <artifactId>kin-mqtt-broker-core</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>org.kin</groupId>
+                <artifactId>kin-mqtt-broker-starter</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>org.kin</groupId>
+                <artifactId>kin-mqtt-broker-store-api</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>org.kin</groupId>
+                <artifactId>kin-mqtt-broker-store-db-starter</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>org.kin</groupId>
+                <artifactId>kin-mqtt-broker-store-redis-starter</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+
+</project>
