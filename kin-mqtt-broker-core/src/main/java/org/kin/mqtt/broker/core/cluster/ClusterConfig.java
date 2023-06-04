@@ -22,7 +22,7 @@ public class ClusterConfig {
     private static final int STORE_PORT_IDX = 2;
 
     /** 暴露host */
-    private String host = NetUtils.getIp();
+    private String host = NetUtils.getLocalhostIp();
     /**
      * core节点配置(包含gossip集群seeds和jraft-rheakv参与选举的节点)
      * ','分割

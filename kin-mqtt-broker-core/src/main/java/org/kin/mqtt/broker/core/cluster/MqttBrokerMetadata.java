@@ -17,7 +17,7 @@ public class MqttBrokerMetadata implements Serializable {
     /** mqtt broker id */
     private String id;
     /** 暴露host */
-    private String host = NetUtils.getIp();
+    private String host = NetUtils.getLocalhostIp();
 
     //---------------------------------------------------gossip
     /** gossip暴露端口 */
