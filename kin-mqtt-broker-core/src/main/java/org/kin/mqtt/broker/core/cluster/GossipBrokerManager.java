@@ -24,6 +24,8 @@ import org.kin.mqtt.broker.core.cluster.event.MqttClusterEvent;
 import org.kin.mqtt.broker.core.message.MqttMessageContext;
 import org.kin.mqtt.broker.core.message.MqttMessageHelper;
 import org.kin.mqtt.broker.core.message.MqttMessageReplica;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.Sinks;
@@ -49,6 +51,8 @@ import java.util.stream.Stream;
  * @date 2022/11/16
  */
 public class GossipBrokerManager implements BrokerManager {
+    private static final Logger log = LoggerFactory.getLogger(GossipBrokerManager.class);
+
     /** gossip消息header, 标识mqtt事件类型 */
     private static final String HEADER_MQTT_EVENT_TYPE = "MqttEventType";
     /** gossip消息header, 标识目标mqtt clientId */
@@ -123,7 +127,7 @@ public class GossipBrokerManager implements BrokerManager {
                 .publishOn(brokerContext.getMqttBizScheduler())
                 .flatMap(mqttMessageReplica -> brokerContext.getDispatcher()
                         .dispatch(MqttMessageContext.fromCluster(mqttMessageReplica), brokerContext))
-                .onErrorContinue((t, o) -> error("gossip broker manager handle cluster message error", t))
+                .onErrorContinue((t, o) -> log.error("gossip broker manager handle cluster message error", t))
                 .subscribe()));
     }
 
@@ -150,7 +154,9 @@ public class GossipBrokerManager implements BrokerManager {
                 .filter(n -> n.hasSubscription(message.getTopic()))
                 //只往有订阅的broker节点广播publish消息
                 .flatMap(n -> clusterMono.flatMap(c -> {
-                    debug("broadcast cluster message {} to node({}:{}:{})", message, n.getId(), n.getHost(), n.getPort());
+                    if (log.isDebugEnabled()) {
+                        log.debug("broadcast cluster message {} to node({}:{}:{})", message, n.getId(), n.getHost(), n.getPort());
+                    }
                     return c.send(Address.create(n.getHost(), n.getPort()), Message.builder().data(message).build());
                 })).then();
     }
@@ -158,7 +164,9 @@ public class GossipBrokerManager implements BrokerManager {
     @Override
     public Mono<Void> sendMqttMessage(String remoteBrokerId, String clientId, MqttMessageReplica message) {
         return Flux.fromIterable(id2Broker.values()).filter(n -> n.getId().equals(remoteBrokerId)).flatMap(n -> clusterMono.flatMap(c -> {
-            debug("send cluster message {} to node({}:{}:{})", message, n.getId(), n.getHost(), n.getPort());
+            if (log.isDebugEnabled()) {
+                log.debug("send cluster message {} to node({}:{}:{})", message, n.getId(), n.getHost(), n.getPort());
+            }
             return c.send(Address.create(n.getHost(), n.getPort()), Message.builder().header(HEADER_MQTT_CLIENT_ID, clientId).data(message).build());
         })).then();
     }
@@ -171,7 +179,9 @@ public class GossipBrokerManager implements BrokerManager {
             clusterEvent.setAddress(brokerCluster.getConfig().getAddress());
         }
         return clusterMono.flatMap(c -> {
-            debug("broadcast cluster event {} ", event);
+            if (log.isDebugEnabled()) {
+                log.debug("broadcast cluster event {} ", event);
+            }
             return c.spreadGossip(Message.builder().header(HEADER_MQTT_EVENT_TYPE, event.getClass().getName()).data(JSON.write(event)).build());
         }).then();
     }
@@ -206,7 +216,10 @@ public class GossipBrokerManager implements BrokerManager {
         @Override
         public void onMessage(Message message) {
             //mqtt publish消息
-            debug("accept cluster message {} ", message);
+            if (log.isDebugEnabled()) {
+                log.debug("accept cluster message {} ", message);
+            }
+
             Map<String, String> headers = message.headers();
             String clientId = headers.get(HEADER_MQTT_CLIENT_ID);
             MqttMessageReplica messageReplica = message.data();
@@ -228,7 +241,10 @@ public class GossipBrokerManager implements BrokerManager {
         @Override
         public void onGossip(Message message) {
             //mqtt event
-            debug("accept gossip cluster message {} ", message);
+            if (log.isDebugEnabled()) {
+                log.debug("accept gossip cluster message {} ", message);
+            }
+
             Map<String, String> headers = message.headers();
             String eventTypeStr = null;
             Class<? extends MqttClusterEvent> eventType;
@@ -249,7 +265,7 @@ public class GossipBrokerManager implements BrokerManager {
             String id = member.alias();
             Address memberAddress = member.address();
             String address = memberAddress.toString();
-            info("mqtt broker(namespace:id:address) '{}:{}:{}' {}", namespace, id, address, event.type());
+            log.info("mqtt broker(namespace:id:address) '{}:{}:{}' {}", namespace, id, address, event.type());
             switch (event.type()) {
                 case ADDED:
                     try {
@@ -263,7 +279,7 @@ public class GossipBrokerManager implements BrokerManager {
                             brokerAddPostProcessor.accept(brokerNode);
                         }
                     } catch (Exception e) {
-                        error("broker({}:{}:{}) add post processor error", namespace, id, address, e);
+                        log.error("broker({}:{}:{}) add post processor error", namespace, id, address, e);
                     }
                     break;
                 case LEAVING:
@@ -278,7 +294,7 @@ public class GossipBrokerManager implements BrokerManager {
                             brokerRemovePostProcessor.accept(brokerNode);
                         }
                     } catch (Exception e) {
-                        error("broker({}:{}:{}) add post processor error", namespace, id, address, e);
+                        log.error("broker({}:{}:{}) add post processor error", namespace, id, address, e);
                     }
                     break;
                 case UPDATED:

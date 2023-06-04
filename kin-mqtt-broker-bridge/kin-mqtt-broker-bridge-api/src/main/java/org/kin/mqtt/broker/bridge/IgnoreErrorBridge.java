@@ -1,7 +1,8 @@
 package org.kin.mqtt.broker.bridge;
 
-import org.kin.framework.log.LoggerOprs;
 import org.kin.mqtt.broker.rule.ContextAttrs;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import reactor.core.publisher.Mono;
 
 /**
@@ -10,19 +11,21 @@ import reactor.core.publisher.Mono;
  * @author huangjianqin
  * @date 2022/11/22
  */
-public abstract class NoErrorBridge extends NamedBridge implements LoggerOprs {
-    protected NoErrorBridge(String name) {
+public abstract class IgnoreErrorBridge extends NamedBridge {
+    private static final Logger log = LoggerFactory.getLogger(IgnoreErrorBridge.class);
+
+    protected IgnoreErrorBridge(String name) {
         super(name);
     }
 
     @Override
-    public Mono<Void> transmit(ContextAttrs attrs) {
+    public final Mono<Void> transmit(ContextAttrs attrs) {
         try {
             return transmit0(attrs)
-                    .doOnError(t -> error("", t))
+                    .doOnError(t -> log.error("", t))
                     .onErrorResume(t -> Mono.empty());
         } catch (Exception e) {
-            error("", e);
+            log.error("", e);
             return Mono.empty();
         }
     }

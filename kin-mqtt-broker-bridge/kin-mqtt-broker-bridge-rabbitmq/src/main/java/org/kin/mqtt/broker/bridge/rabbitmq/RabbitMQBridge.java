@@ -5,7 +5,7 @@ import com.rabbitmq.client.ConnectionFactory;
 import org.kin.framework.utils.JSON;
 import org.kin.framework.utils.StringUtils;
 import org.kin.mqtt.broker.bridge.BridgeAttrNames;
-import org.kin.mqtt.broker.bridge.NoErrorBridge;
+import org.kin.mqtt.broker.bridge.IgnoreErrorBridge;
 import org.kin.mqtt.broker.bridge.definition.RabbitMQBridgeDefinition;
 import org.kin.mqtt.broker.rule.ContextAttrs;
 import org.slf4j.Logger;
@@ -21,7 +21,7 @@ import java.nio.charset.StandardCharsets;
  * @author huangjianqin
  * @date 2022/11/22
  */
-public class RabbitMQBridge extends NoErrorBridge {
+public class RabbitMQBridge extends IgnoreErrorBridge {
     private static final Logger log = LoggerFactory.getLogger(RabbitMQBridge.class);
 
     /** rabbit mq sender */

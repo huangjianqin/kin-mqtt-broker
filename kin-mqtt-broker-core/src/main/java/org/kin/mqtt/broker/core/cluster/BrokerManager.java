@@ -1,6 +1,5 @@
 package org.kin.mqtt.broker.core.cluster;
 
-import org.kin.framework.log.LoggerOprs;
 import org.kin.mqtt.broker.core.cluster.event.MqttClusterEvent;
 import org.kin.mqtt.broker.core.message.MqttMessageReplica;
 import reactor.core.publisher.Flux;
@@ -18,7 +17,7 @@ import java.util.Collection;
  * @author huangjianqin
  * @date 2022/11/15
  */
-public interface BrokerManager extends LoggerOprs {
+public interface BrokerManager {
     /**
      * start
      *

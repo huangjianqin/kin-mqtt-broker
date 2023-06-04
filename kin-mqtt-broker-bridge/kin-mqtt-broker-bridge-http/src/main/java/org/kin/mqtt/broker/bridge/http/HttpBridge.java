@@ -4,7 +4,7 @@ import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpHeaderValues;
 import org.kin.framework.utils.JSON;
 import org.kin.mqtt.broker.bridge.BridgeAttrNames;
-import org.kin.mqtt.broker.bridge.NoErrorBridge;
+import org.kin.mqtt.broker.bridge.IgnoreErrorBridge;
 import org.kin.mqtt.broker.bridge.definition.HttpBridgeDefinition;
 import org.kin.mqtt.broker.rule.ContextAttrs;
 import reactor.core.publisher.Mono;
@@ -22,7 +22,7 @@ import java.util.Map;
  * @author huangjianqin
  * @date 2022/11/22
  */
-public class HttpBridge extends NoErrorBridge {
+public class HttpBridge extends IgnoreErrorBridge {
     /** reactor http client */
     private final HttpClient httpClient;
 

@@ -2,7 +2,7 @@ package org.kin.mqtt.broker.bridge.http.boot;
 
 import org.kin.framework.utils.JSON;
 import org.kin.mqtt.broker.bridge.BridgeAttrNames;
-import org.kin.mqtt.broker.bridge.NoErrorBridge;
+import org.kin.mqtt.broker.bridge.IgnoreErrorBridge;
 import org.kin.mqtt.broker.bridge.definition.HttpBridgeDefinition;
 import org.kin.mqtt.broker.rule.ContextAttrs;
 import org.springframework.http.MediaType;
@@ -18,7 +18,7 @@ import java.util.Map;
  * @author huangjianqin
  * @date 2022/11/22
  */
-public class HttpBridge extends NoErrorBridge {
+public class HttpBridge extends IgnoreErrorBridge {
     private final WebClient webClient;
     /** 默认headers */
     private Map<String, String> headers;

@@ -6,10 +6,12 @@ import org.apache.kafka.clients.producer.RecordMetadata;
 import org.apache.kafka.common.serialization.StringSerializer;
 import org.kin.framework.utils.JSON;
 import org.kin.mqtt.broker.bridge.BridgeAttrNames;
-import org.kin.mqtt.broker.bridge.NoErrorBridge;
+import org.kin.mqtt.broker.bridge.IgnoreErrorBridge;
 import org.kin.mqtt.broker.bridge.definition.KafkaBridgeDefinition;
 import org.kin.mqtt.broker.rule.ContextAttrs;
 import org.kin.mqtt.broker.rule.RuleCtxAttrNames;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import reactor.core.publisher.Mono;
 import reactor.kafka.sender.KafkaSender;
 import reactor.kafka.sender.SenderOptions;
@@ -25,7 +27,8 @@ import java.util.Map;
  * @author huangjianqin
  * @date 2022/11/22
  */
-public class KafkaBridge extends NoErrorBridge {
+public class KafkaBridge extends IgnoreErrorBridge {
+    private static final Logger log = LoggerFactory.getLogger(KafkaBridge.class);
     /** 默认kafka broker地址 */
     private final static String DEFAULT_BOOTSTRAP_SERVERS = "localhost:9092";
 
@@ -75,12 +78,14 @@ public class KafkaBridge extends NoErrorBridge {
                 .flatMapMany(r -> sender.send(Mono.just(r))
                         .doOnNext(result -> {
                             RecordMetadata metadata = result.recordMetadata();
-                            debug("kafka message '{}' sent successfully, topic-partition={}-{} offset={} timestamp={}",
-                                    result.correlationMetadata(),
-                                    metadata.topic(),
-                                    metadata.partition(),
-                                    metadata.offset(),
-                                    Instant.ofEpochMilli(metadata.timestamp()));
+                            if (log.isDebugEnabled()) {
+                                log.debug("kafka message '{}' sent successfully, topic-partition={}-{} offset={} timestamp={}",
+                                        result.correlationMetadata(),
+                                        metadata.topic(),
+                                        metadata.partition(),
+                                        metadata.offset(),
+                                        Instant.ofEpochMilli(metadata.timestamp()));
+                            }
                         }))
                 .then();
     }
