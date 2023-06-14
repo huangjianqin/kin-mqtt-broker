@@ -77,7 +77,7 @@ public class MqttBrokerContext implements Closeable {
         this.messageStore = messageStore;
         this.bridgeManager = new BridgeManager(this);
         this.aclService = aclService;
-        this.eventBus = new DefaultReactorEventBus(true, mqttBizScheduler);
+        this.eventBus = DefaultReactorEventBus.create(mqttBizScheduler);
         for (Object eventConsumer : eventConsumers) {
             this.eventBus.register(eventConsumer);
         }
