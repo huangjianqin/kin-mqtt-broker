@@ -18,12 +18,6 @@
             <artifactId>reactor-netty-core</artifactId>
         </dependency>
 
-        <!-- transport-api -->
-        <dependency>
-            <groupId>org.kin</groupId>
-            <artifactId>kin-transport-common</artifactId>
-        </dependency>
-
         <!-- mqtt codec -->
         <dependency>
             <groupId>io.netty</groupId>

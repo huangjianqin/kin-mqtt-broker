@@ -1,5 +1,6 @@
 package org.kin.mqtt.broker.core;
 
+import com.google.common.base.Preconditions;
 import io.netty.buffer.PooledByteBufAllocator;
 import io.netty.channel.ChannelOption;
 import io.netty.handler.codec.http.HttpObjectAggregator;
@@ -9,9 +10,16 @@ import io.netty.handler.codec.mqtt.MqttDecoder;
 import io.netty.handler.codec.mqtt.MqttEncoder;
 import io.netty.handler.codec.mqtt.MqttMessage;
 import io.netty.handler.codec.mqtt.MqttPublishMessage;
+import io.netty.handler.ssl.ClientAuth;
+import io.netty.handler.ssl.OpenSsl;
+import io.netty.handler.ssl.SslContextBuilder;
+import io.netty.handler.ssl.util.SelfSignedCertificate;
 import io.netty.handler.traffic.ChannelTrafficShapingHandler;
 import org.kin.framework.reactor.event.EventConsumer;
+import org.kin.framework.utils.ExceptionUtils;
+import org.kin.framework.utils.StringUtils;
 import org.kin.framework.utils.SysUtils;
+import org.kin.mqtt.broker.ServerCustomizer;
 import org.kin.mqtt.broker.acl.AclService;
 import org.kin.mqtt.broker.acl.NoneAclService;
 import org.kin.mqtt.broker.auth.AuthService;
@@ -28,15 +36,18 @@ import org.kin.mqtt.broker.rule.RuleDefinition;
 import org.kin.mqtt.broker.store.DefaultMqttMessageStore;
 import org.kin.mqtt.broker.store.MqttMessageStore;
 import org.kin.mqtt.broker.systopic.impl.OnlineClientNumPublisher;
-import org.kin.transport.netty.ServerTransport;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import reactor.core.publisher.Mono;
 import reactor.netty.Connection;
 import reactor.netty.DisposableServer;
 import reactor.netty.resources.LoopResources;
+import reactor.netty.tcp.SslProvider;
 import reactor.netty.tcp.TcpServer;
 
+import javax.net.ssl.SSLException;
+import java.io.File;
+import java.security.cert.CertificateException;
 import java.util.*;
 
 /**
@@ -45,10 +56,12 @@ import java.util.*;
  * @author huangjianqin
  * @date 2022/11/6
  */
-public class MqttBrokerBootstrap extends ServerTransport<MqttBrokerBootstrap> {
+public class MqttBrokerBootstrap {
     private static final Logger log = LoggerFactory.getLogger(MqttBrokerBootstrap.class);
+    private static final String[] PROTOCOLS = new String[]{"TLSv1.3", "TLSv.1.2"};
 
     private final MqttBrokerConfig config;
+    private ServerCustomizer serverCustomizer;
     /** 注册的interceptor */
     private final List<Interceptor> interceptors = new LinkedList<>();
     /** auth service, 默认不进行校验 */
@@ -77,23 +90,14 @@ public class MqttBrokerBootstrap extends ServerTransport<MqttBrokerBootstrap> {
 
     private MqttBrokerBootstrap(MqttBrokerConfig config) {
         this.config = config;
+    }
 
-        //设置ssl相关
-        ssl(config.isSsl());
-        String caFile = config.getCaFile();
-        if (Objects.nonNull(caFile)) {
-            caFile(caFile);
-        }
-
-        String certFile = config.getCertFile();
-        if (Objects.nonNull(certFile)) {
-            certFile(certFile);
-        }
-
-        String certKeyFile = config.getCertKeyFile();
-        if (Objects.nonNull(certKeyFile)) {
-            certKeyFile(certKeyFile);
-        }
+    /**
+     * 自定义netty options
+     */
+    public MqttBrokerBootstrap serverCustomizer(ServerCustomizer serverCustomizer) {
+        this.serverCustomizer = serverCustomizer;
+        return this;
     }
 
     /**
@@ -207,7 +211,6 @@ public class MqttBrokerBootstrap extends ServerTransport<MqttBrokerBootstrap> {
      */
     public MqttBroker start() {
         config.selfCheck();
-        checkRequire();
         check();
 
         MqttBrokerContext brokerContext = new MqttBrokerContext(config, new MqttMessageDispatcher(interceptors),
@@ -238,6 +241,11 @@ public class MqttBrokerBootstrap extends ServerTransport<MqttBrokerBootstrap> {
                 throw new MqttBrokerException(String.format("duplicate bridge name '%s'", name));
             }
         }
+
+        if (config.isSsl()) {
+            Preconditions.checkArgument(StringUtils.isNotBlank(config.getCertFile()), "ssl is opened, but certFile is not set");
+            Preconditions.checkArgument(StringUtils.isNotBlank(config.getCertKeyFile()), "ssl is opened, but certKeyFile is not set");
+        }
     }
 
     /**
@@ -246,6 +254,7 @@ public class MqttBrokerBootstrap extends ServerTransport<MqttBrokerBootstrap> {
      * @param brokerContext mqtt broker context
      * @return {@link  MqttBroker}
      */
+    @SuppressWarnings("rawtypes")
     private MqttBroker initMqttBroker(MqttBrokerContext brokerContext) {
         int port = config.getPort();
         //启动mqtt broker
@@ -253,8 +262,8 @@ public class MqttBrokerBootstrap extends ServerTransport<MqttBrokerBootstrap> {
         List<Mono<DisposableServer>> disposableServerMonoList = new LinkedList<>();
         //tcp
         TcpServer tcpServer = TcpServer.create();
-        if (isSsl()) {
-            tcpServer = tcpServer.secure(this::secure);
+        if (config.isSsl()) {
+            tcpServer = tcpServer.secure(this::onServerSsl);
         }
         tcpServer = tcpServer.port(port)
                 .childOption(ChannelOption.ALLOCATOR, PooledByteBufAllocator.DEFAULT)
@@ -272,8 +281,15 @@ public class MqttBrokerBootstrap extends ServerTransport<MqttBrokerBootstrap> {
                     onMqttClientConnected(brokerContext, new MqttSession(brokerContext, connection));
                 });
 
-        applyOptions(tcpServer);
-        applyChildOptions(tcpServer);
+        Map<ChannelOption, Object> options = Collections.emptyMap();
+        Map<ChannelOption, Object> childOptions = Collections.emptyMap();
+        if (Objects.nonNull(serverCustomizer)) {
+            options = serverCustomizer.options();
+            childOptions = serverCustomizer.childOptions();
+        }
+
+        tcpServer = applyOptions(tcpServer, options);
+        tcpServer = applyOptions(tcpServer, childOptions);
 
         Mono<DisposableServer> disposableServerMono = tcpServer.bind()
                 .doOnNext(d -> {
@@ -288,8 +304,8 @@ public class MqttBrokerBootstrap extends ServerTransport<MqttBrokerBootstrap> {
         int wsPort = config.getWsPort();
         if (wsPort > 0) {
             TcpServer wsServer = TcpServer.create();
-            if (isSsl()) {
-                wsServer = wsServer.secure(this::secure);
+            if (config.isSsl()) {
+                wsServer = wsServer.secure(this::onServerSsl);
             }
             wsServer.port(wsPort)
                     //打印底层event和二进制内容
@@ -315,8 +331,8 @@ public class MqttBrokerBootstrap extends ServerTransport<MqttBrokerBootstrap> {
                         onMqttClientConnected(brokerContext, new MqttSession(brokerContext, connection));
                     });
 
-            applyOptions(wsServer);
-            applyChildOptions(wsServer);
+            wsServer = applyOptions(wsServer, options);
+            wsServer = applyOptions(wsServer, childOptions);
 
             disposableServerMono = wsServer.bind()
                     .doOnNext(d -> {
@@ -337,6 +353,55 @@ public class MqttBrokerBootstrap extends ServerTransport<MqttBrokerBootstrap> {
             loopResources.dispose();
             brokerContext.close();
         });
+    }
+
+    /**
+     * 构建server端ssl上下文
+     */
+    private void onServerSsl(SslProvider.SslContextSpec sslContextSpec) {
+        try {
+            SslContextBuilder sslContextBuilder;
+            String certFile = config.getCertFile();
+            String certKeyFile = config.getCertKeyFile();
+            String certKeyPassword = config.getCertKeyPassword();
+            if (Objects.nonNull(certFile) && Objects.nonNull(certKeyFile)) {
+                //配置证书和私钥
+                sslContextBuilder = SslContextBuilder.forServer(new File(certFile), new File(certKeyFile), certKeyPassword);
+            } else {
+                //自签名证书, for test
+                SelfSignedCertificate ssc = new SelfSignedCertificate();
+                sslContextBuilder = SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey());
+            }
+            sslContextBuilder.protocols(PROTOCOLS)
+                    .sslProvider(getSslProvider())
+                    .clientAuth(ClientAuth.REQUIRE);
+            sslContextSpec.sslContext(sslContextBuilder.build());
+        } catch (SSLException | CertificateException e) {
+            ExceptionUtils.throwExt(e);
+        }
+    }
+
+    /**
+     * 获取ssl provider, 如果支持openssl, 则使用, 否则回退到使用jdk ssl
+     */
+    private static io.netty.handler.ssl.SslProvider getSslProvider() {
+        if (OpenSsl.isAvailable()) {
+            return io.netty.handler.ssl.SslProvider.OPENSSL_REFCNT;
+        } else {
+            return io.netty.handler.ssl.SslProvider.JDK;
+        }
+    }
+
+    /**
+     * 应用netty options
+     */
+    @SuppressWarnings({"rawtypes", "unchecked"})
+    private <V extends reactor.netty.transport.Transport<?, ?>> V applyOptions(V transport, Map<ChannelOption, Object> options) {
+        for (Map.Entry<ChannelOption, Object> entry : options.entrySet()) {
+            transport = (V) transport.option(entry.getKey(), entry.getValue());
+        }
+
+        return transport;
     }
 
     /**

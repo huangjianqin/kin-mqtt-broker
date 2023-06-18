@@ -16,7 +16,6 @@
         <kin-framework-dependencies.version>0.1.0.0</kin-framework-dependencies.version>
         <springboot.version>2.5.13</springboot.version>
         <netty.version>4.1.75.Final</netty.version>
-        <kin-transport-bom.version>0.2.0.0</kin-transport-bom.version>
         <paho.version>1.2.5</paho.version>
         <scalecube-cluster.version>2.6.12</scalecube-cluster.version>
         <r2dhc-pool.version>1.0.0.RELEASE</r2dhc-pool.version>
@@ -46,14 +45,6 @@
                 <version>${kin-framework-dependencies.version}</version>
                 <scope>import</scope>
                 <type>pom</type>
-            </dependency>
-
-            <dependency>
-                <groupId>org.kin</groupId>
-                <artifactId>kin-transport-bom</artifactId>
-                <version>${kin-transport-bom.version}</version>
-                <type>pom</type>
-                <scope>import</scope>
             </dependency>
 
             <dependency>

@@ -21,12 +21,15 @@ public class MqttBrokerConfig {
     private int messageMaxSize = 8388608;
     /** 底层tcp连接是否启动ssl */
     private boolean ssl;
-    /** 证书 */
+    /**
+     * certificate chain file
+     * 证书链文件, 所谓链, 即custom certificate -> root certificate
+     */
     private String certFile;
-    /** 证书密钥 */
+    /** private key file */
     private String certKeyFile;
-    /** CA根证书 */
-    private String caFile;
+    /** the password of the {@code keyFile}, or {@code null} if it's not password-protected */
+    private String certKeyPassword;
     /** 是否开启系统topic */
     private boolean enableSysTopic;
     /** 系统topic推送间隔(秒), 只针对部分系统topic有效, 默认1分钟 */
@@ -62,7 +65,6 @@ public class MqttBrokerConfig {
         if (ssl) {
             Preconditions.checkArgument(StringUtils.isNotBlank(certFile), "certFile must be not blank if open ssl");
             Preconditions.checkArgument(StringUtils.isNotBlank(certKeyFile), "certKeyFile must be not blank if open ssl");
-            Preconditions.checkArgument(StringUtils.isNotBlank(caFile), "caFile must be not blank if open ssl");
         }
         Preconditions.checkArgument(sysTopicInterval > 0, "sysTopicInterval must be greater than 0");
         Preconditions.checkArgument(receiveMaximum > 0, "receiveMaximum must be greater than 0");
@@ -164,10 +166,10 @@ public class MqttBrokerConfig {
     }
 
     /**
-     * 配置ca file
+     * 配置cert key file password
      */
-    public MqttBrokerConfig caFile(String caFile) {
-        this.caFile = caFile;
+    public MqttBrokerConfig certKeyPassword(String certKeyPassword) {
+        this.certKeyPassword = certKeyPassword;
         return this;
     }
 
@@ -285,12 +287,12 @@ public class MqttBrokerConfig {
         this.certKeyFile = certKeyFile;
     }
 
-    public String getCaFile() {
-        return caFile;
+    public String getCertKeyPassword() {
+        return certKeyPassword;
     }
 
-    public void setCaFile(String caFile) {
-        this.caFile = caFile;
+    public void setCertKeyPassword(String certKeyPassword) {
+        this.certKeyPassword = certKeyPassword;
     }
 
     public boolean isEnableSysTopic() {
