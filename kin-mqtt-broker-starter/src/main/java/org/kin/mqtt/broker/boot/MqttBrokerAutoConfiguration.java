@@ -1,6 +1,7 @@
 package org.kin.mqtt.broker.boot;
 
 import org.kin.framework.utils.CollectionUtils;
+import org.kin.mqtt.broker.ServerCustomizer;
 import org.kin.mqtt.broker.acl.AclService;
 import org.kin.mqtt.broker.auth.AuthService;
 import org.kin.mqtt.broker.core.Interceptor;
@@ -37,7 +38,8 @@ public class MqttBrokerAutoConfiguration {
                                  @Autowired(required = false) List<Interceptor> interceptors,
                                  @Autowired(required = false) AuthService authService,
                                  @Autowired(required = false) MqttMessageStore messageStore,
-                                 @Autowired(required = false) AclService aclService) {
+                                 @Autowired(required = false) AclService aclService,
+                                 @Autowired(required = false) ServerCustomizer serverCustomizer) {
         MqttBrokerBootstrap bootstrap = MqttBrokerBootstrap.create(mqttBrokerProperties);
 
         if (CollectionUtils.isNonEmpty(interceptors)) {
@@ -55,6 +57,10 @@ public class MqttBrokerAutoConfiguration {
         bootstrap.rules(getRuleDefinitions());
         if (Objects.nonNull(aclService)) {
             bootstrap.aclService(aclService);
+        }
+
+        if (Objects.nonNull(serverCustomizer)) {
+            bootstrap.serverCustomizer(serverCustomizer);
         }
 
         @SuppressWarnings("rawtypes")
