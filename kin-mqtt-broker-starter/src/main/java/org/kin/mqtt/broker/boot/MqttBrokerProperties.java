@@ -2,11 +2,12 @@ package org.kin.mqtt.broker.boot;
 
 import org.kin.framework.utils.JSON;
 import org.kin.mqtt.broker.Constants;
-import org.kin.mqtt.broker.bridge.Bridges;
+import org.kin.mqtt.broker.bridge.BridgeConfiguration;
 import org.kin.mqtt.broker.core.MqttBrokerConfig;
 import org.kin.mqtt.broker.core.cluster.ClusterConfig;
 import org.kin.mqtt.broker.rule.action.Actions;
 import org.springframework.boot.context.properties.ConfigurationProperties;
+import org.springframework.boot.context.properties.NestedConfigurationProperty;
 
 import javax.annotation.PostConstruct;
 import java.util.*;
@@ -26,7 +27,10 @@ public class MqttBrokerProperties extends MqttBrokerConfig {
     /** 规则链定义 */
     private List<RuleDefinition> rules = Collections.emptyList();
     /** 桥接定义 */
-    private List<BridgeDefinition> bridges = Collections.emptyList();
+    @NestedConfigurationProperty
+    private BridgeConfiguration bridge;
+    /** 桥接定义 */
+    private List<BridgeConfiguration> bridges = Collections.emptyList();
 
     @PostConstruct
     public void init() {
@@ -52,11 +56,20 @@ public class MqttBrokerProperties extends MqttBrokerConfig {
         this.rules = rules;
     }
 
-    public List<BridgeDefinition> getBridges() {
+    public BridgeConfiguration getBridge() {
+        return bridge;
+    }
+
+    public MqttBrokerProperties bridge(BridgeConfiguration bridge) {
+        this.bridge = bridge;
+        return this;
+    }
+
+    public List<BridgeConfiguration> getBridges() {
         return bridges;
     }
 
-    public void setBridges(List<BridgeDefinition> bridges) {
+    public void setBridges(List<BridgeConfiguration> bridges) {
         this.bridges = bridges;
     }
 
@@ -127,36 +140,6 @@ public class MqttBrokerProperties extends MqttBrokerConfig {
         /** 转换成{@link  org.kin.mqtt.broker.rule.action.ActionDefinition}实例 */
         public org.kin.mqtt.broker.rule.action.ActionDefinition toActionDefinition() {
             return JSON.convert(args, Actions.getDefinitionClassByName(type));
-        }
-
-        //setter && getter
-        public String getType() {
-            return type;
-        }
-
-        public void setType(String type) {
-            this.type = type;
-        }
-
-        public Map<String, Object> getArgs() {
-            return args;
-        }
-
-        public void setArgs(Map<String, Object> args) {
-            this.args = args;
-        }
-    }
-
-    public static class BridgeDefinition {
-        private String type;
-        private Map<String, Object> args = new LinkedHashMap<>();
-
-        /** 转换成{@link  org.kin.mqtt.broker.bridge.definition.BridgeDefinition}实例 */
-        public org.kin.mqtt.broker.bridge.definition.BridgeDefinition toBridgeDefinition() {
-            Class<? extends org.kin.mqtt.broker.bridge.definition.BridgeDefinition> definitionClass = Bridges.getDefinitionClassByName(type);
-            Map<String, Object> argsWithType = new LinkedHashMap<>(args);
-            argsWithType.put("@class", definitionClass.getName());
-            return JSON.convert(argsWithType, definitionClass);
         }
 
         //setter && getter

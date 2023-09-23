@@ -4,8 +4,8 @@ import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpHeaderValues;
 import org.kin.framework.utils.JSON;
 import org.kin.mqtt.broker.bridge.BridgeAttrNames;
-import org.kin.mqtt.broker.bridge.IgnoreErrorBridge;
-import org.kin.mqtt.broker.bridge.definition.HttpBridgeDefinition;
+import org.kin.mqtt.broker.bridge.BridgeConfiguration;
+import org.kin.mqtt.broker.bridge.NamedBridge;
 import org.kin.mqtt.broker.rule.ContextAttrs;
 import reactor.core.publisher.Mono;
 import reactor.netty.ByteBufFlux;
@@ -22,7 +22,7 @@ import java.util.Map;
  * @author huangjianqin
  * @date 2022/11/22
  */
-public class HttpBridge extends IgnoreErrorBridge {
+public class HttpBridge extends NamedBridge {
     /** reactor http client */
     private final HttpClient httpClient;
 
@@ -40,8 +40,8 @@ public class HttpBridge extends IgnoreErrorBridge {
                 .headers(headers -> cHeaders.forEach(headers::set));
     }
 
-    public HttpBridge(HttpBridgeDefinition definition){
-        this(definition.getName(), definition.getHeaders());
+    public HttpBridge(BridgeConfiguration config) {
+        this(config.getName(), config.get(HttpBridgeConstants.HEADER_KEY, Collections.emptyMap()));
     }
 
     @Override

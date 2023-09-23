@@ -3,10 +3,11 @@ package org.kin.mqtt.broker.bridge.rabbitmq;
 import com.rabbitmq.client.Connection;
 import com.rabbitmq.client.ConnectionFactory;
 import org.kin.framework.utils.JSON;
+import org.kin.framework.utils.NetUtils;
 import org.kin.framework.utils.StringUtils;
 import org.kin.mqtt.broker.bridge.BridgeAttrNames;
-import org.kin.mqtt.broker.bridge.IgnoreErrorBridge;
-import org.kin.mqtt.broker.bridge.definition.RabbitMQBridgeDefinition;
+import org.kin.mqtt.broker.bridge.BridgeConfiguration;
+import org.kin.mqtt.broker.bridge.NamedBridge;
 import org.kin.mqtt.broker.rule.ContextAttrs;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -15,13 +16,15 @@ import reactor.rabbitmq.*;
 
 import java.nio.charset.StandardCharsets;
 
+import static org.kin.mqtt.broker.bridge.rabbitmq.RabbitMQBridgeConstants.*;
+
 /**
  * 基于reactor-rabbitmq
  *
  * @author huangjianqin
  * @date 2022/11/22
  */
-public class RabbitMQBridge extends IgnoreErrorBridge {
+public class RabbitMQBridge extends NamedBridge {
     private static final Logger log = LoggerFactory.getLogger(RabbitMQBridge.class);
 
     /** rabbit mq sender */
@@ -32,43 +35,28 @@ public class RabbitMQBridge extends IgnoreErrorBridge {
         sender = RabbitFlux.createSender(senderOptions);
     }
 
-    public RabbitMQBridge(RabbitMQBridgeDefinition definition) {
-        super(definition.getName());
-        sender = RabbitFlux.createSender(toSenderOptions(definition));
+    public RabbitMQBridge(BridgeConfiguration config) {
+        super(config.getName());
+        sender = RabbitFlux.createSender(toSenderOptions(config));
     }
 
-    public static SenderOptions getDefaultSenderOptions(int port) {
-        return getDefaultSenderOptions("localhost", port, null, null);
-    }
-
-    public static SenderOptions getDefaultSenderOptions(String host, int port) {
-        return getDefaultSenderOptions(host, port, null, null);
-    }
-
-    public static SenderOptions getDefaultSenderOptions(String host, int port, String user, String password) {
-        return toSenderOptions(RabbitMQBridgeDefinition.builder()
-                .host(host)
-                .port(port)
-                .userName(user)
-                .password(password)
-                .build());
-    }
-
-    private static SenderOptions toSenderOptions(RabbitMQBridgeDefinition definition) {
+    private static SenderOptions toSenderOptions(BridgeConfiguration config) {
         ConnectionFactory connectionFactory = new ConnectionFactory();
         connectionFactory.useNio();
         connectionFactory.setAutomaticRecoveryEnabled(true);
         connectionFactory.setTopologyRecoveryEnabled(true);
-        connectionFactory.setConnectionTimeout(definition.getConnectionTimeout());
-        connectionFactory.setNetworkRecoveryInterval(definition.getReconnectInterval());
-        connectionFactory.setChannelRpcTimeout(definition.getRpcTimeout());
-        connectionFactory.setHost(definition.getHost());
-        connectionFactory.setPort(definition.getPort());
-        if (StringUtils.isNotBlank(definition.getUserName())) {
-            connectionFactory.setUsername(definition.getUserName());
+        connectionFactory.setConnectionTimeout(config.getInt(CONNECTION_TIMEOUT_KEY, DEFAULT_CONNECTION_TIMEOUT));
+        connectionFactory.setNetworkRecoveryInterval(config.getInt(RECONNECT_INTERVAL_KEY, DEFAULT_RECONNECT_INTERVAL));
+        connectionFactory.setChannelRpcTimeout(config.getInt(RPC_TIMEOUT_KEY, DEFAULT_RPC_TIMEOUT));
+        connectionFactory.setHost(config.get(HOST_KEY, NetUtils.getLocalhost4Ip()));
+        connectionFactory.setPort(config.getInt(PORT_KEY, DEFAULT_PORT));
+        String userName = config.get(USER_NAME_KEY);
+        if (StringUtils.isNotBlank(userName)) {
+            connectionFactory.setUsername(userName);
         }
-        if (StringUtils.isNotBlank(definition.getPassword())) {
-            connectionFactory.setPassword(definition.getPassword());
+        String password = config.get(USER_NAME_KEY);
+        if (StringUtils.isNotBlank(password)) {
+            connectionFactory.setPassword(password);
         }
 
         //共享connection
@@ -76,7 +64,9 @@ public class RabbitMQBridge extends IgnoreErrorBridge {
 
         return new SenderOptions()
                 .connectionMono(connectionMono)
-                .channelPool(ChannelPoolFactory.createChannelPool(connectionMono, new ChannelPoolOptions().maxCacheSize(definition.getPoolSize())));
+                .channelPool(ChannelPoolFactory.createChannelPool(connectionMono,
+                        new ChannelPoolOptions()
+                                .maxCacheSize(config.getInt(POOL_SIZE_KEY, DEFAULT_POOL_SIZE))));
     }
 
     @Override

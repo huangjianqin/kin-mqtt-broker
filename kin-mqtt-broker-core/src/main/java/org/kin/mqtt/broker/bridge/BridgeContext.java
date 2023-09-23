@@ -1,20 +1,20 @@
 package org.kin.mqtt.broker.bridge;
 
-import org.kin.mqtt.broker.bridge.definition.BridgeDefinition;
 import org.kin.mqtt.broker.rule.ContextAttrs;
 import reactor.core.publisher.Mono;
 
 /**
  * 桥接上下文
+ *
  * @author huangjianqin
  * @date 2023/5/26
  */
-public class BridgeContext implements Bridge{
-    private final BridgeDefinition definition;
+public class BridgeContext implements Bridge {
+    private final BridgeConfiguration config;
     private final Bridge delegate;
 
-    public BridgeContext(BridgeDefinition definition, Bridge delegate) {
-        this.definition = definition;
+    public BridgeContext(BridgeConfiguration config, Bridge delegate) {
+        this.config = config;
         this.delegate = delegate;
     }
 
@@ -34,8 +34,8 @@ public class BridgeContext implements Bridge{
     }
 
     //getter
-    public BridgeDefinition getDefinition() {
-        return definition;
+    public BridgeConfiguration getConfig() {
+        return config;
     }
 
     public Bridge getDelegate() {

@@ -6,8 +6,8 @@ import org.apache.kafka.clients.producer.RecordMetadata;
 import org.apache.kafka.common.serialization.StringSerializer;
 import org.kin.framework.utils.JSON;
 import org.kin.mqtt.broker.bridge.BridgeAttrNames;
-import org.kin.mqtt.broker.bridge.IgnoreErrorBridge;
-import org.kin.mqtt.broker.bridge.definition.KafkaBridgeDefinition;
+import org.kin.mqtt.broker.bridge.BridgeConfiguration;
+import org.kin.mqtt.broker.bridge.NamedBridge;
 import org.kin.mqtt.broker.rule.ContextAttrs;
 import org.kin.mqtt.broker.rule.RuleCtxAttrNames;
 import org.slf4j.Logger;
@@ -27,7 +27,7 @@ import java.util.Map;
  * @author huangjianqin
  * @date 2022/11/22
  */
-public class KafkaBridge extends IgnoreErrorBridge {
+public class KafkaBridge extends NamedBridge {
     private static final Logger log = LoggerFactory.getLogger(KafkaBridge.class);
     /** 默认kafka broker地址 */
     private final static String DEFAULT_BOOTSTRAP_SERVERS = "localhost:9092";
@@ -61,8 +61,8 @@ public class KafkaBridge extends IgnoreErrorBridge {
         sender = KafkaSender.create(SenderOptions.create(props));
     }
 
-    public KafkaBridge(KafkaBridgeDefinition definition) {
-        this(definition.getName(), definition.getProps());
+    public KafkaBridge(BridgeConfiguration config) {
+        this(config.getName(), config.toMap());
     }
 
     @Override

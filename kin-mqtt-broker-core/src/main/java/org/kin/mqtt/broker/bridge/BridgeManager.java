@@ -5,9 +5,9 @@ import org.kin.framework.collection.CopyOnWriteMap;
 import org.kin.framework.collection.Tuple;
 import org.kin.framework.reactor.event.ReactorEventBus;
 import org.kin.framework.utils.CollectionUtils;
+import org.kin.framework.utils.ExtensionLoader;
 import org.kin.framework.utils.JSON;
 import org.kin.framework.utils.StringUtils;
-import org.kin.mqtt.broker.bridge.definition.BridgeDefinition;
 import org.kin.mqtt.broker.bridge.event.BridgeAddEvent;
 import org.kin.mqtt.broker.bridge.event.BridgeChangedEvent;
 import org.kin.mqtt.broker.bridge.event.BridgeRemoveEvent;
@@ -47,14 +47,14 @@ public class BridgeManager implements Closeable {
      * 1. 访问cluster store持久化配置
      * 2. 对比当前bridge与启动bridge配置, 若有变化, 则更新
      */
-    public void init(List<BridgeDefinition> bridgeDefinitions) {
+    public void init(List<BridgeConfiguration> configs) {
         //配置的bridge
-        Map<String, BridgeDefinition> cName2Definition = bridgeDefinitions.stream().collect(Collectors.toMap(BridgeDefinition::getName, bd -> bd));
+        Map<String, BridgeConfiguration> cName2Config = configs.stream().collect(Collectors.toMap(BridgeConfiguration::getName, bd -> bd));
         //异步加载
         ClusterStore clusterStore = brokerContext.getClusterStore();
         clusterStore.scanRaw(ClusterStoreKeys.BRIDGE_KEY_PREFIX)
-                .doOnNext(t -> onLoadFromClusterStore(t, cName2Definition))
-                .doOnComplete(() -> onFinishLoadFromClusterStore(cName2Definition))
+                .doOnNext(t -> onLoadFromClusterStore(t, cName2Config))
+                .doOnComplete(() -> onFinishLoadFromClusterStore(cName2Config))
                 .subscribe(null,
                         t -> log.error("init bridge manager error", t),
                         () -> log.info("init bridge manager finished"));
@@ -69,7 +69,7 @@ public class BridgeManager implements Closeable {
     /**
      * 从cluster store加载到rule后, 对比启动bridge配置, 若有变化, 则存储新bridge, 并广播集群其余broker节点
      */
-    private void onLoadFromClusterStore(Tuple<String, byte[]> tuple, Map<String, BridgeDefinition> cName2Definition) {
+    private void onLoadFromClusterStore(Tuple<String, byte[]> tuple, Map<String, BridgeConfiguration> cName2Config) {
         String key = tuple.first();
         if (!ClusterStoreKeys.isBridgeKey(key)) {
             //过滤非法key
@@ -77,47 +77,47 @@ public class BridgeManager implements Closeable {
         }
 
         byte[] bytes = tuple.second();
-        if(Objects.isNull(bytes)){
-           return;
+        if (Objects.isNull(bytes)) {
+            return;
         }
 
         //持久化bridge配置
-        BridgeDefinition definition = toBridgeDefinition(bytes);
-        String name = definition.getName();
+        BridgeConfiguration pConfig = toBridgeConfig(bytes);
+        String name = pConfig.getName();
         //新bridge配置
-        BridgeDefinition cDefinition = cName2Definition.get(name);
+        BridgeConfiguration nConfig = cName2Config.get(name);
         //最终配置
-        BridgeDefinition fDefinition;
-        if (cDefinition == null) {
+        BridgeConfiguration fConfig;
+        if (nConfig == null) {
             //应用持久化bridge配置
-            fDefinition = definition;
+            fConfig = pConfig;
         } else {
             //应用新bridge配置
-            fDefinition = cDefinition;
+            fConfig = nConfig;
         }
 
-        Bridge bridge = Bridges.createBridge(fDefinition);
-        bridgeMap.put(name, new BridgeContext(fDefinition, bridge));
-        if (!fDefinition.equals(definition)) {
+        Bridge bridge = createBridge(fConfig);
+        bridgeMap.put(name, new BridgeContext(fConfig, bridge));
+        if (!fConfig.equals(pConfig)) {
             //新配置, 需更新db中的bridge配置
-            persistDefinition(fDefinition);
+            persistConfig(fConfig);
             brokerContext.broadcastClusterEvent(BridgeAddEvent.of(name));
         }
     }
 
     /**
-     * 从cluster store加载bridge完成后, 把{@code name2Definition}中有的, {@link #bridgeMap}中没有的bridge配置加载
+     * 从cluster store加载bridge完成后, 把{@code name2Config}中有的, {@link #bridgeMap}中没有的bridge配置加载
      */
-    private void onFinishLoadFromClusterStore(Map<String, BridgeDefinition> name2Definition) {
-        List<String> newBridgeNames = new ArrayList<>(name2Definition.size());
-        for (BridgeDefinition definition : name2Definition.values()) {
-            String name = definition.getName();
+    private void onFinishLoadFromClusterStore(Map<String, BridgeConfiguration> name2Config) {
+        List<String> newBridgeNames = new ArrayList<>(name2Config.size());
+        for (BridgeConfiguration config : name2Config.values()) {
+            String name = config.getName();
             if (bridgeMap.containsKey(name)) {
                 continue;
             }
 
             newBridgeNames.add(name);
-            addBridge0(definition);
+            addBridge0(config);
         }
         if (CollectionUtils.isNonEmpty(newBridgeNames)) {
             brokerContext.broadcastClusterEvent(BridgeAddEvent.of(newBridgeNames));
@@ -125,53 +125,69 @@ public class BridgeManager implements Closeable {
     }
 
     /**
+     * 创建{@link Bridge}实例
+     *
+     * @return {@link Bridge}实例
+     */
+    @SuppressWarnings("unchecked")
+    private static Bridge createBridge(BridgeConfiguration config) {
+        String type = config.getType();
+        BridgeFactory<Bridge> factory = ExtensionLoader.getExtension(BridgeFactory.class, type);
+        if (Objects.isNull(factory)) {
+            throw new IllegalArgumentException(String.format("can not find bridge factory named '%s'", type));
+        }
+
+        return factory.create(config);
+    }
+
+    /**
      * 添加数据桥接
      *
-     * @param definition 桥接配置
+     * @param config 桥接配置
      */
-    public void addBridge(BridgeDefinition definition) {
-        definition.check();
+    public void addBridge(BridgeConfiguration config) {
+        config.check();
 
-        String bridgeName = definition.getName();
+        String bridgeName = config.getName();
         if (bridgeMap.containsKey(bridgeName)) {
             throw new IllegalArgumentException(String.format("bridge name '%s' conflict!!", bridgeName));
         }
-        addBridge0(definition);
+        addBridge0(config);
         brokerContext.broadcastClusterEvent(BridgeAddEvent.of(bridgeName));
     }
 
-    private void addBridge0(BridgeDefinition definition) {
-        String bridgeName = definition.getName();
+    private void addBridge0(BridgeConfiguration config) {
+        String bridgeName = config.getName();
 
-        Bridge bridge = Bridges.createBridge(definition);
-        bridgeMap.put(bridgeName, new BridgeContext(definition, bridge));
-        persistDefinition(definition);
+        Bridge bridge = createBridge(config);
+        bridgeMap.put(bridgeName, new BridgeContext(config, bridge));
+        persistConfig(config);
     }
 
     /**
      * 更新数据桥接
      *
-     * @param nDefinition 新桥接配置
+     * @param nConfig 新桥接配置
      */
-    public void updateBridge(BridgeDefinition nDefinition) {
-        nDefinition.check();
+    public void updateBridge(BridgeConfiguration nConfig) {
+        nConfig.check();
 
-        String bridgeName = nDefinition.getName();
+        String bridgeName = nConfig.getName();
         BridgeContext bridgeContext = bridgeMap.get(bridgeName);
         if (Objects.isNull(bridgeContext)) {
             throw new IllegalArgumentException(String.format("can not find registered bridge named '%s'", bridgeName));
         }
 
-        if (nDefinition.equals(bridgeContext.getDefinition())) {
-            throw new IllegalArgumentException("bridge definition is complete same, " + nDefinition);
+        if (nConfig.equals(bridgeContext.getConfig())) {
+            throw new IllegalArgumentException("bridge configuration is same completely, " + nConfig);
         }
 
         //old bridge close
         bridgeContext.close();
 
-        Bridge bridge = Bridges.createBridge(nDefinition);
-        bridgeMap.put(bridgeName, new BridgeContext(nDefinition, bridge));
-        persistDefinition(nDefinition);
+        Bridge bridge = createBridge(nConfig);
+        bridgeMap.put(bridgeName, new BridgeContext(nConfig, bridge));
+        persistConfig(nConfig);
         brokerContext.broadcastClusterEvent(BridgeAddEvent.of(bridgeName));
     }
 
@@ -184,7 +200,7 @@ public class BridgeManager implements Closeable {
     public boolean removeBridge(String bridgeName) {
         Bridge removed = bridgeMap.remove(bridgeName);
         if (Objects.nonNull(removed)) {
-            delDefinition(bridgeName);
+            delConfig(bridgeName);
 
             brokerContext.broadcastClusterEvent(BridgeRemoveEvent.of(bridgeName));
             removed.close();
@@ -195,11 +211,11 @@ public class BridgeManager implements Closeable {
     /**
      * 持久化bridge配置
      *
-     * @param definition bridge配置
+     * @param config bridge配置
      */
-    private void persistDefinition(BridgeDefinition definition) {
+    private void persistConfig(BridgeConfiguration config) {
         ClusterStore clusterStore = brokerContext.getClusterStore();
-        clusterStore.put(ClusterStoreKeys.getBridgeKey(definition.getName()), definition)
+        clusterStore.put(ClusterStoreKeys.getBridgeKey(config.getName()), config)
                 .subscribe();
     }
 
@@ -208,20 +224,20 @@ public class BridgeManager implements Closeable {
      *
      * @param bridgeName bridge name
      */
-    private void delDefinition(String bridgeName) {
+    private void delConfig(String bridgeName) {
         ClusterStore clusterStore = brokerContext.getClusterStore();
         clusterStore.delete(ClusterStoreKeys.getBridgeKey(bridgeName))
                 .subscribe();
     }
 
     /**
-     * 将序列化后的字节数组转换为{@link BridgeDefinition}实例
+     * 将序列化后的字节数组转换为{@link BridgeConfiguration}实例
      *
      * @param bytes 序列化后的字节数组
-     * @return {@link BridgeDefinition}实例
+     * @return {@link BridgeConfiguration}实例
      */
-    private BridgeDefinition toBridgeDefinition(byte[] bytes) {
-        return JSON.read(bytes, BridgeDefinition.class);
+    private BridgeConfiguration toBridgeConfig(byte[] bytes) {
+        return JSON.read(bytes, BridgeConfiguration.class);
     }
 
     /**
@@ -238,7 +254,7 @@ public class BridgeManager implements Closeable {
         List<String> keys = names.stream().map(ClusterStoreKeys::getBridgeKey).collect(Collectors.toList());
 
         ClusterStore clusterStore = brokerContext.getClusterStore();
-        clusterStore.multiGet(keys, BridgeDefinition.class)
+        clusterStore.multiGet(keys, BridgeConfiguration.class)
                 .doOnNext(t -> syncBridge(t.second()))
                 .subscribe(null,
                         t -> log.error("sync bridge '{}' error", desc, t),
@@ -246,26 +262,26 @@ public class BridgeManager implements Closeable {
     }
 
     /**
-     * 集群广播bridge变化, 本broker收到事件通知后, 从cluster store加载bridge definition并apply
+     * 集群广播bridge变化, 本broker收到事件通知后, 从cluster store加载bridge configuration并apply
      *
-     * @param definition 桥接配置
+     * @param config 桥接配置
      */
-    private void syncBridge(@Nullable BridgeDefinition definition) {
-        if (Objects.isNull(definition)){
+    private void syncBridge(@Nullable BridgeConfiguration config) {
+        if (Objects.isNull(config)) {
             return;
         }
 
-        definition.check();
+        config.check();
 
-        String bridgeName = definition.getName();
+        String bridgeName = config.getName();
         BridgeContext bridgeContext = bridgeMap.get(bridgeName);
         if (Objects.nonNull(bridgeContext)) {
             //old bridge close
             bridgeContext.close();
         }
 
-        Bridge bridge = Bridges.createBridge(definition);
-        bridgeMap.put(bridgeName, new BridgeContext(definition, bridge));
+        Bridge bridge = createBridge(config);
+        bridgeMap.put(bridgeName, new BridgeContext(config, bridge));
     }
 
     /**

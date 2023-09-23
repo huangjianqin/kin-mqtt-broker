@@ -31,7 +31,7 @@ import java.util.stream.Collectors;
 @EnableConfigurationProperties(MqttBrokerProperties.class)
 public class MqttBrokerAutoConfiguration {
     @Autowired
-    private MqttBrokerProperties mqttBrokerProperties;
+    private MqttBrokerProperties properties;
 
     @Bean(destroyMethod = "close")
     public MqttBroker mqttBroker(@Autowired ApplicationContext context,
@@ -40,7 +40,7 @@ public class MqttBrokerAutoConfiguration {
                                  @Autowired(required = false) MqttMessageStore messageStore,
                                  @Autowired(required = false) AclService aclService,
                                  @Autowired(required = false) ServerCustomizer serverCustomizer) {
-        MqttBrokerBootstrap bootstrap = MqttBrokerBootstrap.create(mqttBrokerProperties);
+        MqttBrokerBootstrap bootstrap = MqttBrokerBootstrap.create(properties);
 
         if (CollectionUtils.isNonEmpty(interceptors)) {
             bootstrap.interceptors(interceptors);
@@ -69,16 +69,17 @@ public class MqttBrokerAutoConfiguration {
             bootstrap.eventConsumers(consumers);
         }
 
-        bootstrap.bridges(mqttBrokerProperties.getBridges()
-                .stream()
-                .map(MqttBrokerProperties.BridgeDefinition::toBridgeDefinition)
-                .collect(Collectors.toList()));
+        if (Objects.nonNull(properties.getBridge())) {
+            bootstrap.bridge(properties.getBridge());
+        }
+
+        bootstrap.bridges(properties.getBridges());
 
         return bootstrap.start();
     }
 
     private List<org.kin.mqtt.broker.rule.RuleDefinition> getRuleDefinitions() {
-        return mqttBrokerProperties.getRules().stream().map(MqttBrokerProperties.RuleDefinition::toRuleDefinition).collect(Collectors.toList());
+        return properties.getRules().stream().map(MqttBrokerProperties.RuleDefinition::toRuleDefinition).collect(Collectors.toList());
     }
 
     @Bean

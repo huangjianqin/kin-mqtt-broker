@@ -1,18 +1,19 @@
 package org.kin.mqtt.broker.bridge.kafka.boot;
 
 import org.kin.framework.utils.Extension;
+import org.kin.mqtt.broker.bridge.BridgeConfiguration;
 import org.kin.mqtt.broker.bridge.BridgeFactory;
-import org.kin.mqtt.broker.bridge.definition.KafkaBridgeDefinition;
 
 /**
  * {@link KafkaBridge} factory实现
+ *
  * @author huangjianqin
  * @date 2023/5/26
  */
 @Extension("kafka")
-public class KafkaBridgeFactory implements BridgeFactory<KafkaBridgeDefinition, KafkaBridge> {
+public class KafkaBridgeFactory implements BridgeFactory<KafkaBridge> {
     @Override
-    public KafkaBridge create(KafkaBridgeDefinition definition) {
-        return new KafkaBridge(definition);
+    public KafkaBridge create(BridgeConfiguration config) {
+        return new KafkaBridge(config);
     }
 }
