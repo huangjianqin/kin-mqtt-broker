@@ -1,11 +1,10 @@
-package org.kin.mqtt.broker.rule.action.bridge;
+package org.kin.mqtt.broker.rule.action.impl.bridge;
 
 import org.kin.mqtt.broker.bridge.Bridge;
 import org.kin.mqtt.broker.core.MqttBrokerContext;
 import org.kin.mqtt.broker.rule.RuleContext;
-import org.kin.mqtt.broker.rule.action.Action;
-import org.kin.mqtt.broker.rule.action.ActionDefinition;
-import org.kin.mqtt.broker.rule.action.bridge.definition.BridgeActionDefinition;
+import org.kin.mqtt.broker.rule.action.AbstractAction;
+import org.kin.mqtt.broker.rule.action.ActionConfiguration;
 import reactor.core.publisher.Mono;
 
 import java.util.Objects;
@@ -16,18 +15,15 @@ import java.util.Objects;
  * @author huangjianqin
  * @date 2022/11/21
  */
-public abstract class BridgeAction<BAD extends BridgeActionDefinition> implements Action {
-    /** 桥接动作定义 */
-    protected final BAD definition;
-
-    protected BridgeAction(BAD definition) {
-        this.definition = definition;
+public abstract class BridgeAction extends AbstractAction {
+    protected BridgeAction(ActionConfiguration config) {
+        super(config);
     }
 
     @Override
     public Mono<Void> execute(RuleContext context) {
         MqttBrokerContext brokerContext = context.getBrokerContext();
-        String bridgeName = definition.getBridgeName();
+        String bridgeName = config.get(BridgeActionConstants.BRIDGE_KEY);
         Bridge bridge = brokerContext.getBridgeManager().getBridge(bridgeName);
         if (Objects.isNull(bridge)) {
             //找不到指定桥接实现, 则直接complete, 中断
@@ -35,11 +31,6 @@ public abstract class BridgeAction<BAD extends BridgeActionDefinition> implement
         }
         preTransmit(context);
         return bridge.transmit(context.getAttrs());
-    }
-
-    @Override
-    public ActionDefinition definition() {
-        return definition;
     }
 
     /**
@@ -54,24 +45,7 @@ public abstract class BridgeAction<BAD extends BridgeActionDefinition> implement
     @Override
     public String toString() {
         return getClass().getSimpleName() + "{" +
-                "definition=" + definition +
+                super.toString() +
                 '}';
-    }
-
-    @Override
-    public boolean equals(Object o) {
-        if (this == o) {
-            return true;
-        }
-        if (!(o instanceof BridgeAction)) {
-            return false;
-        }
-        BridgeAction<?> that = (BridgeAction<?>) o;
-        return Objects.equals(definition, that.definition);
-    }
-
-    @Override
-    public int hashCode() {
-        return Objects.hash(definition);
     }
 }

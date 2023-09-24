@@ -1,24 +1,27 @@
-package org.kin.mqtt.broker.bridge;
+package org.kin.mqtt.broker.rule.action.impl.bridge;
 
 /**
- * 数据桥接会使用的规则链属性名
- *
  * @author huangjianqin
- * @date 2022/11/22
+ * @date 2023/9/23
  */
-public interface BridgeAttrNames {
+public final class BridgeActionConstants {
+    /** bridge name */
+    public static final String BRIDGE_KEY = "bridge";
+
     //----------------------------------------------------------------------------------------http
     /** http bridge post uri */
-    String HTTP_URI = "HTTP_URI";
+    public static final String HTTP_URI_KEY = "uri";
     /** http bridge post headers */
-    String HTTP_HEADERS = "HTTP_HEADERS";
+    public static final String HTTP_HEADERS_KEY = "headers";
 
     //-----------------------------------------------------------------------------------------kafka
     /** 发送的kafka topic */
-    String KAFKA_TOPIC = "KAFKA_TOPIC";
+    public static final String KAFKA_TOPIC_KEY = "topic";
 
     //-----------------------------------------------------------------------------------------rabbitMQ
     /** 要发送的rabbitMQ queue */
-    String RABBITMQ_QUEUE = "RABBITMQ_QUEUE";
+    public static final String RABBITMQ_QUEUE_KEY = "queue";
 
+    private BridgeActionConstants() {
+    }
 }

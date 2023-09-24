@@ -1,14 +1,16 @@
-package org.kin.mqtt.broker.rule.action.bridge;
+package org.kin.mqtt.broker.rule.action.impl.mqtt;
 
 import org.kin.mqtt.broker.core.MqttBrokerContext;
 import org.kin.mqtt.broker.core.message.MqttMessageContext;
 import org.kin.mqtt.broker.core.message.MqttMessageHelper;
 import org.kin.mqtt.broker.core.message.MqttMessageReplica;
 import org.kin.mqtt.broker.rule.RuleContext;
-import org.kin.mqtt.broker.rule.action.Action;
-import org.kin.mqtt.broker.rule.action.ActionDefinition;
-import org.kin.mqtt.broker.rule.action.bridge.definition.MqttTopicActionDefinition;
+import org.kin.mqtt.broker.rule.action.AbstractAction;
+import org.kin.mqtt.broker.rule.action.ActionConfiguration;
 import reactor.core.publisher.Mono;
+
+import static org.kin.mqtt.broker.rule.action.impl.mqtt.MqttTopicActionConstants.QOS_KEY;
+import static org.kin.mqtt.broker.rule.action.impl.mqtt.MqttTopicActionConstants.TOPIC_KEY;
 
 /**
  * 转发到指定mqtt topic
@@ -16,12 +18,9 @@ import reactor.core.publisher.Mono;
  * @author huangjianqin
  * @date 2022/11/21
  */
-public class MqttTopicAction implements Action {
-    /** mqtt topic转发topic定义 */
-    private final MqttTopicActionDefinition definition;
-
-    public MqttTopicAction(MqttTopicActionDefinition definition) {
-        this.definition = definition;
+public class MqttTopicAction extends AbstractAction {
+    public MqttTopicAction(ActionConfiguration config) {
+        super(config);
     }
 
     @Override
@@ -31,14 +30,9 @@ public class MqttTopicAction implements Action {
         //script即真正topic
         //交给mqtt消息handler处理
         return brokerContext.getDispatcher()
-                .dispatch(MqttMessageContext.common(MqttMessageHelper.createPublish(replica, definition.getTopic(), definition.getQos()),
+                .dispatch(MqttMessageContext.common(MqttMessageHelper.createPublish(replica, config.get(TOPIC_KEY), config.get(QOS_KEY)),
                                 brokerContext.getBrokerId(), replica.getClientId()),
                         null,
                         brokerContext);
-    }
-
-    @Override
-    public ActionDefinition definition() {
-        return definition;
     }
 }

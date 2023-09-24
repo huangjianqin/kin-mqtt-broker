@@ -6,7 +6,7 @@ import org.kin.framework.utils.JSON;
 import org.kin.mqtt.broker.core.MqttBrokerContext;
 import org.kin.mqtt.broker.core.message.MqttMessageReplica;
 import org.kin.mqtt.broker.rule.action.Action;
-import org.kin.mqtt.broker.rule.action.ActionDefinition;
+import org.kin.mqtt.broker.rule.action.ActionConfiguration;
 import org.kin.mqtt.broker.rule.action.Actions;
 import org.kin.mqtt.broker.utils.TopicUtils;
 import org.kin.reactor.sql.ReactorSql;
@@ -78,10 +78,10 @@ public class Rule implements Disposable {
         }
         this.regexTopic = TopicUtils.toRegexTopic(table);
         //创建action
-        Set<ActionDefinition> actionDefs = definition.getActionDefs();
+        Set<ActionConfiguration> actionDefs = definition.getActionConfigs();
         List<Action> actions = new CopyOnWriteArrayList<>();
-        for (ActionDefinition actionDefinition : actionDefs) {
-            actions.add(Actions.createAction(actionDefinition));
+        for (ActionConfiguration actionConfiguration : actionDefs) {
+            actions.add(Actions.createAction(actionConfiguration));
         }
         this.actions = actions;
         //准备执行sql
@@ -100,7 +100,7 @@ public class Rule implements Disposable {
                                 try {
                                     return action.execute(ruleContext);
                                 } catch (Exception e) {
-                                    log.error("action start error, message='{}', action='{}', {}", columns, action, e);
+                                    log.error("action start error, message='{}', action='{}'", columns, action, e);
                                     return Mono.empty();
                                 }
                             });
@@ -113,21 +113,21 @@ public class Rule implements Disposable {
     /**
      * 添加动作
      *
-     * @param actionDefinition 规则定义
+     * @param actionConfiguration 规则定义
      */
-    public void addAction(ActionDefinition actionDefinition) {
-        definition.addAction(actionDefinition);
-        actions.add(Actions.createAction(actionDefinition));
+    public void addAction(ActionConfiguration actionConfiguration) {
+        definition.addAction(actionConfiguration);
+        actions.add(Actions.createAction(actionConfiguration));
     }
 
     /**
      * 移除动作
      *
-     * @param actionDefinition 动作定义
+     * @param actionConfiguration 动作定义
      */
-    public boolean removeAction(ActionDefinition actionDefinition) {
-        if (definition.removeAction(actionDefinition)) {
-            actions.removeIf(action -> action.definition().equals(actionDefinition));
+    public boolean removeAction(ActionConfiguration actionConfiguration) {
+        if (definition.removeAction(actionConfiguration)) {
+            actions.removeIf(action -> action.configuration().equals(actionConfiguration));
             return true;
         }
 

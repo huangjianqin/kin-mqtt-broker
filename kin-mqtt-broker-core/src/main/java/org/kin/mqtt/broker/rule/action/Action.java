@@ -21,9 +21,9 @@ public interface Action {
     Mono<Void> execute(RuleContext context);
 
     /**
-     * 返回动作定义
+     * 返回动作配置
      *
-     * @return 动作定义
+     * @return 动作配置
      */
-    ActionDefinition definition();
+    ActionConfiguration configuration();
 }

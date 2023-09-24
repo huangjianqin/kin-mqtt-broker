@@ -144,6 +144,13 @@ public class MqttBrokerBootstrap {
     /**
      * 规则链配置
      */
+    public MqttBrokerBootstrap rules(RuleDefinition... definitions) {
+        return rules(Arrays.asList(definitions));
+    }
+
+    /**
+     * 规则链配置
+     */
     public MqttBrokerBootstrap rules(Collection<RuleDefinition> definitions) {
         definitions.forEach(RuleDefinition::check);
         this.ruleDefinitions.addAll(definitions);
@@ -195,6 +202,13 @@ public class MqttBrokerBootstrap {
         config.check();
         this.bridgeConfigurations.add(config);
         return this;
+    }
+
+    /**
+     * 桥接配置
+     */
+    public MqttBrokerBootstrap bridges(BridgeConfiguration... configs) {
+        return bridges(Arrays.asList(configs));
     }
 
     /**

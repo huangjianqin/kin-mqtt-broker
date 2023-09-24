@@ -1,0 +1,5 @@
+org.kin.mqtt.broker.rule.action.ActionFactory=\
+org.kin.mqtt.broker.rule.action.impl.bridge.HttpBridgeActionFactory,\
+org.kin.mqtt.broker.rule.action.impl.bridge.KafkaBridgeActionFactory,\
+org.kin.mqtt.broker.rule.action.impl.bridge.RabbitMQBridgeActionFactory,\
+org.kin.mqtt.broker.rule.action.impl.bridge.MqttTopicActionFactory

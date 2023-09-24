@@ -1,9 +1,8 @@
 package org.kin.mqtt.broker.rule;
 
-import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.google.common.base.Preconditions;
 import org.kin.framework.utils.StringUtils;
-import org.kin.mqtt.broker.rule.action.ActionDefinition;
+import org.kin.mqtt.broker.rule.action.ActionConfiguration;
 
 import java.util.*;
 import java.util.concurrent.CopyOnWriteArraySet;
@@ -22,8 +21,7 @@ public class RuleDefinition {
     /** sql */
     private String sql;
     /** 绑定的动作 */
-    @JsonTypeInfo(use = JsonTypeInfo.Id.CLASS)
-    private Set<ActionDefinition> actionDefs = new CopyOnWriteArraySet<>();
+    private Set<ActionConfiguration> actionConfigs = new CopyOnWriteArraySet<>();
 
     private RuleDefinition() {
     }
@@ -34,41 +32,39 @@ public class RuleDefinition {
     public void check() {
         Preconditions.checkArgument(StringUtils.isNotBlank(name), "rule name must be not blank");
         Preconditions.checkArgument(StringUtils.isNotBlank(sql), "rule sql must be not blank");
-        for (ActionDefinition actionDef : actionDefs) {
-            actionDef.check();
-        }
+        actionConfigs.forEach(ActionConfiguration::check);
     }
 
     /**
      * 添加动作
      *
-     * @param actionDefinition 规则定义
+     * @param actionConfiguration 规则定义
      */
-    public void addAction(ActionDefinition actionDefinition) {
-        if (containsAction(actionDefinition)) {
-            throw new IllegalStateException("action has registered, " + actionDefinition);
+    public void addAction(ActionConfiguration actionConfiguration) {
+        if (containsAction(actionConfiguration)) {
+            throw new IllegalStateException("action has registered, " + actionConfiguration);
         }
 
-        actionDefs.add(actionDefinition);
+        actionConfigs.add(actionConfiguration);
     }
 
     /**
      * 是否已经包含指定动作
      *
-     * @param actionDefinition 动作定义
+     * @param actionConfiguration 动作定义
      * @return 是否已经包含指定动作
      */
-    public boolean containsAction(ActionDefinition actionDefinition) {
-        return actionDefs.contains(actionDefinition);
+    public boolean containsAction(ActionConfiguration actionConfiguration) {
+        return actionConfigs.contains(actionConfiguration);
     }
 
     /**
      * 移除动作
      *
-     * @param actionDefinition 动作定义
+     * @param actionConfiguration 动作定义
      */
-    public boolean removeAction(ActionDefinition actionDefinition) {
-        return actionDefs.remove(actionDefinition);
+    public boolean removeAction(ActionConfiguration actionConfiguration) {
+        return actionConfigs.remove(actionConfiguration);
     }
 
     //setter && getter
@@ -96,25 +92,29 @@ public class RuleDefinition {
         this.sql = sql;
     }
 
-    public Set<ActionDefinition> getActionDefs() {
-        return actionDefs;
+    public Set<ActionConfiguration> getActionConfigs() {
+        return actionConfigs;
     }
 
-    public void setActionDefs(Set<ActionDefinition> actionDefs) {
-        this.actionDefs = actionDefs;
+    public void setActionConfigs(Set<ActionConfiguration> actionConfigs) {
+        this.actionConfigs = actionConfigs;
     }
 
     @Override
     public boolean equals(Object o) {
-        if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
+        if (this == o) {
+            return true;
+        }
+        if (o == null || getClass() != o.getClass()) {
+            return false;
+        }
         RuleDefinition that = (RuleDefinition) o;
-        return Objects.equals(name, that.name) && Objects.equals(desc, that.desc) && Objects.equals(sql, that.sql) && Objects.equals(actionDefs, that.actionDefs);
+        return Objects.equals(name, that.name) && Objects.equals(desc, that.desc) && Objects.equals(sql, that.sql) && Objects.equals(actionConfigs, that.actionConfigs);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(name, desc, sql, actionDefs);
+        return Objects.hash(name, desc, sql, actionConfigs);
     }
 
     @Override
@@ -123,7 +123,7 @@ public class RuleDefinition {
                 "name='" + name + '\'' +
                 ", desc='" + desc + '\'' +
                 ", sql='" + sql + '\'' +
-                ", actionDefs=" + actionDefs +
+                ", actionDefs=" + actionConfigs +
                 '}';
     }
 
@@ -135,7 +135,7 @@ public class RuleDefinition {
     /** builder **/
     public static class Builder {
         private final RuleDefinition ruleDefinition = new RuleDefinition();
-        private final Set<ActionDefinition> actionDefs = new HashSet<>();
+        private final Set<ActionConfiguration> actionConfigs = new HashSet<>();
 
         public Builder name(String name) {
             ruleDefinition.name = name;
@@ -152,17 +152,17 @@ public class RuleDefinition {
             return this;
         }
 
-        public Builder actionDefs(Collection<ActionDefinition> actionDefs) {
-            this.actionDefs.addAll(actionDefs);
+        public Builder actionConfigs(Collection<ActionConfiguration> actionDefs) {
+            this.actionConfigs.addAll(actionDefs);
             return this;
         }
 
-        public Builder actionDefs(ActionDefinition... actionDefs) {
-            return actionDefs(Arrays.asList(actionDefs));
+        public Builder actionConfigs(ActionConfiguration... actionDefs) {
+            return actionConfigs(Arrays.asList(actionDefs));
         }
 
         public RuleDefinition build() {
-            ruleDefinition.actionDefs = new CopyOnWriteArraySet<>(actionDefs);
+            ruleDefinition.actionConfigs = new CopyOnWriteArraySet<>(actionConfigs);
             return ruleDefinition;
         }
     }

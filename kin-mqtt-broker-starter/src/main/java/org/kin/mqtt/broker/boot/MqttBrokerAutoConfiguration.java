@@ -20,7 +20,6 @@ import org.springframework.context.annotation.Configuration;
 import java.util.Collection;
 import java.util.List;
 import java.util.Objects;
-import java.util.stream.Collectors;
 
 /**
  * @author huangjianqin
@@ -54,7 +53,12 @@ public class MqttBrokerAutoConfiguration {
             bootstrap.messageStore(messageStore);
         }
 
-        bootstrap.rules(getRuleDefinitions());
+        if (Objects.nonNull(properties.getRule())) {
+            bootstrap.rule(properties.getRule());
+        }
+
+        bootstrap.rules(properties.getRules());
+
         if (Objects.nonNull(aclService)) {
             bootstrap.aclService(aclService);
         }
@@ -76,10 +80,6 @@ public class MqttBrokerAutoConfiguration {
         bootstrap.bridges(properties.getBridges());
 
         return bootstrap.start();
-    }
-
-    private List<org.kin.mqtt.broker.rule.RuleDefinition> getRuleDefinitions() {
-        return properties.getRules().stream().map(MqttBrokerProperties.RuleDefinition::toRuleDefinition).collect(Collectors.toList());
     }
 
     @Bean

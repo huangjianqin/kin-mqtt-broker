@@ -1,4 +1,4 @@
-package org.kin.mqtt.broker.bridge;
+package org.kin.mqtt.broker.rule.action;
 
 import com.google.common.base.Preconditions;
 import org.kin.framework.collection.ConfigurationProperties;
@@ -12,28 +12,25 @@ import java.util.Objects;
 import java.util.function.Function;
 
 /**
- * bridge配置定义
+ * 动作配置
+ * 注意, 子类必须实现{@link  Object#equals(Object)}和{@link Object#hashCode()}, 依赖这两个方法判断动作定义式是否一致, 用于动作移除或更新操作
  *
  * @author huangjianqin
- * @date 2023/9/23
+ * @date 2022/12/16
  */
-public class BridgeConfiguration implements ConfigurationProperties, Serializable {
-    private static final long serialVersionUID = -4688448786070328116L;
-    /** bridge name */
-    private String name;
-    /** bridge描述 */
-    private String desc;
-    /** bridge type */
+public class ActionConfiguration implements ConfigurationProperties, Serializable {
+    private static final long serialVersionUID = -8288965916494361239L;
+
+    /** action type */
     private String type;
-    /** bridge配置 */
+    /** action配置 */
     private ConfigurationProperties props = new MapConfigurationProperties();
 
     /**
      * 配置检查
      */
     public void check() {
-        Preconditions.checkArgument(StringUtils.isNotBlank(name), "bridge name must not blank");
-        Preconditions.checkArgument(StringUtils.isNotBlank(type), "bridge type must not blank");
+        Preconditions.checkArgument(StringUtils.isNotBlank(type), "action type must not blank");
     }
 
     @Override
@@ -126,22 +123,6 @@ public class BridgeConfiguration implements ConfigurationProperties, Serializabl
     }
 
     //setter && getter
-    public String getName() {
-        return name;
-    }
-
-    public void setName(String name) {
-        this.name = name;
-    }
-
-    public String getDesc() {
-        return desc;
-    }
-
-    public void setDesc(String desc) {
-        this.desc = desc;
-    }
-
     public String getType() {
         return type;
     }
@@ -163,66 +144,23 @@ public class BridgeConfiguration implements ConfigurationProperties, Serializabl
         if (this == o) {
             return true;
         }
-        if (!(o instanceof BridgeConfiguration)) {
+        if (!(o instanceof ActionConfiguration)) {
             return false;
         }
-        BridgeConfiguration that = (BridgeConfiguration) o;
-        return Objects.equals(name, that.name);
+        ActionConfiguration that = (ActionConfiguration) o;
+        return Objects.equals(type, that.type) && Objects.equals(props, that.props);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(name);
+        return Objects.hash(type, props);
     }
 
     @Override
     public String toString() {
-        return "BridgeConfiguration{" +
-                "name='" + name + '\'' +
-                ", desc='" + desc + '\'' +
+        return "ActionConfiguration{" +
+                "type='" + type + '\'' +
                 ", props=" + props +
                 '}';
-    }
-
-    //---------------------------------------------------------------------------------------------------------------------
-    public static Builder builder() {
-        return new Builder();
-    }
-
-    /** builder **/
-    public static class Builder {
-        private final BridgeConfiguration configuration = new BridgeConfiguration();
-
-        public Builder name(String name) {
-            configuration.name = name;
-            return this;
-        }
-
-        public Builder desc(String desc) {
-            configuration.desc = desc;
-            return this;
-        }
-
-        /**
-         * @see BridgeType
-         */
-        public Builder type(String type) {
-            configuration.type = type;
-            return this;
-        }
-
-        public Builder properties(Map<String, Object> props) {
-            configuration.props.putAll(props);
-            return this;
-        }
-
-        public Builder property(String key, Object value) {
-            configuration.props.put(key, value);
-            return this;
-        }
-
-        public BridgeConfiguration build() {
-            return configuration;
-        }
     }
 }

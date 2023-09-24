@@ -10,7 +10,7 @@ import org.kin.mqtt.broker.core.MqttBrokerContext;
 import org.kin.mqtt.broker.core.cluster.ClusterStore;
 import org.kin.mqtt.broker.core.cluster.ClusterStoreKeys;
 import org.kin.mqtt.broker.core.event.MqttEventConsumer;
-import org.kin.mqtt.broker.rule.action.ActionDefinition;
+import org.kin.mqtt.broker.rule.action.ActionConfiguration;
 import org.kin.mqtt.broker.rule.event.RuleAddEvent;
 import org.kin.mqtt.broker.rule.event.RuleChangedEvent;
 import org.kin.mqtt.broker.rule.event.RuleRemoveEvent;
@@ -319,14 +319,14 @@ public class RuleManager {
      * 添加动作
      *
      * @param name             规则名字
-     * @param actionDefinition 动作定义
+     * @param actionConfiguration 动作定义
      */
-    public void addAction(String name, ActionDefinition actionDefinition) {
+    public void addAction(String name, ActionConfiguration actionConfiguration) {
         Rule rule = getRuleOrThrow(name);
-        rule.addAction(actionDefinition);
+        rule.addAction(actionConfiguration);
         persistDefinition(rule.getDefinition());
 
-        log.debug("add action to rule '{}' success, {}", name, actionDefinition);
+        log.debug("add action to rule '{}' success, {}", name, actionConfiguration);
 
         brokerContext.broadcastClusterEvent(RuleChangedEvent.of(name));
     }
@@ -335,14 +335,14 @@ public class RuleManager {
      * 移除动作
      *
      * @param name             规则名字
-     * @param actionDefinition 动作定义
+     * @param actionConfiguration 动作定义
      */
-    public boolean removeAction(String name, ActionDefinition actionDefinition) {
+    public boolean removeAction(String name, ActionConfiguration actionConfiguration) {
         Rule rule = getRuleOrThrow(name);
-        boolean result = rule.removeAction(actionDefinition);
+        boolean result = rule.removeAction(actionConfiguration);
         if (result) {
             persistDefinition(rule.getDefinition());
-            log.debug("remove action from rule '{}' success, {}", name, actionDefinition);
+            log.debug("remove action from rule '{}' success, {}", name, actionConfiguration);
             brokerContext.broadcastClusterEvent(RuleChangedEvent.of(name));
         }
         return result;
