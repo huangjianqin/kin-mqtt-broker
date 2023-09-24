@@ -21,7 +21,7 @@ public class RuleConfiguration {
     /** sql */
     private String sql;
     /** 绑定的动作 */
-    private Set<ActionConfiguration> actionConfigs = new CopyOnWriteArraySet<>();
+    private Set<ActionConfiguration> actions = new CopyOnWriteArraySet<>();
 
     private RuleConfiguration() {
     }
@@ -32,7 +32,7 @@ public class RuleConfiguration {
     public void check() {
         Preconditions.checkArgument(StringUtils.isNotBlank(name), "rule name must be not blank");
         Preconditions.checkArgument(StringUtils.isNotBlank(sql), "rule sql must be not blank");
-        actionConfigs.forEach(ActionConfiguration::check);
+        actions.forEach(ActionConfiguration::check);
     }
 
     /**
@@ -45,7 +45,7 @@ public class RuleConfiguration {
             throw new IllegalStateException("action has registered, " + actionConfiguration);
         }
 
-        actionConfigs.add(actionConfiguration);
+        actions.add(actionConfiguration);
     }
 
     /**
@@ -55,7 +55,7 @@ public class RuleConfiguration {
      * @return 是否已经包含指定动作
      */
     public boolean containsAction(ActionConfiguration actionConfig) {
-        return actionConfigs.contains(actionConfig);
+        return actions.contains(actionConfig);
     }
 
     /**
@@ -64,7 +64,7 @@ public class RuleConfiguration {
      * @param actionConfig 动作配置
      */
     public boolean removeAction(ActionConfiguration actionConfig) {
-        return actionConfigs.remove(actionConfig);
+        return actions.remove(actionConfig);
     }
 
     //setter && getter
@@ -92,12 +92,12 @@ public class RuleConfiguration {
         this.sql = sql;
     }
 
-    public Set<ActionConfiguration> getActionConfigs() {
-        return actionConfigs;
+    public Set<ActionConfiguration> getActions() {
+        return actions;
     }
 
-    public void setActionConfigs(Set<ActionConfiguration> actionConfigs) {
-        this.actionConfigs = actionConfigs;
+    public void setActions(Set<ActionConfiguration> actions) {
+        this.actions = actions;
     }
 
     @Override
@@ -109,12 +109,15 @@ public class RuleConfiguration {
             return false;
         }
         RuleConfiguration that = (RuleConfiguration) o;
-        return Objects.equals(name, that.name) && Objects.equals(desc, that.desc) && Objects.equals(sql, that.sql) && Objects.equals(actionConfigs, that.actionConfigs);
+        return Objects.equals(name, that.name) &&
+                Objects.equals(desc, that.desc) &&
+                Objects.equals(sql, that.sql) &&
+                Objects.equals(actions, that.actions);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(name, desc, sql, actionConfigs);
+        return Objects.hash(name, desc, sql, actions);
     }
 
     @Override
@@ -123,7 +126,7 @@ public class RuleConfiguration {
                 "name='" + name + '\'' +
                 ", desc='" + desc + '\'' +
                 ", sql='" + sql + '\'' +
-                ", actionConfigs=" + actionConfigs +
+                ", actions=" + actions +
                 '}';
     }
 
@@ -152,17 +155,21 @@ public class RuleConfiguration {
             return this;
         }
 
-        public Builder actionConfigs(Collection<ActionConfiguration> actionConfigs) {
+        public Builder actions(Collection<ActionConfiguration> actionConfigs) {
             this.actionConfigs.addAll(actionConfigs);
             return this;
         }
 
-        public Builder actionConfigs(ActionConfiguration... actionConfigs) {
-            return actionConfigs(Arrays.asList(actionConfigs));
+        public Builder actions(ActionConfiguration... actionConfigs) {
+            return actions(Arrays.asList(actionConfigs));
+        }
+
+        public Builder action(ActionConfiguration actionConfig) {
+            return actions(actionConfig);
         }
 
         public RuleConfiguration build() {
-            ruleConfiguration.actionConfigs = new CopyOnWriteArraySet<>(actionConfigs);
+            ruleConfiguration.actions = new CopyOnWriteArraySet<>(actionConfigs);
             return ruleConfiguration;
         }
     }

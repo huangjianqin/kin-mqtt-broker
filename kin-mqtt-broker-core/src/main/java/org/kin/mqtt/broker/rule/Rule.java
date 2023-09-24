@@ -78,7 +78,7 @@ public class Rule implements Disposable {
         }
         this.regexTopic = TopicUtils.toRegexTopic(table);
         //创建action
-        Set<ActionConfiguration> actionConfigs = config.getActionConfigs();
+        Set<ActionConfiguration> actionConfigs = config.getActions();
         List<Action> actions = new CopyOnWriteArrayList<>();
         for (ActionConfiguration actionConfiguration : actionConfigs) {
             actions.add(Actions.createAction(actionConfiguration));

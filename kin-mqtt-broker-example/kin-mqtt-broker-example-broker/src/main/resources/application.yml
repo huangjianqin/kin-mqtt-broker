@@ -11,15 +11,15 @@ org:
             desc: "message from `example` route to http"
             sql: "select * from `example`"
             actions:
-              - type: http_bridge
-                args:
-                  bridgeName: default_http_bridge
+              - type: httpBridge
+                props:
+                  bridge: default_http_bridge
                   uri: "localhost:13000/mqtt/receive"
         bridges:
           - type: http
-            args:
-              name: default_http_bridge
-              desc: "default http bridge"
+            name: default_http_bridge
+            desc: "default http bridge"
+
 
 server:
   port: 8000

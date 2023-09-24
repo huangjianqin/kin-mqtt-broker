@@ -24,7 +24,7 @@ public class ActionConfiguration implements ConfigurationProperties, Serializabl
     /** action type */
     private String type;
     /** action配置 */
-    private ConfigurationProperties props = new MapConfigurationProperties();
+    private MapConfigurationProperties props = new MapConfigurationProperties();
 
     /**
      * 配置检查
@@ -34,13 +34,13 @@ public class ActionConfiguration implements ConfigurationProperties, Serializabl
     }
 
     @Override
-    public void putAll(Map<String, ?> properties) {
-        props.putAll(properties);
+    public void putAll(Map<? extends String, ?> properties) {
+        this.props.putAll(properties);
     }
 
     @Nullable
     @Override
-    public <T> T put(String key, Object obj) {
+    public Object put(String key, Object obj) {
         return props.put(key, obj);
     }
 
@@ -131,11 +131,11 @@ public class ActionConfiguration implements ConfigurationProperties, Serializabl
         this.type = type;
     }
 
-    public ConfigurationProperties getProps() {
+    public MapConfigurationProperties getProps() {
         return props;
     }
 
-    public void setProps(ConfigurationProperties props) {
+    public void setProps(MapConfigurationProperties props) {
         this.props = props;
     }
 
