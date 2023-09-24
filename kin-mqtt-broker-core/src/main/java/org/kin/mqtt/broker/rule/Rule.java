@@ -56,8 +56,8 @@ public class Rule implements Disposable {
      * lazy init
      */
     private volatile MqttBrokerContext brokerContext;
-    /** 规则定义 */
-    private final RuleDefinition definition;
+    /** 规则配置 */
+    private final RuleConfiguration config;
     /** 匹配的mqtt topic */
     private final String regexTopic;
     /** 消费队列 */
@@ -67,10 +67,10 @@ public class Rule implements Disposable {
     /** sql执行结果订阅disposable */
     private final Disposable disposable;
 
-    public Rule(RuleDefinition definition) {
-        this.definition = definition;
+    public Rule(RuleConfiguration config) {
+        this.config = config;
 
-        String sql = definition.getSql();
+        String sql = config.getSql();
         ReactorSql reactorSql = ReactorSql.create(sql);
         String table = reactorSql.getTable();
         if (Objects.isNull(table)) {
@@ -78,9 +78,9 @@ public class Rule implements Disposable {
         }
         this.regexTopic = TopicUtils.toRegexTopic(table);
         //创建action
-        Set<ActionConfiguration> actionDefs = definition.getActionConfigs();
+        Set<ActionConfiguration> actionConfigs = config.getActionConfigs();
         List<Action> actions = new CopyOnWriteArrayList<>();
-        for (ActionConfiguration actionConfiguration : actionDefs) {
+        for (ActionConfiguration actionConfiguration : actionConfigs) {
             actions.add(Actions.createAction(actionConfiguration));
         }
         this.actions = actions;
@@ -113,21 +113,21 @@ public class Rule implements Disposable {
     /**
      * 添加动作
      *
-     * @param actionConfiguration 规则定义
+     * @param actionConfig 规则配置
      */
-    public void addAction(ActionConfiguration actionConfiguration) {
-        definition.addAction(actionConfiguration);
-        actions.add(Actions.createAction(actionConfiguration));
+    public void addAction(ActionConfiguration actionConfig) {
+        config.addAction(actionConfig);
+        actions.add(Actions.createAction(actionConfig));
     }
 
     /**
      * 移除动作
      *
-     * @param actionConfiguration 动作定义
+     * @param actionConfig 动作配置
      */
-    public boolean removeAction(ActionConfiguration actionConfiguration) {
-        if (definition.removeAction(actionConfiguration)) {
-            actions.removeIf(action -> action.configuration().equals(actionConfiguration));
+    public boolean removeAction(ActionConfiguration actionConfig) {
+        if (config.removeAction(actionConfig)) {
+            actions.removeIf(action -> action.configuration().equals(actionConfig));
             return true;
         }
 
@@ -170,14 +170,14 @@ public class Rule implements Disposable {
     }
 
     //getter
-    public RuleDefinition getDefinition() {
-        return definition;
+    public RuleConfiguration getConfig() {
+        return config;
     }
 
     @Override
     public String toString() {
         return "Rule{" +
-                "definition=" + definition +
+                "config=" + config +
                 ", regexTopic='" + regexTopic + '\'' +
                 ", actions=" + actions +
                 '}';

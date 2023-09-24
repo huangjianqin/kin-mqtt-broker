@@ -12,7 +12,7 @@ import java.util.Objects;
 import java.util.function.Function;
 
 /**
- * bridge配置定义
+ * bridge配置
  *
  * @author huangjianqin
  * @date 2023/9/23

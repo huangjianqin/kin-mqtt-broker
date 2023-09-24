@@ -4,7 +4,7 @@ import org.kin.mqtt.broker.Constants;
 import org.kin.mqtt.broker.bridge.BridgeConfiguration;
 import org.kin.mqtt.broker.core.MqttBrokerConfig;
 import org.kin.mqtt.broker.core.cluster.ClusterConfig;
-import org.kin.mqtt.broker.rule.RuleDefinition;
+import org.kin.mqtt.broker.rule.RuleConfiguration;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.boot.context.properties.NestedConfigurationProperty;
 
@@ -26,15 +26,15 @@ public class MqttBrokerProperties extends MqttBrokerConfig {
      * 单独重新定义是为了兼容spring-boot-configuration-processor无法解析父类中static class和非基础类
      */
     private ClusterConfig cluster = DEFAULT_CLUSTER_CONFIG;
-    /** 规则链定义 */
+    /** 规则链配置 */
     @NestedConfigurationProperty
-    private RuleDefinition rule;
-    /** 规则链定义 */
-    private List<RuleDefinition> rules = Collections.emptyList();
-    /** 桥接定义 */
+    private RuleConfiguration rule;
+    /** 规则链配置 */
+    private List<RuleConfiguration> rules = Collections.emptyList();
+    /** 桥接配置 */
     @NestedConfigurationProperty
     private BridgeConfiguration bridge;
-    /** 桥接定义 */
+    /** 桥接配置 */
     private List<BridgeConfiguration> bridges = Collections.emptyList();
 
     @PostConstruct
@@ -53,11 +53,11 @@ public class MqttBrokerProperties extends MqttBrokerConfig {
         super.setCluster(this.cluster);
     }
 
-    public RuleDefinition getRule() {
+    public RuleConfiguration getRule() {
         return rule;
     }
 
-    public void setRule(RuleDefinition rule) {
+    public void setRule(RuleConfiguration rule) {
         this.rule = rule;
     }
 
@@ -65,11 +65,11 @@ public class MqttBrokerProperties extends MqttBrokerConfig {
         this.bridge = bridge;
     }
 
-    public List<RuleDefinition> getRules() {
+    public List<RuleConfiguration> getRules() {
         return rules;
     }
 
-    public void setRules(List<RuleDefinition> rules) {
+    public void setRules(List<RuleConfiguration> rules) {
         this.rules = rules;
     }
 

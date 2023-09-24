@@ -39,7 +39,7 @@ public final class ClusterStoreKeys {
     /**
      * 生成指定mqtt broker 规则引擎规则key
      *
-     * @param ruleName rule definition name
+     * @param ruleName rule configuration name
      * @return mqtt broker 规则引擎规则key
      */
     public static String getRuleKey(String ruleName) {

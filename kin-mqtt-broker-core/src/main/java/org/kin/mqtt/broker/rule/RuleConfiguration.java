@@ -8,12 +8,12 @@ import java.util.*;
 import java.util.concurrent.CopyOnWriteArraySet;
 
 /**
- * 规则定义
+ * 规则配置
  *
  * @author huangjianqin
  * @date 2022/11/21
  */
-public class RuleDefinition {
+public class RuleConfiguration {
     /** 规则名 */
     private String name;
     /** 规则描述 */
@@ -23,7 +23,7 @@ public class RuleDefinition {
     /** 绑定的动作 */
     private Set<ActionConfiguration> actionConfigs = new CopyOnWriteArraySet<>();
 
-    private RuleDefinition() {
+    private RuleConfiguration() {
     }
 
     /**
@@ -38,7 +38,7 @@ public class RuleDefinition {
     /**
      * 添加动作
      *
-     * @param actionConfiguration 规则定义
+     * @param actionConfiguration 规则配置
      */
     public void addAction(ActionConfiguration actionConfiguration) {
         if (containsAction(actionConfiguration)) {
@@ -51,20 +51,20 @@ public class RuleDefinition {
     /**
      * 是否已经包含指定动作
      *
-     * @param actionConfiguration 动作定义
+     * @param actionConfig 动作配置
      * @return 是否已经包含指定动作
      */
-    public boolean containsAction(ActionConfiguration actionConfiguration) {
-        return actionConfigs.contains(actionConfiguration);
+    public boolean containsAction(ActionConfiguration actionConfig) {
+        return actionConfigs.contains(actionConfig);
     }
 
     /**
      * 移除动作
      *
-     * @param actionConfiguration 动作定义
+     * @param actionConfig 动作配置
      */
-    public boolean removeAction(ActionConfiguration actionConfiguration) {
-        return actionConfigs.remove(actionConfiguration);
+    public boolean removeAction(ActionConfiguration actionConfig) {
+        return actionConfigs.remove(actionConfig);
     }
 
     //setter && getter
@@ -108,7 +108,7 @@ public class RuleDefinition {
         if (o == null || getClass() != o.getClass()) {
             return false;
         }
-        RuleDefinition that = (RuleDefinition) o;
+        RuleConfiguration that = (RuleConfiguration) o;
         return Objects.equals(name, that.name) && Objects.equals(desc, that.desc) && Objects.equals(sql, that.sql) && Objects.equals(actionConfigs, that.actionConfigs);
     }
 
@@ -119,11 +119,11 @@ public class RuleDefinition {
 
     @Override
     public String toString() {
-        return "RuleDefinition{" +
+        return "RuleConfiguration{" +
                 "name='" + name + '\'' +
                 ", desc='" + desc + '\'' +
                 ", sql='" + sql + '\'' +
-                ", actionDefs=" + actionConfigs +
+                ", actionConfigs=" + actionConfigs +
                 '}';
     }
 
@@ -134,36 +134,36 @@ public class RuleDefinition {
 
     /** builder **/
     public static class Builder {
-        private final RuleDefinition ruleDefinition = new RuleDefinition();
+        private final RuleConfiguration ruleConfiguration = new RuleConfiguration();
         private final Set<ActionConfiguration> actionConfigs = new HashSet<>();
 
         public Builder name(String name) {
-            ruleDefinition.name = name;
+            ruleConfiguration.name = name;
             return this;
         }
 
         public Builder desc(String desc) {
-            ruleDefinition.desc = desc;
+            ruleConfiguration.desc = desc;
             return this;
         }
 
         public Builder sql(String sql) {
-            ruleDefinition.sql = sql;
+            ruleConfiguration.sql = sql;
             return this;
         }
 
-        public Builder actionConfigs(Collection<ActionConfiguration> actionDefs) {
-            this.actionConfigs.addAll(actionDefs);
+        public Builder actionConfigs(Collection<ActionConfiguration> actionConfigs) {
+            this.actionConfigs.addAll(actionConfigs);
             return this;
         }
 
-        public Builder actionConfigs(ActionConfiguration... actionDefs) {
-            return actionConfigs(Arrays.asList(actionDefs));
+        public Builder actionConfigs(ActionConfiguration... actionConfigs) {
+            return actionConfigs(Arrays.asList(actionConfigs));
         }
 
-        public RuleDefinition build() {
-            ruleDefinition.actionConfigs = new CopyOnWriteArraySet<>(actionConfigs);
-            return ruleDefinition;
+        public RuleConfiguration build() {
+            ruleConfiguration.actionConfigs = new CopyOnWriteArraySet<>(actionConfigs);
+            return ruleConfiguration;
         }
     }
 }

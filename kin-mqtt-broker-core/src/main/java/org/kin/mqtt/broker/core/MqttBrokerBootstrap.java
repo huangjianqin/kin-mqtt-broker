@@ -32,7 +32,7 @@ import org.kin.mqtt.broker.core.handler.WsFrame2ByteBufDecoder;
 import org.kin.mqtt.broker.core.message.MqttMessageContext;
 import org.kin.mqtt.broker.core.topic.share.RandomShareSubLoadBalance;
 import org.kin.mqtt.broker.core.topic.share.ShareSubLoadBalance;
-import org.kin.mqtt.broker.rule.RuleDefinition;
+import org.kin.mqtt.broker.rule.RuleConfiguration;
 import org.kin.mqtt.broker.store.DefaultMqttMessageStore;
 import org.kin.mqtt.broker.store.MqttMessageStore;
 import org.kin.mqtt.broker.systopic.impl.OnlineClientNumPublisher;
@@ -68,8 +68,8 @@ public class MqttBrokerBootstrap {
     private AuthService authService = NoneAuthService.INSTANCE;
     /** mqtt消息外部存储, 默认存储在jvm内存 */
     private MqttMessageStore messageStore = new DefaultMqttMessageStore();
-    /** 规则链定义 */
-    private final List<RuleDefinition> ruleDefinitions = new LinkedList<>();
+    /** 规则链配置 */
+    private final List<RuleConfiguration> ruleConfigs = new LinkedList<>();
     /** 访问控制权限管理 */
     private AclService aclService = NoneAclService.INSTANCE;
     /** 事件consumer */
@@ -77,8 +77,8 @@ public class MqttBrokerBootstrap {
     private final List<MqttEventConsumer> eventConsumers = new LinkedList<>();
     /** 共享订阅负载均衡实现 */
     private ShareSubLoadBalance shareSubLoadBalance = RandomShareSubLoadBalance.INSTANCE;
-    /** 桥接定义 */
-    private final List<BridgeConfiguration> bridgeConfigurations = new LinkedList<>();
+    /** 桥接配置 */
+    private final List<BridgeConfiguration> bridgeConfigs = new LinkedList<>();
 
     public static MqttBrokerBootstrap create() {
         return new MqttBrokerBootstrap(MqttBrokerConfig.create());
@@ -135,25 +135,25 @@ public class MqttBrokerBootstrap {
     /**
      * 规则链配置
      */
-    public MqttBrokerBootstrap rule(RuleDefinition definition) {
-        definition.check();
-        this.ruleDefinitions.add(definition);
+    public MqttBrokerBootstrap rule(RuleConfiguration ruleConfig) {
+        ruleConfig.check();
+        this.ruleConfigs.add(ruleConfig);
         return this;
     }
 
     /**
      * 规则链配置
      */
-    public MqttBrokerBootstrap rules(RuleDefinition... definitions) {
-        return rules(Arrays.asList(definitions));
+    public MqttBrokerBootstrap rules(RuleConfiguration... ruleConfigs) {
+        return rules(Arrays.asList(ruleConfigs));
     }
 
     /**
      * 规则链配置
      */
-    public MqttBrokerBootstrap rules(Collection<RuleDefinition> definitions) {
-        definitions.forEach(RuleDefinition::check);
-        this.ruleDefinitions.addAll(definitions);
+    public MqttBrokerBootstrap rules(Collection<RuleConfiguration> ruleConfigs) {
+        ruleConfigs.forEach(RuleConfiguration::check);
+        this.ruleConfigs.addAll(ruleConfigs);
         return this;
     }
 
@@ -200,7 +200,7 @@ public class MqttBrokerBootstrap {
      */
     public MqttBrokerBootstrap bridge(BridgeConfiguration config) {
         config.check();
-        this.bridgeConfigurations.add(config);
+        this.bridgeConfigs.add(config);
         return this;
     }
 
@@ -216,7 +216,7 @@ public class MqttBrokerBootstrap {
      */
     public MqttBrokerBootstrap bridges(Collection<BridgeConfiguration> configs) {
         configs.forEach(BridgeConfiguration::check);
-        this.bridgeConfigurations.addAll(configs);
+        this.bridgeConfigs.addAll(configs);
         return this;
     }
 
@@ -234,9 +234,9 @@ public class MqttBrokerBootstrap {
         return brokerContext.getCluster().init()
                 .then(Mono.fromRunnable(() -> {
                     //加载rule定义并apply rule
-                    brokerContext.getRuleManager().init(ruleDefinitions);
+                    brokerContext.getRuleManager().init(ruleConfigs);
                     //加载bridge配置并apply bridge
-                    brokerContext.getBridgeManager().init(bridgeConfigurations);
+                    brokerContext.getBridgeManager().init(bridgeConfigs);
                 }))
                 //初始化mqtt broker
                 .then(Mono.fromCallable(() -> initMqttBroker(brokerContext)))
@@ -249,7 +249,7 @@ public class MqttBrokerBootstrap {
     private void check() {
         //检查bridge name是否会重复
         Set<String> bridgeNames = new HashSet<>();
-        for (BridgeConfiguration bc : bridgeConfigurations) {
+        for (BridgeConfiguration bc : bridgeConfigs) {
             String name = bc.getName();
             if (!bridgeNames.add(name)) {
                 throw new MqttBrokerException(String.format("duplicate bridge name '%s'", name));
@@ -497,8 +497,8 @@ public class MqttBrokerBootstrap {
         return authService;
     }
 
-    public List<RuleDefinition> getRuleDefinitions() {
-        return ruleDefinitions;
+    public List<RuleConfiguration> getRuleConfigs() {
+        return ruleConfigs;
     }
 
     public AclService getAclService() {
@@ -512,5 +512,9 @@ public class MqttBrokerBootstrap {
 
     public ShareSubLoadBalance getShareSubLoadBalance() {
         return shareSubLoadBalance;
+    }
+
+    public List<BridgeConfiguration> getBridgeConfigs() {
+        return bridgeConfigs;
     }
 }
