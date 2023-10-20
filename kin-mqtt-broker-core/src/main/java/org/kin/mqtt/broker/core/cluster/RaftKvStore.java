@@ -29,6 +29,7 @@ import reactor.core.publisher.Sinks;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.*;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.Collectors;
 
 import static io.scalecube.reactor.RetryNonSerializedEmitFailureHandler.RETRY_NON_SERIALIZED;
@@ -91,13 +92,14 @@ public class RaftKvStore implements ClusterStore {
                     log.info("raft kv store region-{} become leader", finalI);
                     onReady();
 
+                    //预防leader在添加core或者replicator节点时发生变更, 导致raft集群节点不一致
                     for (MqttBrokerNode node : cluster.getBrokerManager().getClusterBrokerNodes()) {
                         String storeAddress = node.getStoreAddress();
+                        //regionId从123开始
                         if (node.isCore()) {
-                            addCore(storeAddress);
-                        }
-                        else{
-                            addReplicator(storeAddress);
+                            addCore(storeAddress, finalI);
+                        } else {
+                            addReplicator(storeAddress, finalI);
                         }
                     }
                 }
@@ -366,7 +368,7 @@ public class RaftKvStore implements ClusterStore {
                         ByteArray bKey = entry.getKey();
                         byte[] bValue = entry.getValue();
 
-                        tuples.add(new Tuple<>(toSKey(bKey), Objects.nonNull(bValue)? JSON.read(bValue, type): null));
+                        tuples.add(new Tuple<>(toSKey(bKey), Objects.nonNull(bValue) ? JSON.read(bValue, type) : null));
                     }
 
                     return Flux.fromIterable(tuples);
@@ -431,7 +433,7 @@ public class RaftKvStore implements ClusterStore {
                     List<Tuple<String, T>> tuples = new ArrayList<>(list.size());
                     for (KVEntry entry : list) {
                         byte[] bValue = entry.getValue();
-                        tuples.add(new Tuple<>(toSKey(entry.getKey()), Objects.nonNull(bValue)? JSON.read(bValue, type): null));
+                        tuples.add(new Tuple<>(toSKey(entry.getKey()), Objects.nonNull(bValue) ? JSON.read(bValue, type) : null));
                     }
 
                     return Flux.fromIterable(tuples);
@@ -476,6 +478,26 @@ public class RaftKvStore implements ClusterStore {
     /**
      * 添加replicator
      *
+     * @param nodeAddress replicator node address
+     * @param regionId    kv store region id
+     */
+    private void addReplicator(String nodeAddress, long regionId) {
+        kvStore.doOnNext(s -> {
+                    for (RegionEngine regionEngine : s.getStoreEngine().getAllRegionEngines()) {
+                        if (regionEngine.getRegion().getId() != regionId) {
+                            continue;
+                        }
+
+                        addReplicator(nodeAddress, regionEngine);
+                        break;
+                    }
+                })
+                .subscribe();
+    }
+
+    /**
+     * 添加replicator
+     *
      * @param nodeAddress  replicator node address
      * @param regionEngine kv store region engine
      */
@@ -491,8 +513,6 @@ public class RaftKvStore implements ClusterStore {
         }
 
         long regionId = regionEngine.getRegion().getId();
-        log.info("raft kv store region-{} ready to add replicator node '{}'", regionId, nodeAddress);
-
         PeerId newLearnerPeerId = PeerId.parsePeer(nodeAddress);
         boolean learnerExists = false;
         for (PeerId learnerPeerId : node.listLearners()) {
@@ -507,17 +527,26 @@ public class RaftKvStore implements ClusterStore {
         if (learnerExists) {
             log.info("raft kv store region-{} replicator node '{}' exists", regionId, nodeAddress);
         } else {
+            log.info("raft kv store region-{} ready to add replicator node '{}'", regionId, nodeAddress);
             node.addLearners(Collections.singletonList(newLearnerPeerId), status -> {
+                log.info("raft kv store region-{} add replicator node '{}' result: {}", regionId, nodeAddress, status);
                 if (!status.isOk()) {
-                    // TODO: 2023/5/19 确认延迟时间
-                    Mono.delay(Duration.ofMillis(1000))
+                    int millis = randomRetryMillis();
+                    log.info("raft kv store region-{} retry to add replicator node '{}' after {}ms", regionId, nodeAddress, millis);
+                    Mono.delay(Duration.ofMillis(millis))
                             .subscribeOn(brokerContext.getMqttBizScheduler())
                             .subscribe(t -> addReplicator(nodeAddress, regionEngine));
-                    return;
                 }
-                log.info("raft kv store region-{} add replicator node '{}' result: {}", regionId, nodeAddress, status);
             });
         }
+    }
+
+    /**
+     * 随机重试时间, 200ms-2000ms
+     */
+    private int randomRetryMillis() {
+        // TODO: 2023/5/19 确认延迟时间
+        return 200 + ThreadLocalRandom.current().nextInt(1800);
     }
 
     @Override
@@ -549,8 +578,6 @@ public class RaftKvStore implements ClusterStore {
         }
 
         long regionId = regionEngine.getRegion().getId();
-        log.info("raft kv store region-{} ready to remove replicator node '{}'", regionId, nodeAddress);
-
         PeerId targetLearnerPeerId = PeerId.parsePeer(nodeAddress);
         boolean learnerExists = false;
         for (PeerId learnerPeerId : node.listLearners()) {
@@ -563,15 +590,16 @@ public class RaftKvStore implements ClusterStore {
         }
 
         if (learnerExists) {
+            log.info("raft kv store region-{} ready to remove replicator node '{}'", regionId, nodeAddress);
             node.removeLearners(Collections.singletonList(targetLearnerPeerId), status -> {
+                log.info("raft kv store region-{} remove replicator node '{}' result: {}", regionId, nodeAddress, status);
                 if (!status.isOk()) {
-                    // TODO: 2023/5/19 确认延迟时间
-                    Mono.delay(Duration.ofMillis(1000))
+                    int millis = randomRetryMillis();
+                    log.info("raft kv store region-{} retry to remove replicator node '{}' after {}ms", regionId, nodeAddress, millis);
+                    Mono.delay(Duration.ofMillis(millis))
                             .subscribeOn(brokerContext.getMqttBizScheduler())
                             .subscribe(t -> removeReplicator(nodeAddress, regionEngine));
-                    return;
                 }
-                log.info("raft kv store region-{} remove replicator node '{}' result: {}", regionId, nodeAddress, status);
             });
         } else {
             log.info("raft kv store region-{} replicator node '{}' not exists", regionId, nodeAddress);
@@ -584,6 +612,25 @@ public class RaftKvStore implements ClusterStore {
         kvStore.doOnNext(s -> {
                     for (RegionEngine regionEngine : s.getStoreEngine().getAllRegionEngines()) {
                         addCore(nodeAddress, regionEngine);
+                    }
+                })
+                .subscribe();
+    }
+
+    /**
+     * 添加core
+     *
+     * @param nodeAddress core node address
+     * @param regionId    kv store region id
+     */
+    private void addCore(String nodeAddress, long regionId) {
+        kvStore.doOnNext(s -> {
+                    for (RegionEngine regionEngine : s.getStoreEngine().getAllRegionEngines()) {
+                        if (regionEngine.getRegion().getId() != regionId) {
+                            continue;
+                        }
+                        addCore(nodeAddress, regionEngine);
+                        break;
                     }
                 })
                 .subscribe();
@@ -607,8 +654,6 @@ public class RaftKvStore implements ClusterStore {
         }
 
         long regionId = regionEngine.getRegion().getId();
-        log.info("raft kv store region-{} ready to add core node '{}'", regionId, nodeAddress);
-
         PeerId newPeerId = PeerId.parsePeer(nodeAddress);
         boolean exists = false;
         for (PeerId peerId : node.listPeers()) {
@@ -623,15 +668,16 @@ public class RaftKvStore implements ClusterStore {
         if (exists) {
             log.info("raft kv store region-{} core node '{}' exists", regionId, nodeAddress);
         } else {
+            log.info("raft kv store region-{} ready to add core node '{}'", regionId, nodeAddress);
             node.addPeer(newPeerId, status -> {
+                log.info("raft kv store region-{} add core node '{}' result: {}", regionId, nodeAddress, status);
                 if (!status.isOk()) {
-                    // TODO: 2023/5/19 确认延迟时间
-                    Mono.delay(Duration.ofMillis(1000))
+                    int millis = randomRetryMillis();
+                    log.info("raft kv store region-{} retry to add core node '{}' after {}ms", regionId, nodeAddress, millis);
+                    Mono.delay(Duration.ofMillis(millis))
                             .subscribeOn(brokerContext.getMqttBizScheduler())
                             .subscribe(t -> addCore(nodeAddress, regionEngine));
-                    return;
                 }
-                log.info("raft kv store region-{} add core node '{}' result: {}", regionId, nodeAddress, status);
             });
         }
     }
@@ -665,8 +711,6 @@ public class RaftKvStore implements ClusterStore {
         }
 
         long regionId = regionEngine.getRegion().getId();
-        log.info("raft kv store region-{} ready to remove core node '{}'", regionId, nodeAddress);
-
         PeerId targetPeerId = PeerId.parsePeer(nodeAddress);
         boolean exists = false;
         for (PeerId peerId : node.listPeers()) {
@@ -679,15 +723,16 @@ public class RaftKvStore implements ClusterStore {
         }
 
         if (exists) {
+            log.info("raft kv store region-{} ready to remove core node '{}'", regionId, nodeAddress);
             node.removePeer(targetPeerId, status -> {
+                log.info("raft kv store region-{} remove core node '{}' result: {}", regionId, nodeAddress, status);
                 if (!status.isOk()) {
-                    // TODO: 2023/5/19 确认延迟时间
-                    Mono.delay(Duration.ofMillis(1000))
+                    int millis = randomRetryMillis();
+                    log.info("raft kv store region-{} retry to remove core node '{}' after {}ms", regionId, nodeAddress, millis);
+                    Mono.delay(Duration.ofMillis(millis))
                             .subscribeOn(brokerContext.getMqttBizScheduler())
                             .subscribe(t -> removeCore(nodeAddress, regionEngine));
-                    return;
                 }
-                log.info("raft kv store region-{} remove core node '{}' result: {}", regionId, nodeAddress, status);
             });
         } else {
             log.info("raft kv store region-{} core node '{}' not exists", regionId, nodeAddress);

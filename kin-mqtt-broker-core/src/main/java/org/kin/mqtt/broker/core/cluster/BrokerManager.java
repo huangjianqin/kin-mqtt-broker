@@ -7,6 +7,7 @@ import reactor.core.publisher.Mono;
 
 import javax.annotation.Nullable;
 import java.util.Collection;
+import java.util.Objects;
 
 /**
  * mqtt集群broker节点管理
@@ -72,6 +73,16 @@ public interface BrokerManager {
      */
     @Nullable
     MqttBrokerNode getNodeById(String brokerId);
+
+    /**
+     * 集群中是否存在id为{@code brokerId}的节点
+     *
+     * @param brokerId mqtt broker id
+     * @return true表示存在id为{@code brokerId}的节点
+     */
+    default boolean containsNode(String brokerId) {
+        return Objects.nonNull(getNodeById(brokerId));
+    }
 
     /**
      * 返回集群所有broker节点信息
